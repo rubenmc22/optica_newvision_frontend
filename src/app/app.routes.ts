@@ -6,13 +6,19 @@ import { ForgotPasswordComponent } from './view/forgot-password/forgot-password.
 import { DashboardComponent } from './view/dashboard/dashboard.component';
 import { MyAccountComponent } from './view/my-account/my-account.component';
 import { PostloginTemplateComponent } from './view/postlogin-template/postlogin-template.component';
-import { FichaTecnicaComponent } from './view/ficha-tecnica/ficha-tecnica.component';
-import { VerAtletasComponent } from './view/ver-atletas/ver-atletas.component';
-import { CrearAtletasComponent } from './view/crear-atletas/crear-atletas.component';
+import { EmpleadosComponent } from './view/empleados/empleados.component';
 import { authGuard } from './core/services/auth/auth.guard';
 import { AuthService } from './core/services/auth/auth.service';
 import { AcceptTycComponent } from './view/accept-tyc-component/accept-tyc-component.component';
 import { Title } from '@angular/platform-browser';
+import { TasaComponent } from './view/tasa-cambiaria/tasa.component';
+import { VerPacientesComponent } from './view/pacientes/pacientes.component';
+import { HistoriasMedicasComponent } from './view/historias-medicas/historias-medicas.component';
+import { ProductosListComponent } from './view/productos/productos-list/productos-list.component';
+import { VentasDashboardComponent } from './view/ventas/ventas-dashboard.component';
+import { RendimientoComercialComponent } from './view/ventas/rendimiento-comercial/rendimiento-comercial.component';
+import { SystemConfigComponent } from './view/system-config/system-config.component';
+import { GestionOrdenesTrabajoComponent } from './view/gestion-ordenes-trabajo/gestion-ordenes-trabajo.component';
 
 // Nombre de la óptica (constante global)
 const OPTICA_NAME = 'Óptica New Vision';
@@ -73,19 +79,51 @@ export const appRoutes: Routes = [
         title: getFullTitle('Mi cuenta')
       },
       {
-        path: 'ficha-tecnica',
-        component: FichaTecnicaComponent,
-        title: getFullTitle('Ficha técnica')
+        path: 'empleados',
+        component: EmpleadosComponent,
+        title: getFullTitle('Empleados')
       },
       {
-        path: 'ver-atletas',
-        component: VerAtletasComponent,
-        title: getFullTitle('Ver atletas')
+        path: 'Tipo-de-cambio',
+        component: TasaComponent,
+        title: getFullTitle('Tipo-de-cambio')
       },
       {
-        path: 'crear-atletas',
-        component: CrearAtletasComponent,
-        title: getFullTitle('Crear atleta')
+        path: 'pacientes',
+        component: VerPacientesComponent,
+        title: getFullTitle('pacientes')
+      },
+      {
+        path: 'pacientes-historias',
+        component: HistoriasMedicasComponent,
+        children: [
+          { path: ':id', component: HistoriasMedicasComponent }
+        ]
+      },
+      {
+        path: 'productos-inventario',
+        component: ProductosListComponent,
+        title: getFullTitle('Catálogo de productos')
+      },
+      {
+        path: 'ventas/rendimiento-comercial',
+        component: RendimientoComercialComponent,
+        title: getFullTitle('Rendimiento Comercial')
+      },
+      {
+        path: 'ventas',
+        component: VentasDashboardComponent,
+        title: getFullTitle('Ventas')
+      },
+      {
+        path: 'configuracion-sistema',
+        component: SystemConfigComponent,
+        title: getFullTitle('Configuración del sistema')
+      },
+         {
+        path: 'ordenes-de-trabajo',
+        component: GestionOrdenesTrabajoComponent,
+        title: getFullTitle('Ordenes de Trabajo')
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'prefix' }
     ]

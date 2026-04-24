@@ -8,7 +8,7 @@ describe('ForgotPasswordComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ForgotPasswordComponent]
+      declarations: [ForgotPasswordComponent]
     })
     .compileComponents();
 

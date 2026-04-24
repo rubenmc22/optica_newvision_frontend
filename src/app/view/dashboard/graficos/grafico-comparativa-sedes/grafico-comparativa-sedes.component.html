@@ -1,0 +1,50 @@
+<div class="comparison-board">
+  <div class="comparison-board__topbar">
+    <button type="button" class="comparison-board__toggle" (click)="alternarTipoGrafico()">
+      <i class="fas" [class.fa-chart-line]="chartType === 'bar'" [class.fa-chart-bar]="chartType === 'line'"></i>
+      {{ chartType === 'bar' ? 'Ver líneas' : 'Ver barras' }}
+    </button>
+  </div>
+
+  <div class="comparison-board__filters">
+    <button
+      type="button"surface-header
+      class="comparison-filter"
+      *ngFor="let filtro of filtrosVista"
+      [class.comparison-filter--active]="metricaSeleccionada === filtro.key"
+      (click)="seleccionarVista(filtro.key)">
+      <i [class]="filtro.icon"></i>
+      <span>{{ filtro.label }}</span>
+    </button>
+  </div>
+
+  <div *ngIf="mostrarGrafico" class="comparison-board__canvas-shell">
+    <div class="comparison-board__canvas">
+      <canvas baseChart [type]="chartType" [data]="chartData" [options]="chartOptions"></canvas>
+    </div>
+  </div>
+
+  <div *ngIf="!mostrarGrafico" class="comparison-board__empty">
+    <div class="comparison-board__empty-icon">
+      <i class="fas fa-hospital"></i>
+    </div>
+    <h4>Sin datos para comparar</h4>
+    <p>La comparación aparecerá cuando existan registros para ambas sedes.</p>
+  </div>
+
+  <div *ngIf="resumenSedes.length" class="comparison-board__summary-grid">
+    <article class="comparison-summary" *ngFor="let sede of resumenSedes">
+      <div class="comparison-summary__header">
+        <span class="comparison-summary__badge">{{ sede.label }}</span>
+        <strong class="comparison-summary__total">{{ sede.total | number:'1.0-0' }}</strong>
+      </div>
+
+      <div class="comparison-summary__stats">
+        <span>Pacientes {{ sede.pacientes }}</span>
+        <span>Historias {{ sede.historias }}</span>
+        <span>Pendientes {{ sede.pendientes }}</span>
+        <span>Con venta {{ sede.facturadas }}</span>
+      </div>
+    </article>
+  </div>
+</div>

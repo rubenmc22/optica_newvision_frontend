@@ -222,7 +222,7 @@ export class UserRegisterComponent implements OnInit {
         // Si acepta los términos, procedemos con el registro
         this.registerUser();
       } else {
-        console.log('El usuario canceló la operación.');
+      //  console.log('El usuario canceló la operación.');
       }
     });
 
@@ -230,14 +230,14 @@ export class UserRegisterComponent implements OnInit {
 
   private registerUser() {
     // Mostrar loading
-    this.swalService.showApolloLoading();
+    //this.swalService.showApolloLoading();
 
     const formData = {
       ...this.registerForm.value,
       acceptedTerms: true
     };
 
-    console.log('Datos del formulario:', formData);
+    //console.log('Datos del formulario:', formData);
 
     const isMinor = formData.isMinor;
 

@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AcceptTycComponentComponent } from './accept-tyc-component.component';
+import { AcceptTycComponent } from './accept-tyc-component.component';
 
-describe('AcceptTycComponentComponent', () => {
-  let component: AcceptTycComponentComponent;
-  let fixture: ComponentFixture<AcceptTycComponentComponent>;
+describe('AcceptTycComponent', () => {
+  let component: AcceptTycComponent;
+  let fixture: ComponentFixture<AcceptTycComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AcceptTycComponentComponent]
+      declarations: [AcceptTycComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(AcceptTycComponentComponent);
+    fixture = TestBed.createComponent(AcceptTycComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

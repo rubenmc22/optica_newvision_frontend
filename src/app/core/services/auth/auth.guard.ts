@@ -25,7 +25,7 @@ export const authGuard: CanActivateFn = (route, state) => {
   }
 
   // 4. Bloquear acceso si no ha aceptado TyC (0 o undefined)
-  if (tycAceptado !== 1) {
+ /* if (tycAceptado !== 1) {
     // Forzar recarga de datos del usuario desde el backend
     return authService.refreshUserInfo().pipe(
       switchMap(() => {
@@ -38,7 +38,7 @@ export const authGuard: CanActivateFn = (route, state) => {
       }),
       catchError(() => of(router.createUrlTree(['/login'])))
     );
-  }
+  }*/
 
   return true;
 };

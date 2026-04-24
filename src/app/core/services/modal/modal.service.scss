@@ -1,0 +1,53 @@
+@use '../../../custom-theme.scss' as theme;
+
+#globalModal {
+  .modal-content {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+
+    .modal-header {
+      padding: 1.25rem 1.5rem;
+      background-color: theme.$primary;
+      color: white;
+      font-weight: bold;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      font-size: 1rem;
+      
+      .form-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+      }
+    }
+
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #dee2e6;
+      display: flex;
+      justify-content: space-between;
+    }
+  }
+}
+
+.modal-backdrop {
+  z-index: 1040 !important;
+  opacity: 0.5 !important; // 🔹 Ajustamos opacidad para mejor visualización
+}
+
+#globalModal,
+.modal-content {
+  z-index: 1055 !important;
+}
+
+// 🔹 Estilos generales para botones del modal
+.btn-cancel {
+  background-color: theme.$secondary;
+  border: none;
+}
+
+.btn-confirm {
+  background-color: theme.$success;
+  border: none;
+}

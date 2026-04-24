@@ -1,0 +1,77 @@
+// detalle-orden.component.scss
+.detalle-orden-container {
+    padding: 20px;
+
+    .detalle-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #e2e8f0;
+
+        h3 {
+            margin: 0;
+            color: #1e293b;
+        }
+
+        .badge {
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 14px;
+
+            &.badge-en_tienda {
+                background: #e3f2fd;
+                color: #1976d2;
+            }
+
+            &.badge-proceso_laboratorio {
+                background: #fff3e0;
+                color: #f57c00;
+            }
+
+            &.badge-listo_laboratorio {
+                background: #e8f5e9;
+                color: #388e3c;
+            }
+
+            &.badge-pendiente_retiro {
+                background: #fff8e1;
+                color: #ffa000;
+            }
+        }
+    }
+
+    .detalle-content {
+        .info-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+
+            h4 {
+                color: #334155;
+                margin-bottom: 12px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+
+                i {
+                    color: #64748b;
+                }
+            }
+
+            p {
+                margin: 8px 0;
+                color: #475569;
+
+                strong {
+                    color: #1e293b;
+                    margin-right: 8px;
+                }
+            }
+        }
+    }
+}

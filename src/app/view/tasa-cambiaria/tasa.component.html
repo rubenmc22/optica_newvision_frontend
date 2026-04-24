@@ -1,0 +1,233 @@
+<!-- Loader Component -->
+<app-loader></app-loader>
+
+<div class="container-fluid mt-4">
+  <div class="card pacientes-moderno">
+    <!-- Header modernizado -->
+    <div class="card-header-moderno">
+      <div class="header-content">
+        <div class="header-icon">
+          <i class="bi bi-currency-exchange"></i>
+        </div>
+        <div class="header-text">
+          <h4 class="header-title">Gestión de Tasas de Cambio</h4>
+          <div class="header-subtitle">Administra y consulta las tasas de cambio en tiempo real</div>
+        </div>
+      </div>
+      <button class="btn btn-agregar-paciente" (click)="actualizarYMostrarTasasDesdeBCV()">
+        <i class="bi bi-cloud-arrow-down-fill me-2"></i>
+        Actualizar desde BCV
+      </button>
+    </div>
+
+    <!-- Cuerpo modernizado -->
+    <div class="card-body-moderno">
+      <!-- Grid de tasas -->
+      <div class="tasas-grid">
+        <div *ngFor="let tasa of tasas" class="tasa-card">
+          <!-- Card de Tasa Individual -->
+          <div class="tasa-card-content" [class.tasa-manual]="metodoTasa[tasa.id] === 'manual'">
+            <!-- Header de la Card -->
+            <div class="tasa-card-header">
+              <div class="tasa-info">
+                <div class="tasa-icon">
+                  <i class="bi" [ngClass]="{
+                      'bi-currency-dollar': tasa.simbolo === '$',
+                      'bi-currency-euro': tasa.simbolo === '€',
+                      'bi-coin': tasa.simbolo !== '$' && tasa.simbolo !== '€'
+                    }"></i>
+                </div>
+                <div class="tasa-title">
+                  <h5 class="tasa-name">
+                    {{ metodoTasa[tasa.id] === 'manual' ? '(' + tasa.simbolo + ')' + ' ' + tasa.nombre : tasa.nombre + '
+                    Oficial BCV' }}
+                  </h5>
+                  <span class="tasa-badge" [class]="metodoTasa[tasa.id]">
+                    {{ metodoTasa[tasa.id] === 'manual' ? 'Manual' : 'BCV' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Botón de Configuración Moderno -->
+              <div class="tasa-actions">
+                <button class="btn-action-menu" (click)="abrirMenu($event, tasa.id)">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+
+                <!-- Menú de Configuración Mejorado -->
+                <div *ngIf="menuAbierto === tasa.id" class="action-menu" (clickOutside)="cerrarMenu()">
+                  <ng-container [ngSwitch]="metodoTasa[tasa.id]">
+                    <ng-container *ngSwitchCase="'bcv'">
+                      <button class="menu-item" (click)="abrirPopover(tasa.id)">
+                        <i class="bi bi-pencil me-2"></i>
+                        Ingresar Tasa Manual
+                      </button>
+                    </ng-container>
+                    <ng-container *ngSwitchCase="'automatico'">
+                      <button class="menu-item" (click)="abrirPopover(tasa.id)">
+                        <i class="bi bi-pencil me-2"></i>
+                        Ingresar Tasa Manual
+                      </button>
+                    </ng-container>
+                    <ng-container *ngSwitchCase="'manual'">
+                      <button class="menu-item" [disabled]="loadingBCV[tasa.id]" (click)="updateTasaBCVPorId(tasa.id)">
+                        <i class="bi bi-cloud-download me-2"></i>
+                        {{ loadingBCV[tasa.id] ? 'Actualizando...' : 'Actualizar a Tasa BCV' }}
+                      </button>
+                    </ng-container>
+                  </ng-container>
+
+                  <div class="menu-divider"></div>
+
+                  <button class="menu-item" (click)="verHistorial(tasa.id)">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Ver Historial
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Valor Principal -->
+            <div class="tasa-value-section">
+              <div class="current-tasa">
+                <ng-container *ngIf="!loadingBCV[tasa.id]; else cargandoBCV">
+                  <span class="tasa-amount">{{ obtenerValorVisual(tasa.id) }}</span>
+                  <span class="tasa-symbol">{{ tasa.simbolo }}</span>
+                </ng-container>
+                <ng-template #cargandoBCV>
+                  <div class="loading-tasa">
+                    <i class="bi bi-arrow-repeat spinner"></i>
+                    Actualizando...
+                  </div>
+                </ng-template>
+              </div>
+            </div>
+
+            <!-- Información BCV -->
+            <div class="bcv-info">
+              <div class="bcv-label">
+                <i class="bi bi-building me-1"></i>
+                Tasa oficial BCV:
+              </div>
+              <div class="bcv-value">
+                <ng-container *ngIf="bcvDisponible[tasa.id]; else noDisponible">
+                  {{ valorBCV[tasa.id] }} {{ tasa.simbolo }}
+                </ng-container>
+                <ng-template #noDisponible>
+                  <span class="bcv-unavailable">No disponible</span>
+                </ng-template>
+              </div>
+            </div>
+
+            <!-- Footer con Metadata -->
+            <div class="tasa-footer">
+              <div class="last-update">
+                <i class="bi bi-clock me-1"></i>
+                {{ (metodoTasa[tasa.id] === 'manual' ? fechaActualizacionManual[tasa.id] : tasa.updated_at) |
+                date:'dd/MM/yyyy HH:mm' }}
+              </div>
+
+              <div class="auto-update-toggle">
+                <label class="toggle-switch">
+                  <input type="checkbox" [(ngModel)]="autoActualizar[tasa.id]"
+                    (change)="activarRastreoBCVAutomatico(tasa.id)">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span class="toggle-label">Auto</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Popover Mejorado -->
+          <div *ngIf="popoverActivo === tasa.id" class="tasa-popover">
+            <div class="popover-header">
+              <h6>Modificar Tasa</h6>
+              <button class="popover-close" (click)="cerrarPopover()">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+            <div class="popover-body">
+              <input type="number" class="form-control-modern text-center no-spinner" [(ngModel)]="nuevaTasaManual"
+                step="0.01" placeholder="0.00">
+              <button class="btn-modern-save w-100" (click)="guardarTasaManual(tasa.id)">
+                <i class="bi bi-save me-2"></i>
+                Guardar Tasa
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Historial Mejorado -->
+<div class="modal fade modern-modal" id="modalHistorial" tabindex="-1" aria-labelledby="historialLabel"
+  aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content modern-modal-content">
+      <div class="modal-header modern-modal-header">
+        <div class="modal-title-content">
+          <i class="bi bi-graph-up modal-icon"></i>
+          <div>
+            <h5 class="modal-title" id="historialLabel">Historial de Tasa</h5>
+            <p class="modal-subtitle">{{ simboloSeleccionado }}</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modern" data-bs-dismiss="modal">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body modern-modal-body">
+        <div class="table-container">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th class="text-center">
+                  <i class="bi bi-person me-1"></i>
+                  Usuario
+                </th>
+                <th class="text-center">
+                  <i class="bi bi-clock me-1"></i>
+                  Fecha
+                </th>
+                <th class="text-center">
+                  <i class="bi bi-currency-dollar me-1"></i>
+                  Valor
+                </th>
+                <th class="text-center">
+                  <i class="bi bi-tag me-1"></i>
+                  Tipo
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of historialTasaSeleccionada" class="table-row">
+                <td class="text-center user-cell">{{ item.usuario }}</td>
+                <td class="text-center date-cell">{{ item.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td class="text-center value-cell">
+                  <strong>{{ item.valor | number:'1.2-2' }} {{ simboloSeleccionado }}</strong>
+                </td>
+                <td class="text-center">
+                  <span class="method-badge" [class]="item.metodo">
+                    <i class="bi" [class.bi-hand-index]="item.metodo === 'manual'"
+                      [class.bi-cloud]="item.metodo === 'bcv'"></i>
+                    {{ item.metodo === 'manual' ? 'Manual' : 'BCV' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer modern-modal-footer">
+        <button type="button" class="btn-modern-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x me-2"></i>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

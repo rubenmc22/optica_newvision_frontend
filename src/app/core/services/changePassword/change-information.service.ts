@@ -6,7 +6,10 @@ import { environment } from '../../../../environments/environment';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
-import { User, Rol, AuthData, AuthResponse } from '../../../Interfaces/models-interface';
+import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
+import { Sede } from './../../../view/login/login-interface';
+import { UserProfile, ApiUser } from '../../../view/my-account/my-account-interface';
+import { of } from 'rxjs';
 
 
 @Injectable({
@@ -23,9 +26,7 @@ export class ChangeInformationService {
     private http: HttpClient
   ) { }
 
-
-
-  // Cambiar el return type y manejar ambos casos
+  // Editar perfil de usuario
   editUser(userData: Partial<User>): Observable<AuthResponse> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
 
@@ -35,24 +36,34 @@ export class ChangeInformationService {
       { headers }
     ).pipe(
       map(response => {
-        // Type guard para verificar si es la respuesta completa
-        const isFullResponse = (res: any): res is AuthResponse => {
-          return res.user !== undefined && res.token !== undefined;
-        };
+        const isFullResponse = (res: any): res is AuthResponse => res.user !== undefined && res.token !== undefined;
 
         if (isFullResponse(response)) {
+          // Tipar sedeData como Partial<Sede> para que TypeScript reconozca las propiedades
+          const sedeData: Partial<Sede> = response.sede || {};
+
+          const sedeCompleta: Sede = {
+            key: sedeData.key || '',
+            nombre: sedeData.nombre || '',
+            nombre_optica: sedeData.nombre_optica,
+            rif: sedeData.rif,
+            direccion: sedeData.direccion || '',
+            direccion_fiscal: sedeData.direccion_fiscal,
+            telefono: sedeData.telefono || '',
+            email: sedeData.email || '',
+          };
+
           const authData: AuthData = {
             token: response.token || this.authService.getToken() || '',
-            user: {
-              ...response.user,
-              email: response.user.correo
-            },
-            rol: response.rol || this.authService.currentUserValue?.rol as Rol
+            user: { ...response.user, email: response.user.correo },
+            rol: response.rol || this.authService.currentUserValue?.rol as Rol,
+            cargo: response.cargo || this.authService.currentUserValue?.cargo as Cargo,
+            sede: sedeCompleta
           };
           this.authService.setAuth(authData);
         }
 
-        return response; // Devuelve la respuesta original
+        return response;
       }),
       catchError(error => {
         console.error('Error in editUser:', error);
@@ -60,18 +71,55 @@ export class ChangeInformationService {
       })
     );
   }
-
-  //Carda de imagen
-  // change-information.service.ts
-  uploadProfileImage(formData: FormData): Observable<{message: string, image_url: string}> {
-    return this.http.post<{message: string, image_url: string}>(
-     `${environment.apiUrl}/account/upload-profile-image`,
-      formData
-      // ¡No agregues headers manualmente! Multer necesita el boundary automático
+  getUsuarioPorCedula(cedula: string): Observable<ApiUser | null> {
+    return this.http.get<{ message: string; usuarios: ApiUser[] }>(`${environment.apiUrl}/get-usuarios/${cedula}`).pipe(
+      map(response => {
+        if (!response || !Array.isArray(response.usuarios) || response.usuarios.length === 0) {
+          return null;
+        }
+        return response.usuarios[0];
+      }),
+      catchError(error => {
+        console.error('Error al obtener usuario por cédula:', error);
+        return of(null);
+      })
     );
   }
 
-  // Métodos para cambio de contraseña
+
+  // Enviar OTP para cambio de contraseña única
+  sendUniquePasswordOtp(email: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/account/send-unique-password-otp`, { email }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error al enviar OTP para contraseña única:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  // Guardar la contraseña única tras la validación del OTP
+  changeUniquePassword(email: string, uniquePassword: string, otp: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/account/change-unique-password`, {
+      email,
+      uniquePassword,
+      otp
+    }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error al cambiar la contraseña única:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  // Carga de imagen de perfil
+  uploadProfileImage(formData: FormData): Observable<{ message: string, image_url: string }> {
+    return this.http.post<{ message: string, image_url: string }>(
+      `${environment.apiUrl}/account/upload-profile-image`,
+      formData
+    );
+  }
+
+  // Métodos para cambio de contraseña de acceso
   sendPasswordChangeOtp(email: string): Observable<any> {
     return this.http.post(`${environment.apiUrl}/account/change-password--send-otp`, { email });
   }
@@ -85,6 +133,11 @@ export class ChangeInformationService {
       email,
       newPassword,
       otp
-    });
+    }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error al cambiar la contraseña:', error);
+        return throwError(() => error);
+      })
+    );
   }
 }

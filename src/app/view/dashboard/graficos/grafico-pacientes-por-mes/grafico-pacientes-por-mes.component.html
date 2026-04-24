@@ -1,0 +1,56 @@
+<div class="movement-board">
+  <div class="movement-board__topbar">
+    <div class="movement-board__heading">
+      <span class="movement-board__eyebrow">Actividad mensual</span>
+      <h4 class="movement-board__title">Operación de {{ sedeActual }}</h4>
+      <p class="movement-board__subtitle">
+        {{ periodoDescripcion }}
+        <span *ngIf="mesPicoLabel">· pico en {{ mesPicoLabel }} con {{ mesPicoValor }} movimientos</span>
+      </p>
+    </div>
+
+    <button type="button" class="movement-board__toggle" (click)="alternarTipoGrafico()">
+      <i class="fas" [class.fa-wave-square]="chartType === 'line'" [class.fa-chart-column]="chartType === 'bar'"></i>
+      {{ chartType === 'line' ? 'Ver barras' : 'Ver líneas' }}
+    </button>
+  </div>
+
+  <div class="movement-board__filters">
+    <button
+      type="button"
+      class="movement-filter"
+      *ngFor="let filtro of filtrosVista"
+      [class.movement-filter--active]="vistaActual === filtro.key"
+      (click)="seleccionarVista(filtro.key)">
+      <i [class]="filtro.icon"></i>
+      <span>{{ filtro.label }}</span>
+    </button>
+  </div>
+
+  <div *ngIf="mostrarGrafico" class="movement-board__canvas-shell">
+    <div class="movement-board__canvas">
+      <canvas baseChart [type]="chartType" [data]="chartData" [options]="chartOptions"></canvas>
+    </div>
+  </div>
+
+  <div *ngIf="!mostrarGrafico" class="movement-board__empty">
+    <div class="movement-board__empty-icon">
+      <i class="fas fa-chart-line"></i>
+    </div>
+    <h4>Sin datos suficientes</h4>
+    <p>Cuando exista movimiento mensual en la sede, aquí verás pacientes, historias, ventas y órdenes.</p>
+  </div>
+
+  <div *ngIf="resumenTarjetas.length" class="movement-board__summary-grid">
+    <article class="movement-metric" *ngFor="let item of resumenTarjetas" [style.--metric-color]="item.color">
+      <div class="movement-metric__icon">
+        <i [class]="item.icon"></i>
+      </div>
+      <div class="movement-metric__content">
+        <span class="movement-metric__label">{{ item.label }}</span>
+        <strong class="movement-metric__value">{{ item.value | number:'1.0-0' }}</strong>
+        <small class="movement-metric__detail">{{ item.detail }}</small>
+      </div>
+    </article>
+  </div>
+</div>

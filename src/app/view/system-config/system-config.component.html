@@ -1,0 +1,732 @@
+<div class="config-container">
+  <!-- Header -->
+  <div class="config-header">
+    <div class="header-content">
+      <i class="header-icon bi bi-sliders"></i>
+      <div class="header-text">
+        <h1 class="header-title">Configuración del Sistema</h1>
+        <p class="header-subtitle">Administra los ajustes generales de la aplicación</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pestañas de Navegación -->
+  <div class="tabs-navigation">
+    <div class="tabs-container">
+      <button class="tab-button" [class.active]="activeTab === 'general'" (click)="seleccionarTab('general')">
+        <i class="bi bi-gear"></i>
+        Configuración General
+      </button>
+      <button class="tab-button" data-tab="avanzada" disabled>
+        <i class="bi bi-tools"></i>
+        Configuración Avanzada
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenido de Pestañas -->
+  <div class="tab-content">
+
+    <div class="tab-pane" [class.active]="activeTab === 'general'" id="general-tab">
+      <div class="settings-subsection settings-subsection--currency">
+        <div class="settings-subsection__header">
+          <div class="settings-subsection__title-wrap">
+            <div class="settings-subsection__icon">
+              <i class="bi bi-currency-exchange"></i>
+            </div>
+            <div>
+              <h3>Moneda Principal</h3>
+              <p>Define la moneda base para nuevas operaciones y mantén la referencia operativa del sistema.</p>
+            </div>
+          </div>
+
+          <div class="settings-subsection__actions">
+            <div class="settings-subsection__meta">
+              <small>{{ config.simboloMoneda }} {{ getNombreMoneda(config.monedaPrincipal) }}</small>
+              <small>Actualizado {{ formatFecha(config.ultimaActualizacion) }}</small>
+            </div>
+
+            <button
+              class="settings-subsection__toggle"
+              type="button"
+              [attr.aria-expanded]="estaSeccionGeneralExpandida('monedaPrincipal')"
+              (click)="alternarSeccionGeneral('monedaPrincipal')">
+              <span>{{ estaSeccionGeneralExpandida('monedaPrincipal') ? 'Ocultar' : 'Mostrar' }}</span>
+              <i class="bi" [ngClass]="estaSeccionGeneralExpandida('monedaPrincipal') ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="currency-config" *ngIf="estaSeccionGeneralExpandida('monedaPrincipal')">
+          <div class="currency-compact-grid">
+            <button
+              *ngFor="let moneda of monedas"
+              class="currency-compact-card"
+              type="button"
+              [disabled]="isLoading"
+              [class.currency-compact-card--active]="config.monedaPrincipal === moneda.codigo"
+              (click)="seleccionarMoneda(moneda.codigo)">
+              <div class="currency-compact-card__header">
+                <span class="currency-compact-symbol">{{ moneda.simbolo }}</span>
+                <span class="currency-compact-check" *ngIf="config.monedaPrincipal === moneda.codigo">
+                  <i class="bi bi-check2-circle"></i>
+                </span>
+              </div>
+
+              <strong>{{ moneda.nombre }}</strong>
+              <small>{{ moneda.codigo }}</small>
+              <span class="currency-compact-rate">Tasa actual: {{ formatTasa(getValorTasa(moneda.codigo)) }}</span>
+            </button>
+          </div>
+
+          <div class="currency-compact-footer">
+            <div class="currency-mini-badge">
+              <i class="bi bi-info-circle"></i>
+              <div>
+                <strong>Moneda activa</strong>
+                <span>{{ config.simboloMoneda }} {{ getNombreMoneda(config.monedaPrincipal) }}</span>
+              </div>
+            </div>
+
+            <div class="currency-impact-grid">
+              <div class="currency-impact-item">
+                <i class="bi bi-plus-square"></i>
+                <span>Nuevas ventas y registros toman esta moneda por defecto.</span>
+              </div>
+
+              <div class="currency-impact-item">
+                <i class="bi bi-clock-history"></i>
+                <span>Las operaciones históricas conservan su moneda original.</span>
+              </div>
+
+              <div class="currency-impact-item">
+                <i class="bi bi-graph-up-arrow"></i>
+                <span>Las tasas visibles se recalculan en tiempo real según la base seleccionada.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-subsection settings-subsection--notifications">
+        <div class="settings-subsection__header">
+          <div class="settings-subsection__title-wrap">
+            <div class="settings-subsection__icon">
+              <i class="bi bi-envelope-check"></i>
+            </div>
+            <div>
+              <h3>Correos de Notificación</h3>
+              <p>Canales operativos del sistema para alertas y avisos automáticos.</p>
+            </div>
+          </div>
+
+          <div class="settings-subsection__actions">
+            <div class="settings-subsection__meta" *ngIf="correosConfig">
+              <small>Actualizado {{ formatFecha(correosConfig.ultimaActualizacion) }}</small>
+            </div>
+
+            <button
+              class="settings-subsection__toggle"
+              type="button"
+              [attr.aria-expanded]="estaSeccionGeneralExpandida('correos')"
+              (click)="alternarSeccionGeneral('correos')">
+              <span>{{ estaSeccionGeneralExpandida('correos') ? 'Ocultar' : 'Mostrar' }}</span>
+              <i class="bi" [ngClass]="estaSeccionGeneralExpandida('correos') ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="notification-loading" *ngIf="estaSeccionGeneralExpandida('correos') && isNotificationsLoading">
+          <div class="loading-orb"></div>
+          <div>
+            <strong>Cargando configuración</strong>
+            <p>Preparando los correos de notificación.</p>
+          </div>
+        </div>
+
+        <form class="notification-form notification-form--compact" *ngIf="estaSeccionGeneralExpandida('correos') && !isNotificationsLoading" [formGroup]="notificationForm" (ngSubmit)="guardarCorreosNotificacion()">
+          <div class="notification-toolbar">
+            <div class="notification-inline-summary">
+              <div class="status-row status-row--compact">
+                <span>Estado</span>
+                <strong>{{ getEstadoCorreos() }}</strong>
+              </div>
+              <div class="status-row status-row--compact">
+                <span>Destino de envío</span>
+                <strong>{{ getTextoEnvioSimultaneo() }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="notification-compact-grid">
+            <div
+              class="notification-compact-card notification-compact-card--selectable"
+              [class.notification-compact-card--active]="getModoEntregaActual() === 'individual' && getDestinoIndividualActual() === 'principal'"
+              [class.notification-compact-card--muted]="getEnvioSimultaneoActivo()"
+              role="button"
+              tabindex="0"
+              (click)="seleccionarDestinoIndividual('principal')"
+              (keydown)="manejarTecladoSeleccionDestino($event, 'principal')">
+              <div class="notification-compact-card__header">
+                <div>
+                  <span class="slot-badge slot-badge--primary">Principal</span>
+                  <h4>Correo principal</h4>
+                </div>
+              </div>
+
+              <div class="input-shell" [class.input-shell--invalid]="esCorreoInvalido('correoPrincipal')">
+                <i class="bi bi-envelope-at"></i>
+                <input type="email" formControlName="correoPrincipal" placeholder="notificaciones@empresa.com">
+              </div>
+
+              <small class="slot-helper slot-helper--status" *ngIf="getTextoEstadoCardCorreo('principal')">{{ getTextoEstadoCardCorreo('principal') }}</small>
+
+              <div class="field-error" *ngIf="esCorreoInvalido('correoPrincipal')">
+                Ingresa un correo principal válido.
+              </div>
+            </div>
+
+            <div
+              class="notification-compact-card notification-compact-card--selectable"
+              [class.notification-compact-card--active]="getModoEntregaActual() === 'individual' && getDestinoIndividualActual() === 'secundario'"
+              [class.notification-compact-card--disabled]="!getPuedeUsarCorreoSecundario()"
+              [class.notification-compact-card--muted]="getEnvioSimultaneoActivo()"
+              role="button"
+              tabindex="0"
+              (click)="seleccionarDestinoIndividual('secundario')"
+              (keydown)="manejarTecladoSeleccionDestino($event, 'secundario')">
+              <div class="notification-compact-card__header">
+                <div>
+                  <span class="slot-badge slot-badge--secondary">Secundario</span>
+                  <h4>Correo secundario</h4>
+                </div>
+              </div>
+
+              <div class="input-shell" [class.input-shell--invalid]="esCorreoInvalido('correoSecundario')">
+                <i class="bi bi-envelope-paper"></i>
+                <input type="email" formControlName="correoSecundario" placeholder="respaldo@empresa.com">
+              </div>
+
+              <small class="slot-helper">Opcional.</small>
+              <small class="slot-helper slot-helper--status" *ngIf="getTextoEstadoCardCorreo('secundario')">{{ getTextoEstadoCardCorreo('secundario') }}</small>
+
+              <div class="field-error" *ngIf="esCorreoInvalido('correoSecundario')">
+                Si lo indicas, debe ser un correo secundario válido.
+              </div>
+            </div>
+          </div>
+
+          <div class="notification-switch-row">
+            <label class="notification-switch" [class.notification-switch--disabled]="!getPuedeUsarCorreoSecundario()">
+              <input type="checkbox" [checked]="getEnvioSimultaneoActivo()" [disabled]="!getPuedeUsarCorreoSecundario()" (change)="alternarEnvioSimultaneo($event)">
+              <span class="notification-switch__track"></span>
+              <span class="notification-switch__content">
+                <strong>Enviar a ambos correos</strong>
+                <small>{{ getTextoAyudaEnvioSimultaneo() }}</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="notification-inline-row">
+            <div class="notification-inline-summary notification-inline-summary--single">
+              <div class="status-row status-row--compact">
+                <span>Correo seleccionado</span>
+                <strong>{{ getResumenCorreoSeleccionado() }}</strong>
+              </div>
+            </div>
+
+            <div class="notification-form-actions notification-form-actions--compact">
+              <button class="btn-primary-modern" type="submit" [disabled]="!puedeGuardarCorreos()">
+                <i class="bi" [ngClass]="isSavingNotifications ? 'bi-arrow-repeat spinning' : 'bi-save2'"></i>
+                {{ getTextoBotonCorreos() }}
+              </button>
+
+              <button class="btn-secondary-modern" type="button" [disabled]="!puedeDescartarCambiosCorreos()" (click)="descartarCambiosCorreos()">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                Descartar cambios
+              </button>
+            </div>
+          </div>
+
+          <div class="notification-alert" *ngIf="getHayCorreosDuplicados()">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>El correo principal y el secundario deben ser diferentes.</span>
+          </div>
+
+          <div class="notification-alert" *ngIf="getHayConfiguracionDestinoInvalida()">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Para usar el secundario o activar el envío simultáneo, primero debes registrar un correo secundario válido.</span>
+          </div>
+        </form>
+      </div>
+
+      <div class="settings-subsection settings-subsection--payment-methods">
+        <div class="settings-subsection__header">
+          <div class="settings-subsection__title-wrap">
+            <div class="settings-subsection__icon">
+              <i class="bi bi-wallet2"></i>
+            </div>
+            <div>
+              <h3>Métodos de Pago</h3>
+              <p>Centraliza qué opciones estarán disponibles y cómo se recibirán los fondos por cada canal.</p>
+            </div>
+          </div>
+
+          <div class="settings-subsection__actions">
+            <div class="settings-subsection__meta" *ngIf="metodosPagoConfig">
+              <small>Actualizado {{ formatFecha(metodosPagoConfig.ultimaActualizacion) }}</small>
+            </div>
+
+            <button
+              class="settings-subsection__toggle"
+              type="button"
+              [attr.aria-expanded]="estaSeccionGeneralExpandida('metodosPago')"
+              (click)="alternarSeccionGeneral('metodosPago')">
+              <span>{{ estaSeccionGeneralExpandida('metodosPago') ? 'Ocultar' : 'Mostrar' }}</span>
+              <i class="bi" [ngClass]="estaSeccionGeneralExpandida('metodosPago') ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="notification-loading" *ngIf="estaSeccionGeneralExpandida('metodosPago') && isPaymentMethodsLoading">
+          <div class="loading-orb"></div>
+          <div>
+            <strong>Cargando configuración</strong>
+            <p>Preparando los métodos de pago disponibles.</p>
+          </div>
+        </div>
+
+        <div class="payment-config" *ngIf="estaSeccionGeneralExpandida('metodosPago') && !isPaymentMethodsLoading && metodosPagoDraft">
+          <div class="payment-summary-grid">
+            <div class="payment-summary-card">
+              <span>Métodos activos</span>
+              <strong>{{ getCantidadMetodosActivos() }}</strong>
+            </div>
+
+            <div class="payment-summary-card">
+              <span>Canales con receptor</span>
+              <strong>{{ getCantidadMetodosConCuentas() }}</strong>
+            </div>
+
+            <div class="payment-summary-card">
+              <span>Cuentas configuradas</span>
+              <strong>{{ getCantidadCuentasConfiguradas() }}</strong>
+            </div>
+          </div>
+
+          <div class="payment-methods-layout">
+            <div class="payment-methods-list">
+              <div class="payment-method-note" *ngIf="!metodosPagoDraft.methods.length">
+                No hay métodos de pago agregados en este momento.
+              </div>
+
+              <article
+                class="payment-method-card"
+                *ngFor="let metodo of metodosPagoDraft.methods; trackBy: trackByMetodo"
+                [class.payment-method-card--expanded]="metodoPagoExpandido === metodo.key"
+                [class.payment-method-card--invalid]="metodoPagoTieneErrores(metodo)">
+                <div class="payment-method-card__header">
+                  <button class="payment-method-card__trigger" type="button" (click)="alternarExpansionMetodo(metodo.key)">
+                    <div class="payment-method-card__content">
+                      <div class="payment-method-card__topline">
+                        <strong>{{ metodo.label }}</strong>
+                        <div class="payment-method-card__badges">
+                          <span class="payment-method-chip">{{ formatearMonedaMetodo(metodo.currency) }}</span>
+                          <span class="payment-method-chip payment-method-chip--subtle" *ngIf="metodo.requiresReceiverAccount">Cuenta receptora</span>
+                          <span class="payment-method-chip payment-method-chip--custom" *ngIf="metodo.isCustom">Personalizado</span>
+                          <span class="payment-method-chip payment-method-chip--inactive" *ngIf="!metodo.enabled">Inactivo</span>
+                        </div>
+                      </div>
+                      <p>{{ metodo.description }}</p>
+                    </div>
+
+                    <i class="bi" [ngClass]="metodoPagoExpandido === metodo.key ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                  </button>
+
+                  <div class="payment-method-card__actions">
+                    <label class="notification-toggle">
+                      <input
+                        type="checkbox"
+                        [ngModel]="metodo.enabled"
+                        (ngModelChange)="alternarDisponibilidadMetodo(metodo, $event)">
+                      <span class="notification-toggle__track">
+                        <span class="notification-toggle__thumb"></span>
+                      </span>
+                      <span class="notification-toggle__label">{{ metodo.enabled ? 'Activo' : 'Oculto' }}</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="payment-method-card__body" *ngIf="metodoPagoExpandido === metodo.key">
+                  <div class="payment-method-fields">
+                    <label class="payment-field">
+                      <span>Nombre visible</span>
+                      <input type="text" [(ngModel)]="metodo.label" (blur)="persistirMetodoPago(metodo.key)">
+                    </label>
+
+                    <label class="payment-field">
+                      <span>Moneda operativa</span>
+                      <select [(ngModel)]="metodo.currency" (ngModelChange)="persistirMetodoPago(metodo.key)">
+                        <option *ngFor="let moneda of getOpcionesMonedaOperativa()" [ngValue]="moneda">{{ formatearMonedaMetodo(moneda) }}</option>
+                      </select>
+                    </label>
+
+                    <label class="payment-field payment-field--wide">
+                      <span>Descripción operativa</span>
+                      <input type="text" [(ngModel)]="metodo.description" (blur)="persistirMetodoPago(metodo.key)">
+                    </label>
+                  </div>
+
+                  <div class="payment-method-footnote">
+                    <span>{{ getResumenMetodoPago(metodo) }}</span>
+                    <span *ngIf="metodoPagoTieneErrores(metodo)">Completa los datos obligatorios antes de guardar.</span>
+                  </div>
+
+                  <div class="payment-accounts" *ngIf="metodo.requiresReceiverAccount">
+                    <div class="payment-accounts__header">
+                      <div>
+                        <h4>Destinos receptores</h4>
+                        <p>Define dónde se recibirá el dinero cuando este método esté operativo.</p>
+                      </div>
+
+                      <button class="btn-secondary-inline" type="button" (click)="agregarCuentaReceptora(metodo.key)">
+                        <i class="bi bi-plus-lg"></i>
+                        Agregar cuenta
+                      </button>
+                    </div>
+
+                    <div class="payment-account-card" *ngFor="let cuenta of metodo.accounts; trackBy: trackByCuenta">
+                      <div class="payment-account-card__grid">
+                        <label class="payment-field" *ngIf="requiereBancoCuenta(metodo)">
+                          <span>Banco receptor</span>
+                          <select [ngModel]="cuenta.bankCode" (ngModelChange)="actualizarBancoCuenta(metodo.key, cuenta.id, $event)">
+                            <option [ngValue]="''">Selecciona un banco</option>
+                            <option *ngFor="let banco of getBancosConfigurables(metodo, cuenta)" [ngValue]="banco.code">{{ banco.name }}</option>
+                          </select>
+                          <small class="payment-field-note payment-field-note--warning" *ngIf="esBancoCuentaInactivo(cuenta)">
+                            El banco actualmente asociado fue desactivado. Debes seleccionar uno activo.
+                          </small>
+                        </label>
+
+                        <label class="payment-field" *ngIf="requiereTitularCuenta(metodo)">
+                          <span>Titular</span>
+                          <input type="text" [(ngModel)]="cuenta.ownerName" (blur)="persistirMetodoPago(metodo.key)">
+                        </label>
+
+                        <label class="payment-field" *ngIf="requiereDocumentoCuenta(metodo)">
+                          <span>Cédula o RIF</span>
+                          <input type="text" [(ngModel)]="cuenta.ownerId" (blur)="persistirMetodoPago(metodo.key)">
+                        </label>
+
+                        <label class="payment-field" *ngIf="requiereTelefonoCuenta(metodo)">
+                          <span>Teléfono</span>
+                          <input type="tel" [(ngModel)]="cuenta.phone" (blur)="persistirMetodoPago(metodo.key)">
+                        </label>
+
+                        <label class="payment-field" *ngIf="requiereEmailCuenta(metodo)">
+                          <span>Correo receptor</span>
+                          <input type="email" [(ngModel)]="cuenta.email" (blur)="persistirMetodoPago(metodo.key)">
+                        </label>
+
+                        <label class="payment-field payment-field--wide" *ngIf="requiereWalletCuenta(metodo)">
+                          <span>Dirección wallet</span>
+                          <input type="text" [(ngModel)]="cuenta.walletAddress" (blur)="persistirMetodoPago(metodo.key)">
+                        </label>
+
+                        <label class="payment-field payment-field--wide">
+                          <span>Descripción de cuenta</span>
+                          <input type="text" [(ngModel)]="cuenta.accountDescription" (blur)="persistirMetodoPago(metodo.key)">
+                        </label>
+                      </div>
+
+                      <div class="payment-account-card__footer">
+                        <span class="account-code-chip" *ngIf="cuenta.bankCode">Código {{ cuenta.bankCode }}</span>
+
+                        <button class="btn-text-danger" type="button" (click)="eliminarCuentaReceptora(metodo.key, cuenta.id)">
+                          <i class="bi bi-dash-circle"></i>
+                          Eliminar cuenta
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="payment-method-note" *ngIf="!metodo.accounts.length">
+                      Agrega al menos una cuenta receptora para dejar este canal listo.
+                    </div>
+                  </div>
+
+                  <div class="payment-method-note" *ngIf="!metodo.requiresReceiverAccount">
+                    Este método solo controla disponibilidad visual y no requiere banco receptor.
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <aside class="payment-methods-sidebar">
+              <div class="payment-side-card payment-side-card--quick-action">
+                <div class="payment-side-card__header-inline">
+                  <div>
+                    <h4>Agregar método</h4>
+                    <p>Crea nuevas opciones de cobro sin ocupar espacio fijo en el panel.</p>
+                  </div>
+
+                  <button class="btn-primary-modern btn-primary-modern--compact" type="button" (click)="abrirModalNuevoMetodo()">
+                    <i class="bi bi-plus-circle"></i>
+                    Agregar método
+                  </button>
+                </div>
+              </div>
+
+              <div class="payment-side-card">
+                <h4>Catálogo de bancos</h4>
+                <p>Centraliza bancos activos e inactivos. Los botones + de cada listado abren el formulario exacto según el tipo de banco.</p>
+
+                <div class="payment-catalog-summary-grid">
+                  <div class="payment-catalog-summary-card">
+                    <span>Nacionales</span>
+                    <strong>{{ getCantidadBancosActivosPorAlcance('national') }}</strong>
+                    <small>{{ getCantidadBancosInactivosPorAlcance('national') }} inactivos</small>
+                  </div>
+
+                  <div class="payment-catalog-summary-card payment-catalog-summary-card--alt">
+                    <span>Internacionales</span>
+                    <strong>{{ getCantidadBancosActivosPorAlcance('international') }}</strong>
+                    <small>{{ getCantidadBancosInactivosPorAlcance('international') }} inactivos</small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bank-group-card">
+                <div class="bank-group-card__header">
+                  <div class="bank-group-card__title-wrap">
+                    <h5>Bancos nacionales</h5>
+                    <span>{{ getCantidadBancosActivosPorAlcance('national') }}/{{ getCantidadBancosPorAlcance('national') }}</span>
+                  </div>
+
+                  <div class="bank-group-card__controls">
+                    <button
+                      class="icon-action-button icon-action-button--soft"
+                      type="button"
+                      (click)="alternarExpansionBanco('national')"
+                      [attr.aria-expanded]="estaSeccionBancoExpandida('national')"
+                      aria-label="Mostrar u ocultar bancos nacionales">
+                      <i class="bi" [ngClass]="estaSeccionBancoExpandida('national') ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+
+                    <button class="icon-action-button icon-action-button--soft" type="button" (click)="abrirModalNuevoBanco('national')">
+                      <i class="bi bi-plus-lg"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="bank-catalog-list" *ngIf="estaSeccionBancoExpandida('national')">
+                  <div class="bank-catalog-item" *ngFor="let banco of getBancosPorAlcance('national')" [class.bank-catalog-item--inactive]="!esBancoActivo(banco)">
+                    <div class="bank-catalog-item__meta">
+                      <strong>{{ banco.name }}</strong>
+                      <small>{{ banco.code }}</small>
+                    </div>
+
+                    <div class="bank-catalog-item__actions">
+                      <span class="bank-status-chip" [class.bank-status-chip--inactive]="!esBancoActivo(banco)">
+                        {{ esBancoActivo(banco) ? 'Activo' : 'Inactivo' }}
+                      </span>
+
+                      <button class="icon-action-button icon-action-button--soft" type="button" (click)="alternarEstadoBancoCatalogo(banco.code)">
+                        <i class="bi" [ngClass]="esBancoActivo(banco) ? 'bi-pause-circle' : 'bi-arrow-clockwise'"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bank-group-card bank-group-card--international">
+                <div class="bank-group-card__header">
+                  <div class="bank-group-card__title-wrap">
+                    <h5>Bancos internacionales</h5>
+                    <span>{{ getCantidadBancosActivosPorAlcance('international') }}/{{ getCantidadBancosPorAlcance('international') }}</span>
+                  </div>
+
+                  <div class="bank-group-card__controls">
+                    <button
+                      class="icon-action-button icon-action-button--soft"
+                      type="button"
+                      (click)="alternarExpansionBanco('international')"
+                      [attr.aria-expanded]="estaSeccionBancoExpandida('international')"
+                      aria-label="Mostrar u ocultar bancos internacionales">
+                      <i class="bi" [ngClass]="estaSeccionBancoExpandida('international') ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+
+                    <button class="icon-action-button icon-action-button--soft" type="button" (click)="abrirModalNuevoBanco('international')">
+                      <i class="bi bi-plus-lg"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="bank-catalog-list" *ngIf="estaSeccionBancoExpandida('international')">
+                  <div class="bank-catalog-item" *ngFor="let banco of getBancosPorAlcance('international')" [class.bank-catalog-item--inactive]="!esBancoActivo(banco)">
+                    <div class="bank-catalog-item__meta">
+                      <strong>{{ banco.name }}</strong>
+                      <small>{{ banco.code }}</small>
+                    </div>
+
+                    <div class="bank-catalog-item__actions">
+                      <span class="bank-status-chip" [class.bank-status-chip--inactive]="!esBancoActivo(banco)">
+                        {{ esBancoActivo(banco) ? 'Activo' : 'Inactivo' }}
+                      </span>
+
+                      <button class="icon-action-button icon-action-button--soft" type="button" (click)="alternarEstadoBancoCatalogo(banco.code)">
+                        <i class="bi" [ngClass]="esBancoActivo(banco) ? 'bi-pause-circle' : 'bi-arrow-clockwise'"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <div class="payment-actions-footer">
+            <div class="notification-form-actions notification-form-actions--compact">
+              <button class="btn-primary-modern" type="button" [disabled]="!puedeGuardarMetodosPago()" (click)="guardarMetodosPagoConfigurables()">
+                <i class="bi" [ngClass]="isSavingPaymentMethods ? 'bi-arrow-repeat spinning' : 'bi-save2'"></i>
+                {{ getTextoBotonMetodosPago() }}
+              </button>
+
+              <button class="btn-secondary-modern" type="button" [disabled]="!puedeDescartarCambiosMetodosPago()" (click)="descartarCambiosMetodosPago()">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                Descartar cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-modal-backdrop" *ngIf="mostrarModalNuevoMetodo || mostrarModalNuevoBanco" (click)="mostrarModalNuevoMetodo ? cerrarModalNuevoMetodo() : cerrarModalNuevoBanco()"></div>
+
+    <div class="config-modal" *ngIf="mostrarModalNuevoMetodo">
+      <div class="config-modal__dialog" (click)="$event.stopPropagation()">
+        <div class="config-modal__header">
+          <div>
+            <h3>Agregar método</h3>
+            <p>Configura una nueva opción de cobro y déjala lista para futuras operaciones.</p>
+          </div>
+
+          <button class="icon-action-button icon-action-button--soft" type="button" (click)="cerrarModalNuevoMetodo()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <div class="config-modal__body">
+          <div class="payment-side-form payment-side-form--modal">
+            <label class="payment-field">
+              <span>Nombre visible</span>
+              <input type="text" [(ngModel)]="nuevoMetodoPago.label" placeholder="Ej: Binance Pay">
+            </label>
+
+            <label class="payment-field">
+              <span>Descripción</span>
+              <input type="text" [(ngModel)]="nuevoMetodoPago.description" placeholder="Ej: Canal digital alterno">
+            </label>
+
+            <label class="payment-field">
+              <span>Moneda operativa</span>
+              <select [(ngModel)]="nuevoMetodoPago.currency">
+                <option value="VES">Bolívares</option>
+                <option value="USD">Dólares</option>
+                <option value="EUR">Euros</option>
+                <option value="MULTI">VES, USD y EUR</option>
+                <option value="CRYPTO">Cripto</option>
+                <option value="USDT">USDT</option>
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+              </select>
+            </label>
+
+            <label class="payment-inline-check payment-inline-check--modal">
+              <input type="checkbox" [(ngModel)]="nuevoMetodoPago.requiresReceiverAccount">
+              <span>Este método requiere banco receptor y datos del titular</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="config-modal__footer">
+          <button class="btn-secondary-modern" type="button" [disabled]="isSavingPaymentMethods" (click)="cerrarModalNuevoMetodo()">
+            Cancelar
+          </button>
+
+          <button class="btn-primary-modern" type="button" [disabled]="isSavingPaymentMethods" (click)="confirmarNuevoMetodo()">
+            <i class="bi" [ngClass]="isSavingPaymentMethods ? 'bi-arrow-repeat spinning' : 'bi-plus-circle'"></i>
+            Guardar método
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-modal" *ngIf="mostrarModalNuevoBanco">
+      <div class="config-modal__dialog config-modal__dialog--bank" (click)="$event.stopPropagation()">
+        <div class="config-modal__header">
+          <div>
+            <h3>{{ getTituloModalBanco() }}</h3>
+            <p>Agrega un banco al catálogo {{ modalBancoScope === 'international' ? 'internacional' : 'nacional' }} para disponibilizarlo en cuentas receptoras.</p>
+          </div>
+
+          <button class="icon-action-button icon-action-button--soft" type="button" (click)="cerrarModalNuevoBanco()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <div class="config-modal__body">
+          <div class="payment-bank-form-grid payment-bank-form-grid--modal">
+            <label class="payment-field">
+              <span>Código</span>
+              <input type="text" [(ngModel)]="nuevoBancoCatalogo.code" placeholder="Ej: 0102 o BOFAUS3N">
+            </label>
+
+            <label class="payment-field">
+              <span>Tipo de banco</span>
+              <select [(ngModel)]="nuevoBancoCatalogo.scope">
+                <option value="national">Nacional</option>
+                <option value="international">Internacional</option>
+              </select>
+            </label>
+
+            <label class="payment-field payment-field--wide">
+              <span>Nombre del banco</span>
+              <input type="text" [(ngModel)]="nuevoBancoCatalogo.name" placeholder="Ej: Banco de Venezuela">
+            </label>
+          </div>
+        </div>
+
+        <div class="config-modal__footer">
+          <button class="btn-secondary-modern" type="button" [disabled]="isSavingBankCatalog" (click)="cerrarModalNuevoBanco()">
+            Cancelar
+          </button>
+
+          <button class="btn-primary-modern" type="button" [disabled]="isSavingBankCatalog" (click)="confirmarNuevoBanco()">
+            <i class="bi" [ngClass]="isSavingBankCatalog ? 'bi-arrow-repeat spinning' : 'bi-building-add'"></i>
+            Guardar banco
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane" [class.active]="activeTab === 'avanzada'" id="avanzada-tab">
+      <div class="coming-soon">
+        <i class="bi bi-tools"></i>
+        <h3>Configuración Avanzada</h3>
+        <p>Opciones avanzadas estarán disponibles en futuras actualizaciones</p>
+      </div>
+    </div>
+
+    <div
+      class="payment-save-feedback"
+      *ngIf="paymentConfigNotice as aviso"
+      [class.payment-save-feedback--saving]="aviso.tone === 'saving'"
+      [class.payment-save-feedback--success]="aviso.tone === 'success'"
+      aria-live="polite"
+      aria-atomic="true">
+      <i class="bi" [ngClass]="aviso.tone === 'saving' ? 'bi-arrow-repeat spinning' : 'bi-check2-circle'"></i>
+      <span>{{ aviso.message }}</span>
+    </div>
+
+  </div>
+</div>

@@ -17,6 +17,7 @@ import { GeneralFunctions } from '../../general-functions/general-functions';
 export class ForgotPasswordComponent implements OnInit {
   forgotPasswordForm: FormGroup;
   isLoading = false;
+  infoExpanded = false;
 
   constructor(
     private fb: FormBuilder,
@@ -53,6 +54,10 @@ export class ForgotPasswordComponent implements OnInit {
   get email() {
     return this.forgotPasswordForm.get('email');
   }
+
+  toggleInfo() {
+  this.infoExpanded = !this.infoExpanded;
+}
 
   onSubmit() {
     if (this.forgotPasswordForm.invalid) {

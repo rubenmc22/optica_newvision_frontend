@@ -1,0 +1,123 @@
+<div class="container-fluid px-4 mt-4">
+  <div class="row">
+    <!-- Generar Venta -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="modern-card card-venta" 
+           [class.active]="esVistaActiva('generacion-de-ventas')"
+           (click)="cambiarVista('generacion-de-ventas')">
+        <div class="card-content">
+          <div class="card-icon">
+            <i class="fas fa-cash-register"></i>
+          </div>
+          <div class="card-info">
+            <div class="card-value">{{ totalVentas !== null ? totalVentas : '—' }}</div>
+            <div class="card-label">Generar Venta</div>
+            <div class="card-footer">
+              <span class="card-action">Carga al abrir módulo</span>
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+          <div class="card-glow"></div>
+          <!-- Indicador de selección -->
+          <div class="selection-indicator" *ngIf="esVistaActiva('generacion-de-ventas')">
+            <i class="fas fa-check"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Presupuesto -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="modern-card card-presupuesto" 
+           [class.active]="esVistaActiva('presupuestos')"
+           (click)="cambiarVista('presupuestos')">
+        <div class="card-content">
+          <div class="card-icon">
+            <i class="fas fa-file-invoice-dollar"></i>
+          </div>
+          <div class="card-info">
+            <div class="card-value">{{ totalPresupuestos !== null ? totalPresupuestos : '—' }}</div>
+            <div class="card-label">Presupuestos Activos</div>
+            <div class="card-footer">
+              <span class="card-action">Carga al abrir módulo</span>
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+          <div class="card-glow"></div>
+          <!-- Indicador de selección -->
+          <div class="selection-indicator" *ngIf="esVistaActiva('presupuestos')">
+            <i class="fas fa-check"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Historial -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="modern-card card-historial" 
+           [class.active]="esVistaActiva('historial-de-ventas')"
+           (click)="cambiarVista('historial-de-ventas')">
+        <div class="card-content">
+          <div class="card-icon">
+            <i class="fas fa-history"></i>
+          </div>
+          <div class="card-info">
+            <div class="card-value">{{ totalHistorialVentas !== null ? totalHistorialVentas : '—' }}</div>
+            <div class="card-label">Historial de Ventas</div>
+            <div class="card-footer">
+              <span class="card-action">Carga al abrir módulo</span>
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+          <div class="card-glow"></div>
+          <!-- Indicador de selección -->
+          <div class="selection-indicator" *ngIf="esVistaActiva('historial-de-ventas')">
+            <i class="fas fa-check"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cierre de Caja -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="modern-card card-caja" 
+           [class.active]="esVistaActiva('cierre-de-caja')"
+           (click)="cambiarVista('cierre-de-caja')">
+        <div class="card-content">
+          <div class="card-icon">
+            <i class="fas fa-lock"></i>
+          </div>
+          <div class="card-info">
+            <div class="card-value">{{ totalCierres !== null ? totalCierres : '—' }}</div>
+            <div class="card-label">Cierre de Caja</div>
+            <div class="card-footer">
+              <span class="card-action">Carga al abrir módulo</span>
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+          <div class="card-glow"></div>
+          <!-- Indicador de selección -->
+          <div class="selection-indicator" *ngIf="esVistaActiva('cierre-de-caja')">
+            <i class="fas fa-check"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel dinámico -->
+  <div class="card shadow-sm mt-1 mb-5">
+    <div *ngIf="estaVistaInstanciada('generacion-de-ventas')" [style.display]="esVistaActiva('generacion-de-ventas') ? '' : 'none'">
+      <app-generar-venta></app-generar-venta>
+    </div>
+    <div *ngIf="estaVistaInstanciada('presupuestos')" [style.display]="esVistaActiva('presupuestos') ? '' : 'none'">
+      <app-presupuesto></app-presupuesto>
+    </div>
+    <div *ngIf="estaVistaInstanciada('historial-de-ventas')" [style.display]="esVistaActiva('historial-de-ventas') ? '' : 'none'">
+      <app-historial-ventas></app-historial-ventas>
+    </div>
+    <div *ngIf="estaVistaInstanciada('cierre-de-caja')" [style.display]="esVistaActiva('cierre-de-caja') ? '' : 'none'">
+      <app-cierre-caja></app-cierre-caja>
+    </div>
+  </div>
+</div>

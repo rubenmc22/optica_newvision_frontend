@@ -1,0 +1,2427 @@
+﻿<!-- cierre-caja.component.html -->
+<div class="cierre-caja-container">
+
+  <!-- HEADER  -->
+  <div class="cierre-header">
+    <div class="header-content">
+      <div class="header-title">
+        <i class="bi bi-cash-stack"></i>
+        <div class="header-text">
+          <h1>Cierre de Caja Diario</h1>
+          <div class="header-subtitle">
+            <!-- Estado badge integrado como subtítulo -->
+            <span class="estado-badge estado-sin-iniciar" *ngIf="!cierreActual && esDiaActual && !tieneBloqueoPorCierrePendienteAnterior()">
+              <i class="bi bi-exclamation-circle"></i>
+              Caja sin iniciar
+            </span>
+            <span class="estado-badge estado-sin-cierre" *ngIf="!cierreActual && esDiaActual && tieneBloqueoPorCierrePendienteAnterior()">
+              <i class="bi bi-exclamation-triangle"></i>
+              Cierre pendiente anterior
+            </span>
+            <span class="estado-badge" [ngClass]="getEstadoClass(cierreActual?.estado, cierreActual?.fecha)" *ngIf="cierreActual">
+              <i class="bi" [ngClass]="getEstadoIconClass(cierreActual?.estado, cierreActual?.fecha)"></i>
+              {{ getEstadoTexto(cierreActual?.estado, cierreActual?.fecha) }}
+            </span>
+            <span class="estado-badge estado-sin-cierre" *ngIf="!cierreActual && !esDiaActual">
+              <i class="bi bi-calendar-x"></i>
+              Sin cierre registrado
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Selector de fecha mejorado -->
+        <div class="date-section">
+          <div class="fecha-selector">
+            <button class="btn-fecha" (click)="cambiarFecha(-1)" title="Día anterior">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <div class="fecha-display" (click)="abrirSelectorFecha()">
+              <i class="bi bi-calendar3"></i>
+              <span>{{ fechaSeleccionada | date:'EEEE, d MMMM yyyy' }}</span>
+            </div>
+            <button class="btn-fecha" (click)="cambiarFecha(1)" title="Día siguiente">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Grupo de acciones principales -->
+        <div class="actions-group">
+          <!-- Botones de acción -->
+          <div class="acciones-principales">
+            <button class="btn-moderno btn-primary" (click)="abrirModalInicioCaja()" *ngIf="!cierreActual && esDiaActual"
+              [disabled]="tieneBloqueoPorCierrePendienteAnterior()"
+              [title]="tieneBloqueoPorCierrePendienteAnterior() ? mensajeBloqueoCierrePendienteAnterior : 'Iniciar caja del día'">
+              <i class="bi bi-play-circle"></i>
+              <span>Iniciar Caja</span>
+            </button>
+
+            <button class="btn-moderno btn-success" (click)="abrirModalCierre()"
+              *ngIf="cierreActual?.estado === 'abierto' && esDiaActual">
+              <i class="bi bi-lock"></i>
+              <span>Cerrar Caja</span>
+            </button>
+
+            <div class="info-mensaje" [class.warning]="esCierrePendienteVisual(cierreActual)" *ngIf="cierreActual && !esDiaActual">
+              <i class="bi bi-info-circle"></i>
+              <span>{{ getTextoReferenciaFecha() }}</span>
+            </div>
+
+            <div class="info-mensaje warning" *ngIf="!cierreActual && !esDiaActual">
+              <i class="bi bi-exclamation-triangle"></i>
+              <span>Sin cierre registrado</span>
+            </div>
+
+            <button class="btn-moderno btn-info" (click)="abrirHistorial()">
+              <i class="bi bi-clock-history"></i>
+              <span>Historial</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI GRID -->
+  <div class="kpi-grid">
+    <!-- Tarjeta Efectivo Inicial - Solo visible si hay cierre -->
+    <div class="kpi-card glass-card" *ngIf="cierreActual">
+      <div class="kpi-icon" style="background: rgba(37, 99, 235, 0.15); color: #2563eb;">
+        <i class="bi bi-cash"></i>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Efectivo Inicial</span>
+        <div class="kpi-monedas">
+          <div class="moneda-item" *ngIf="cierreActual.efectivoInicialDetalle?.USD > 0">
+            <span class="moneda-simbolo">$</span>
+            <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.USD | number:'1.2-2' }}</span>
+          </div>
+          <div class="moneda-item" *ngIf="cierreActual.efectivoInicialDetalle?.EUR > 0">
+            <span class="moneda-simbolo">€</span>
+            <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.EUR | number:'1.2-2' }}</span>
+          </div>
+          <div class="moneda-item" *ngIf="cierreActual.efectivoInicialDetalle?.Bs > 0">
+            <span class="moneda-simbolo">Bs.</span>
+            <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.Bs | number:'1.2-2' }}</span>
+          </div>
+          <div class="moneda-item" *ngIf="!cierreActual.efectivoInicialDetalle?.USD && !cierreActual.efectivoInicialDetalle?.EUR && !cierreActual.efectivoInicialDetalle?.Bs">
+            <span class="moneda-valor text-muted">0.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Ventas - SIEMPRE visible -->
+    <div class="kpi-card glass-card">
+      <div class="kpi-icon" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">
+        <i class="bi bi-cart-check"></i>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Total Ventas</span>
+        <span class="kpi-value">{{ totalVentasKPI | currency }}</span>
+        <span class="kpi-trend">{{ transacciones.length }} transacciones</span>
+      </div>
+    </div>
+
+    <!-- Total Pendiente - SIEMPRE visible -->
+    <div class="kpi-card glass-card">
+      <div class="kpi-icon" style="background: rgba(234, 179, 8, 0.15); color: #eab308;">
+        <i class="bi bi-exclamation-triangle"></i>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Total Pendiente</span>
+        <span class="kpi-value">{{ totalPendientesKPI | currency }}</span>
+        <span class="kpi-trend">{{ analisisVentasPendientes.length }} ventas</span>
+      </div>
+    </div>
+
+    <!-- Neto del Día - SIEMPRE visible -->
+    <div class="kpi-card glass-card">
+      <div class="kpi-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+        <i class="bi bi-arrow-repeat"></i>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Neto del Día</span>
+        <span class="kpi-value">{{ netoDiaKPI | currency }}</span>
+        <span class="kpi-trend">Cobrado e ingresos - egresos</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <div class="content-grid">
+
+    <!-- COLUMNA IZQUIERDA: TRANSACCIONES -->
+    <div class="left-column">
+      <div class="panel glass-card panel-transacciones">
+        <div class="panel-header">
+          <div class="panel-title">
+            <i class="bi bi-list-check"></i>
+            <h3>Transacciones del Día</h3>
+          </div>
+          <div class="panel-actions">
+            <button class="btn-icon" (click)="refrescarTransaccionesDia()" [disabled]="cargandoDatos" title="Actualizar transacciones">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button class="btn-icon" (click)="abrirModalTransaccion()" title="Nueva transacción">
+              <i class="bi bi-plus-circle"></i>
+            </button>
+            <button class="btn-icon" (click)="mostrarFiltros = !mostrarFiltros" title="Filtrar">
+              <i class="bi bi-funnel"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filtros -->
+        <form class="filtros-panel" *ngIf="mostrarFiltros" [formGroup]="filtroForm">
+          <div class="filtros-panel__header">
+            <div>
+              <span class="filtros-panel__eyebrow">Vista operativa</span>
+              <h4 class="filtros-panel__title">Filtrar movimientos del cierre</h4>
+            </div>
+            <span class="filtros-panel__summary">{{ transaccionesFiltradas.length }} visibles</span>
+          </div>
+          <div class="filtros-grid">
+            <label class="filtro-field">
+              <span class="filtro-field__label">
+                <i class="bi bi-diagram-3"></i>
+                Tipo de movimiento
+              </span>
+              <select class="filtro-select" formControlName="tipo">
+                <option value="todos">Todos los movimientos</option>
+                <option *ngFor="let tipo of opcionesFiltroTipoTransaccion" [value]="tipo.valor">{{ tipo.label }}</option>
+              </select>
+            </label>
+
+            <label class="filtro-field">
+              <span class="filtro-field__label">
+                <i class="bi bi-wallet2"></i>
+                Metodo aplicado
+              </span>
+              <select class="filtro-select" formControlName="metodoPago">
+                <option value="todos">Todos los metodos configurados</option>
+                <option *ngFor="let metodo of getOpcionesFiltroMetodoPago()" [value]="metodo.valor">{{ metodo.label }}</option>
+              </select>
+            </label>
+          </div>
+        </form>
+
+        <!-- Lista de transacciones con altura dinámica -->
+        <div class="transacciones-list-wrapper">
+          <div class="transacciones-list">
+            <div *ngIf="transaccionesFiltradas.length === 0" class="empty-state">
+              <div class="empty-icon">
+                <i class="bi bi-receipt"></i>
+              </div>
+              <h4>No hay transacciones</h4>
+              <p>Los movimientos del dia apareceran aqui automaticamente</p>
+            </div>
+
+            <div class="transaccion-item" *ngFor="let trans of transaccionesFiltradas"
+              [class.transaccion-item--mobile]="isMobile"
+              [class.transaccion-item--desktop]="!isMobile"
+              [ngClass]="{'pendiente': trans.estado === 'pendiente', 'anulado': trans.estado === 'anulado'}">
+              <div class="transaccion-icon" [style.background]="getColorTipoTransaccion(trans.tipo) + '20'">
+                <i [class]="getIconoTipoTransaccion(trans.tipo)"
+                  [style.color]="getColorTipoTransaccion(trans.tipo)"></i>
+              </div>
+
+              <div class="transaccion-info">
+                <ng-container *ngIf="!isMobile; else transaccionMobileTemplate">
+                  <div class="transaccion-header">
+                    <div class="transaccion-heading-main">
+                      <span class="transaccion-desc" [title]="getTituloHistorialTransaccion(trans)">{{ getTituloHistorialTransaccion(trans) }}</span>
+                      <span class="badge-estado-pago badge-estado-pago--header" *ngIf="trans.numeroVenta"
+                        [style.background]="getColorEstadoPagoHistorial(trans) + '18'"
+                        [style.color]="getColorEstadoPagoHistorial(trans)">
+                        {{ getTextoEstadoPagoHistorial(trans) }}
+                      </span>
+                    </div>
+                    <span class="transaccion-monto" [ngClass]="{
+                        'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
+                        'text-danger': trans.tipo === 'egreso'
+                      }">
+                      {{ getTextoMontoHistorialTransaccion(trans) }}
+                    </span>
+                  </div>
+
+                  <div class="transaccion-subdesc transaccion-subdesc--sale" *ngIf="trans.numeroVenta; else descripcionMovimientoManual">
+                    <span>{{ getEtiquetaHistorialTransaccion(trans) }}</span>
+                    <span>{{ getTextoFormaPagoMetodoHistorial(trans) }}</span>
+                  </div>
+
+                  <ng-template #descripcionMovimientoManual>
+                    <div class="transaccion-subdesc" *ngIf="getDescripcionHistorialTransaccion(trans)">
+                      {{ getDescripcionHistorialTransaccion(trans) }}
+                    </div>
+                  </ng-template>
+
+                  <div class="transaccion-meta" *ngIf="!trans.numeroVenta">
+                    <span class="badge-tipo-movimiento" [style.background]="getColorHistorialTransaccion(trans) + '20'"
+                      [style.color]="getColorHistorialTransaccion(trans)">
+                      <i class="bi" [ngClass]="getIconoHistorialTransaccion(trans)"></i>
+                      {{ getEtiquetaHistorialTransaccion(trans) }}
+                    </span>
+                    <span class="badge-metodo" [style.background]="getColorMetodoPago(trans.metodoPago) + '20'"
+                      [style.color]="getColorMetodoPago(trans.metodoPago)">
+                      <i class="bi" [ngClass]="getIconoMetodoPago(trans.metodoPago)"></i>
+                      {{ formatearTipoPago(trans.metodoPago) }}
+                    </span>
+                    <span class="meta-item">
+                      <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
+                    </span>
+                    <span class="meta-item">
+                      <i class="bi bi-person"></i> {{ trans.usuario }}
+                    </span>
+                  </div>
+
+                  <div class="transaccion-detalle" *ngIf="trans.numeroVenta">
+                    <span class="venta-num">Venta #{{ trans.numeroVenta }}</span>
+                    <span class="meta-item meta-item--sale">
+                      <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
+                    </span>
+                    <span class="meta-item meta-item--sale">
+                      <i class="bi bi-person"></i> {{ trans.usuario }}
+                    </span>
+                    <span class="abono-resumen" *ngIf="esAbonoEnHistorial(trans)">{{ getDetalleAbonoHistorial(trans) }}</span>
+                  </div>
+                </ng-container>
+
+                <ng-template #transaccionMobileTemplate>
+                  <div class="transaccion-mobile-card">
+                    <div class="transaccion-mobile-card__top">
+                      <div class="transaccion-mobile-card__title-block">
+                        <span class="transaccion-mobile-card__title" [title]="getTituloHistorialTransaccion(trans)">{{ getTituloHistorialTransaccion(trans) }}</span>
+                        <span class="transaccion-mobile-card__status" *ngIf="trans.numeroVenta"
+                          [style.background]="getColorEstadoPagoHistorial(trans) + '18'"
+                          [style.color]="getColorEstadoPagoHistorial(trans)">
+                          {{ getTextoEstadoPagoHistorial(trans) }}
+                        </span>
+                      </div>
+
+                      <span class="transaccion-mobile-card__amount" [ngClass]="{
+                          'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
+                          'text-danger': trans.tipo === 'egreso'
+                        }">
+                        {{ getTextoMontoHistorialTransaccion(trans) }}
+                      </span>
+                    </div>
+
+                    <div class="transaccion-mobile-card__summary" *ngIf="trans.numeroVenta; else transaccionMobileManualTemplate">
+                      <span class="transaccion-mobile-card__chip">{{ getEtiquetaHistorialTransaccion(trans) }}</span>
+                      <span class="transaccion-mobile-card__chip transaccion-mobile-card__chip--soft">{{ getTextoFormaPagoMetodoHistorial(trans) }}</span>
+                    </div>
+
+                    <ng-template #transaccionMobileManualTemplate>
+                      <div class="transaccion-mobile-card__summary transaccion-mobile-card__summary--manual" *ngIf="getDescripcionHistorialTransaccion(trans)">
+                        <span class="transaccion-mobile-card__note">{{ getDescripcionHistorialTransaccion(trans) }}</span>
+                      </div>
+
+                      <div class="transaccion-mobile-card__meta" *ngIf="!trans.numeroVenta">
+                        <div class="transaccion-mobile-card__meta-row">
+                          <span class="badge-tipo-movimiento" [style.background]="getColorHistorialTransaccion(trans) + '20'"
+                            [style.color]="getColorHistorialTransaccion(trans)">
+                            <i class="bi" [ngClass]="getIconoHistorialTransaccion(trans)"></i>
+                            {{ getEtiquetaHistorialTransaccion(trans) }}
+                          </span>
+                          <span class="badge-metodo" [style.background]="getColorMetodoPago(trans.metodoPago) + '20'"
+                            [style.color]="getColorMetodoPago(trans.metodoPago)">
+                            <i class="bi" [ngClass]="getIconoMetodoPago(trans.metodoPago)"></i>
+                            {{ formatearTipoPago(trans.metodoPago) }}
+                          </span>
+                        </div>
+
+                        <div class="transaccion-mobile-card__meta-row">
+                          <span class="meta-item">
+                            <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
+                          </span>
+                          <span class="meta-item">
+                            <i class="bi bi-person"></i> {{ trans.usuario }}
+                          </span>
+                        </div>
+                      </div>
+                    </ng-template>
+
+                    <div class="transaccion-mobile-card__detail" *ngIf="trans.numeroVenta">
+                      <span class="venta-num">Venta #{{ trans.numeroVenta }}</span>
+
+                      <div class="transaccion-mobile-card__meta-row">
+                        <span class="meta-item meta-item--sale">
+                          <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
+                        </span>
+                        <span class="meta-item meta-item--sale">
+                          <i class="bi bi-person"></i> {{ trans.usuario }}
+                        </span>
+                      </div>
+
+                      <span class="abono-resumen" *ngIf="esAbonoEnHistorial(trans)">{{ getDetalleAbonoHistorial(trans) }}</span>
+                    </div>
+                  </div>
+                </ng-template>
+
+                <div class="transaccion-actions-row" *ngIf="trans.numeroVenta && puedeExpandirCobrosVenta(trans)">
+                  <button
+                    type="button"
+                    class="btn-toggle-cobros"
+                    (click)="toggleDetalleCobrosVenta(trans, $event)">
+                    <i class="bi" [ngClass]="esDetalleCobrosVentaExpandido(trans) ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    {{ esDetalleCobrosVentaExpandido(trans) ? 'Ocultar cobros del dia' : ('Ver cobros del dia (' + getCantidadAbonosCobroDia(trans) + ')') }}
+                  </button>
+                </div>
+
+                <div class="detalle-cobros-dia" *ngIf="esDetalleCobrosVentaExpandido(trans)">
+                  <div class="detalle-cobros-dia__header">
+                    <div>
+                      <span class="detalle-cobros-dia__eyebrow">Detalle del dia</span>
+                      <strong>Cobros aplicados a esta venta durante el cierre</strong>
+                    </div>
+                    <span class="detalle-cobros-dia__total">{{ (trans.montoPagado || trans.monto) | currency }}</span>
+                  </div>
+
+                  <div class="detalle-cobros-dia__list">
+                    <div class="detalle-cobro-item" *ngFor="let cobro of trans.cobrosDelDia">
+                      <div class="detalle-cobro-item__icon" [class.is-abono]="cobro.tipo === 'abono'">
+                        <i class="bi" [ngClass]="cobro.tipo === 'abono' ? 'bi-calendar-check' : 'bi-cash-stack'"></i>
+                      </div>
+
+                      <div class="detalle-cobro-item__content">
+                        <div class="detalle-cobro-item__topline">
+                          <strong>{{ cobro.etiqueta }}</strong>
+                          <span>{{ getMontoCobroDiaSistema(cobro) | currency }}</span>
+                        </div>
+
+                        <div class="detalle-cobro-item__meta">
+                          <span>
+                            <i class="bi bi-clock"></i>
+                            {{ cobro.fecha | date:'HH:mm' }}
+                          </span>
+                          <span>
+                            <i class="bi bi-wallet2"></i>
+                            {{ getTextoResumenMetodosCobro(cobro) }}
+                          </span>
+                          <span *ngIf="cobro.deudaPendiente !== undefined && cobro.deudaPendiente !== null">
+                            <i class="bi bi-hourglass-split"></i>
+                            Pendiente: {{ cobro.deudaPendiente | currency:(trans.monedaOriginal || trans.moneda || 'USD'):'symbol':'1.2-2' }}
+                          </span>
+                        </div>
+
+                        <p class="detalle-cobro-item__note" *ngIf="cobro.observaciones">{{ cobro.observaciones }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="transaccion-actions">
+                <button class="btn-action" (click)="abrirModalTransaccion(trans)" *ngIf="!trans.numeroVenta"
+                  title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn-action" (click)="eliminarTransaccion(trans)" *ngIf="!trans.numeroVenta && usaModoDummy"
+                  title="Eliminar">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: RESUMEN Y ESTADO DE CAJA -->
+    <div class="right-column">
+
+      <!-- PANEL DE CIERRE - -->
+      <div class="cierre-panel glass-card" *ngIf="cierreActual; else sinCierre">
+        <div class="panel-header">
+          <div class="panel-title">
+            <i class="bi bi-safe"></i>
+            <h3>Estado de Caja</h3>
+            <span class="badge-estado" [ngClass]="getEstadoClass(cierreActual.estado, cierreActual.fecha)">
+              <i class="bi" [ngClass]="getEstadoIconClass(cierreActual.estado, cierreActual.fecha)"></i>
+              {{ getEstadoTexto(cierreActual.estado, cierreActual.fecha) }}
+            </span>
+          </div>
+          <div class="panel-actions" *ngIf="cierreActual.estado === 'abierto'">
+            <button class="btn-sm btn-outline" (click)="abrirModalCierre()">
+              <i class="bi bi-lock"></i> {{ esCierrePendienteVisual(cierreActual) ? 'Conciliar y cerrar' : 'Cerrar Caja' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="cierre-detalle">
+          
+          <!-- ========== VISTA PARA CAJA ABIERTA ========== -->
+          <div *ngIf="cierreActual.estado === 'abierto'">
+            <!-- Resumen de ventas del día (solo informativo) -->
+            <div class="cierre-resumen-grid">
+              <div class="cierre-resumen-item">
+                <span class="label">Efectivo Inicial</span>
+                <div class="value-monedas-vertical">
+                  <div class="moneda-linea" *ngIf="cierreActual.efectivoInicialDetalle?.USD > 0">
+                    <span class="moneda-simbolo">$</span>
+                    <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.USD | number:'1.2-2' }}</span>
+                    <span class="moneda-nombre">USD</span>
+                  </div>
+                  <div class="moneda-linea" *ngIf="cierreActual.efectivoInicialDetalle?.EUR > 0">
+                    <span class="moneda-simbolo">€</span>
+                    <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.EUR | number:'1.2-2' }}</span>
+                    <span class="moneda-nombre">EUR</span>
+                  </div>
+                  <div class="moneda-linea" *ngIf="cierreActual.efectivoInicialDetalle?.Bs > 0">
+                    <span class="moneda-simbolo">Bs.</span>
+                    <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.Bs | number:'1.2-2' }}</span>
+                    <span class="moneda-nombre">VES</span>
+                  </div>
+                  <div class="moneda-linea text-muted" *ngIf="!cierreActual.efectivoInicialDetalle?.USD && !cierreActual.efectivoInicialDetalle?.EUR && !cierreActual.efectivoInicialDetalle?.Bs">
+                    <span>0.00</span>
+                  </div>
+                </div>
+              </div>
+              <div class="cierre-resumen-item">
+                <span class="label">Total Ventas</span>
+                <span class="value text-success">{{ totalVentasKPI | currency }}</span>
+              </div>
+              <div class="cierre-resumen-item">
+                <span class="label">Total Egresos</span>
+                <span class="value text-danger">{{ getTotalEgresos() | currency }}</span>
+              </div>
+              <div class="cierre-resumen-item highlight">
+                <span class="label">Neto del Día</span>
+                <span class="value fw-bold">{{ getNetoDia() | currency }}</span>
+              </div>
+            </div>
+
+            <!-- Desglose de ventas por método (informativo) -->
+            <div class="ventas-metodos-info">
+              <div class="info-row">
+                <span class="info-label">Ventas en Efectivo:</span>
+                <span class="info-value">{{ analisisMetodosPago.efectivo.total | currency }}</span>
+                <span class="info-note">(ingresa físicamente a caja)</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Otros métodos:</span>
+                <span class="info-value">{{ (totalVentasKPI - analisisMetodosPago.efectivo.total) | currency }}</span>
+                <span class="info-note">(punto, transferencia, pago móvil, zelle)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ========== VISTA PARA CIERRE (cuando se ingresan valores reales) ========== -->
+          <div *ngIf="cierreActual.estado === 'cerrado' || cierreActual.estado === 'revisado'">
+            
+            <!-- Cálculo del EFECTIVO TEÓRICO (solo efectivo físico) -->
+            <div class="seccion-titulo-pequeno">
+              <i class="bi bi-cash"></i> Efectivo Físico en Caja
+            </div>
+            <div class="cierre-resumen-grid">
+              <div class="cierre-resumen-item">
+                <span class="label">Efectivo Inicial</span>
+                <div class="value-monedas">
+                  <span *ngIf="cierreActual.efectivoInicialDetalle?.USD > 0">$ {{ cierreActual.efectivoInicialDetalle.USD | number:'1.2-2' }}</span>
+                  <span *ngIf="cierreActual.efectivoInicialDetalle?.EUR > 0">€ {{ cierreActual.efectivoInicialDetalle.EUR | number:'1.2-2' }}</span>
+                  <span *ngIf="cierreActual.efectivoInicialDetalle?.Bs > 0">Bs. {{ cierreActual.efectivoInicialDetalle.Bs | number:'1.2-2' }}</span>
+                </div>
+              </div>
+              <div class="cierre-resumen-item">
+                <span class="label">+ Ventas Efectivo</span>
+                <span class="value text-success">{{ cierreActual.ventasEfectivo | currency }}</span>
+              </div>
+              <div class="cierre-resumen-item">
+                <span class="label">- Egresos Efectivo</span>
+                <span class="value text-danger">{{ getEgresosEfectivo() | currency }}</span>
+              </div>
+              <div class="cierre-resumen-item highlight">
+                <span class="label">= Efectivo Teórico</span>
+                <span class="value fw-bold">{{ getEfectivoFinalTeorico() | currency }}</span>
+              </div>
+            </div>
+
+            <!-- Comparación con lo REAL contado -->
+            <div class="diferencia-destacada" [ngClass]="{
+              'positiva': getDiferenciaTotal() > 0,
+              'negativa': getDiferenciaTotal() < 0,
+              'cero': getDiferenciaTotal() === 0
+            }">
+              <div class="diferencia-icon">
+                <i class="bi" [ngClass]="{
+                  'bi-arrow-up-circle': getDiferenciaTotal() > 0,
+                  'bi-arrow-down-circle': getDiferenciaTotal() < 0,
+                  'bi-check-circle': getDiferenciaTotal() === 0
+                }"></i>
+              </div>
+              <div class="diferencia-info">
+                <span class="diferencia-label">Diferencia General del Cierre</span>
+                <span class="diferencia-valor">{{ getDiferenciaTotal() | currency }}</span>
+                <span class="diferencia-nota">Incluye efectivo y métodos electrónicos conciliados</span>
+              </div>
+            </div>
+
+            <div class="diferencia-breakdown" *ngIf="getDesgloseDiferenciasActual().length > 0">
+              <span class="diferencia-breakdown__title">Desglose</span>
+              <div class="diferencia-breakdown__chips">
+                <div class="diferencia-breakdown__chip" *ngFor="let item of getDesgloseDiferenciasActual()">
+                  <span class="diferencia-breakdown__label">{{ item.label }}</span>
+                  <span class="diferencia-breakdown__value" [ngClass]="{
+                    'text-success': item.valor > 0,
+                    'text-danger': item.valor < 0,
+                    'text-secondary': item.valor === 0
+                  }">{{ item.valor | currency }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resumen general de todos los métodos -->
+            <div class="seccion-titulo-pequeno mt-3">
+              <i class="bi bi-graph-up"></i> Resumen General de Ventas
+            </div>
+            <div class="ventas-metodos-info">
+              <div class="info-row">
+                <span class="info-label">Total Ventas (todos los métodos):</span>
+                <span class="info-value">{{ totalVentasKPI | currency }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Total Egresos:</span>
+                <span class="info-value text-danger">{{ getTotalEgresos() | currency }}</span>
+              </div>
+              <div class="info-row total">
+                <span class="info-label">Neto del Día:</span>
+                <span class="info-value fw-bold">{{ getNetoDia() | currency }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Información de apertura (siempre visible) -->
+          <div class="fecha-info">
+            <div class="info-item">
+              <i class="bi bi-person"></i>
+              <span>Apertura: {{ cierreActual.usuarioApertura }} - {{ cierreActual.fechaApertura | date:'HH:mm' }}</span>
+            </div>
+            <div class="info-item" *ngIf="cierreActual.fechaCierre">
+              <i class="bi bi-person-check"></i>
+              <span>Cierre: {{ cierreActual.usuarioCierre }} - {{ cierreActual.fechaCierre | date:'HH:mm' }}</span>
+            </div>
+          </div>
+
+          <!-- Observaciones -->
+          <div class="observaciones" *ngIf="cierreActual.observaciones">
+            <i class="bi bi-chat-text"></i>
+            <span>{{ cierreActual.observaciones }}</span>
+          </div>
+
+        </div>
+      </div>
+
+      <ng-template #sinCierre>
+        <div class="cierre-panel glass-card sin-cierre">
+          <div class="panel-header">
+            <div class="panel-title">
+              <i class="bi bi-exclamation-circle"></i>
+              <h3>Estado de Caja</h3>
+            </div>
+            <div class="panel-actions">
+              <button class="btn-sm btn-primary" (click)="abrirModalInicioCaja()"
+                [disabled]="tieneBloqueoPorCierrePendienteAnterior()"
+                [title]="tieneBloqueoPorCierrePendienteAnterior() ? mensajeBloqueoCierrePendienteAnterior : 'Iniciar caja'">
+                <i class="bi bi-play-circle"></i> Iniciar Caja
+              </button>
+            </div>
+          </div>
+          <div class="cierre-detalle text-center">
+            <i class="bi bi-cash-stack" style="font-size: 3rem; color: #94a3b8;"></i>
+            <h4>{{ tieneBloqueoPorCierrePendienteAnterior() ? 'Cierre pendiente anterior' : 'Caja no iniciada' }}</h4>
+            <p *ngIf="tieneBloqueoPorCierrePendienteAnterior(); else mensajeInicioCaja">
+              {{ mensajeBloqueoCierrePendienteAnterior }}
+            </p>
+            <ng-template #mensajeInicioCaja>
+              <p>Haz clic en "Iniciar Caja" para comenzar la jornada.</p>
+            </ng-template>
+          </div>
+        </div>
+      </ng-template>
+
+      <!-- PANEL DE ANÁLISIS DE VENTAS -->
+      <div class="panel glass-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <i class="bi bi-pie-chart"></i>
+            <h3>Análisis de Ventas</h3>
+          </div>
+        </div>
+
+        <div class="resumen-tabs">
+          <button class="tab-btn" [class.active]="tabActivo === 'tipos'" (click)="tabActivo = 'tipos'">
+            <i class="bi bi-grid"></i> Tipos
+          </button>
+          <button class="tab-btn" [class.active]="tabActivo === 'metodos'" (click)="tabActivo = 'metodos'">
+            <i class="bi bi-credit-card"></i> Métodos
+          </button>
+          <button class="tab-btn" [class.active]="tabActivo === 'formas'" (click)="tabActivo = 'formas'">
+            <i class="bi bi-wallet2"></i> Formas
+          </button>
+          <button class="tab-btn" [class.active]="tabActivo === 'pendientes'" (click)="tabActivo = 'pendientes'">
+            <i class="bi bi-exclamation-triangle"></i> Pendientes
+          </button>
+        </div>
+
+        <!-- Contenedor con scroll vertical -->
+        <div class="analisis-scroll-container">
+          <!-- TAB: TIPOS DE VENTA -->
+          <div class="tab-content" *ngIf="tabActivo === 'tipos'">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-icon bg-primary-light">
+                  <i class="bi bi-person-badge"></i>
+                </div>
+                <div class="stat-info">
+                  <span class="stat-label">Solo Consulta</span>
+                  <span class="stat-value">{{ totalConsultas | currency }}</span>
+                  <span class="stat-count">{{ analisisVentas.soloConsulta.cantidad }} ventas</span>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon bg-success-light">
+                  <i class="bi bi-journal-medical"></i>
+                </div>
+                <div class="stat-info">
+                  <span class="stat-label">Consulta + Productos</span>
+                  <span class="stat-value">{{ totalConsultaProductos | currency }}</span>
+                  <span class="stat-count">{{ analisisVentas.consultaProductos.cantidad }} ventas</span>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon bg-warning-light">
+                  <i class="bi bi-cart"></i>
+                </div>
+                <div class="stat-info">
+                  <span class="stat-label">Solo Productos</span>
+                  <span class="stat-value">{{ totalSoloProductos | currency }}</span>
+                  <span class="stat-count">{{ analisisVentas.soloProductos.cantidad }} ventas</span>
+                </div>
+              </div>
+            </div>
+
+           <!-- <div class="chart-container">
+              <div class="progress-bars">
+                <div class="progress-item">
+                  <div class="progress-bar-fill" [style.width.%]="(totalConsultas / getTotalVentas() * 100) || 0"
+                    style="background: #2563eb;"></div>
+                </div>
+                <div class="progress-item">
+                  <div class="progress-bar-fill"
+                    [style.width.%]="(totalConsultaProductos / getTotalVentas() * 100) || 0"
+                    style="background: #22c55e;"></div>
+                </div>
+                <div class="progress-item">
+                  <div class="progress-bar-fill" [style.width.%]="(totalSoloProductos / getTotalVentas() * 100) || 0"
+                    style="background: #eab308;"></div>
+                </div>
+              </div>
+              <div class="chart-legend">
+                <div class="legend-item"><span class="color-dot" style="background: #2563eb;"></span>Solo Consulta
+                </div>
+                <div class="legend-item"><span class="color-dot" style="background: #22c55e;"></span>Consulta +
+                  Productos
+                </div>
+                <div class="legend-item"><span class="color-dot" style="background: #eab308;"></span>Solo Productos
+                </div>
+              </div>
+            </div>-->
+          </div>
+
+          <!-- TAB: MÉTODOS DE PAGO -->
+          <div class="tab-content" *ngIf="tabActivo === 'metodos'">
+            <div class="metodo-seccion">
+              <h4 class="seccion-titulo">
+                <i class="bi bi-cash"></i> Efectivo
+                <span class="seccion-total">{{ analisisMetodosPago.efectivo.total | currency }}</span>
+              </h4>
+              <div class="monedas-grid">
+                <div class="moneda-card" *ngIf="tieneMovimientoEfectivoMoneda('USD')"><span class="moneda-simbolo">$</span><span class="moneda-monto">{{
+                    analisisMetodosPago.efectivo.porMoneda.dolar
+                    | currency:'USD':'symbol':'1.2-2' }}</span><span class="moneda-label">Dólares</span></div>
+                <div class="moneda-card" *ngIf="tieneMovimientoEfectivoMoneda('EUR')"><span class="moneda-simbolo">€</span><span class="moneda-monto">{{
+                    analisisMetodosPago.efectivo.porMoneda.euro |
+                    currency:'EUR':'symbol':'1.2-2' }}</span><span class="moneda-label">Euros</span></div>
+                <div class="moneda-card" *ngIf="tieneMovimientoEfectivoMoneda('VES')"><span class="moneda-simbolo">Bs.</span><span class="moneda-monto">{{
+                    analisisMetodosPago.efectivo.porMoneda.bolivar | currency:'VES':'symbol':'1.2-2' }}</span><span
+                    class="moneda-label">Bolívares</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="metodo-seccion" *ngIf="tieneMovimientosMetodoCierre('punto')">
+              <h4 class="seccion-titulo"><i class="bi bi-credit-card"></i> Punto de Venta <span class="seccion-total">{{
+                  analisisMetodosPago.punto.total | currency }}</span></h4>
+              <div class="bancos-grid">
+                <div class="banco-card" *ngFor="let banco of getDestinosMetodo('punto')">
+                  <div class="banco-header">
+                    <i class="bi bi-bank"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(banco) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(banco)">{{ getDetalleDestino(banco) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(banco)">{{ getReferenciaDestino(banco) }}</span>
+                    </div>
+                  </div>
+                  <div class="banco-body banco-body-resumen"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                      class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="metodo-seccion" *ngIf="tieneMovimientosMetodoCierre('pagomovil')">
+              <h4 class="seccion-titulo"><i class="bi bi-phone"></i> Pago Móvil <span class="seccion-total">{{
+                  analisisMetodosPago.pagomovil.total | currency }}</span></h4>
+              <div class="bancos-grid">
+                <div class="banco-card" *ngFor="let banco of getDestinosMetodo('pagomovil')">
+                  <div class="banco-header">
+                    <i class="bi bi-bank"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(banco) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(banco)">{{ getDetalleDestino(banco) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(banco)">{{ getReferenciaDestino(banco) }}</span>
+                    </div>
+                  </div>
+                  <div class="banco-body banco-body-resumen"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                      class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="metodo-seccion" *ngIf="tieneMovimientosMetodoCierre('transferencia')">
+              <h4 class="seccion-titulo"><i class="bi bi-bank2"></i> Transferencias <span class="seccion-total">{{
+                  analisisMetodosPago.transferencia.total | currency }}</span></h4>
+              <div class="bancos-grid">
+                <div class="banco-card" *ngFor="let banco of getDestinosMetodo('transferencia')">
+                  <div class="banco-header">
+                    <i class="bi bi-bank"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(banco) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(banco)">{{ getDetalleDestino(banco) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(banco)">{{ getReferenciaDestino(banco) }}</span>
+                    </div>
+                  </div>
+                  <div class="banco-body banco-body-resumen"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                      class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="metodo-seccion" *ngIf="tieneMovimientosMetodoCierre('zelle')">
+              <h4 class="seccion-titulo"><i class="bi bi-globe2"></i> Zelle <span class="seccion-total">{{
+                  analisisMetodosPago.zelle.total | currency }}</span></h4>
+              <div class="bancos-grid" *ngIf="getDestinosMetodo('zelle').length > 0">
+                <div class="banco-card" *ngFor="let banco of getDestinosMetodo('zelle')">
+                  <div class="banco-header">
+                    <i class="bi bi-globe2"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(banco) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(banco)">{{ getDetalleDestino(banco) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(banco)">{{ getReferenciaDestino(banco) }}</span>
+                    </div>
+                  </div>
+                  <div class="banco-body banco-body-resumen"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                      class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: FORMAS DE PAGO -->
+          <div class="tab-content" *ngIf="tabActivo === 'formas'">
+            <div class="formas-grid">
+              <div class="forma-card contado">
+                <div class="forma-icon"><i class="bi bi-cash-stack"></i></div>
+                <div class="forma-content"><span class="forma-label">Contado</span><span class="forma-monto">{{
+                    analisisFormasPago.contado.total | currency }}</span><span class="forma-count">{{
+                    analisisFormasPago.contado.cantidad }} ventas</span></div>
+              </div>
+
+              <div class="forma-card abono">
+                <div class="forma-icon"><i class="bi bi-calendar-check"></i></div>
+                <div class="forma-content"><span class="forma-label">Abono</span><span class="forma-monto">{{
+                    analisisFormasPago.abono.total
+                    | currency }}</span>
+                  <div class="forma-detalle"><span>Abonado: {{ analisisFormasPago.abono.montoAbonado | currency
+                      }}</span><span>Pendiente: {{ analisisFormasPago.abono.deudaPendiente | currency }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="forma-card cashea">
+                <div class="forma-icon"><i class="bi bi-arrow-repeat"></i></div>
+                <div class="forma-content"><span class="forma-label">Cashea</span><span class="forma-monto">{{
+                    analisisFormasPago.cashea.total
+                    | currency }}</span>
+                  <div class="forma-detalle"><span>Inicial: {{ analisisFormasPago.cashea.montoInicial | currency
+                      }}</span><span>Pendiente: {{ analisisFormasPago.cashea.deudaPendiente | currency }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="forma-card pendiente" *ngIf="analisisFormasPago.deContadoPendiente.total > 0">
+                <div class="forma-icon"><i class="bi bi-hourglass-split"></i></div>
+                <div class="forma-content"><span class="forma-label">Pendiente por Pago</span><span
+                    class="forma-monto text-danger">{{ analisisFormasPago.deContadoPendiente.total | currency
+                    }}</span><span class="forma-count">{{
+                    analisisFormasPago.deContadoPendiente.cantidad }} ventas sin cobrar</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: VENTAS PENDIENTES -->
+          <div class="tab-content" *ngIf="tabActivo === 'pendientes'">
+            <div class="pendientes-list" *ngIf="analisisVentasPendientes.length > 0; else sinPendientes">
+              <div class="pendiente-card" *ngFor="let venta of analisisVentasPendientes">
+                <div class="pendiente-header"><span class="venta-num">#{{ venta.numeroVenta }}</span><span
+                    class="venta-cliente">{{ venta.cliente }}</span><span class="venta-fecha">{{ venta.fecha |
+                    date:'dd/MM/yyyy' }}</span></div>
+                <div class="pendiente-body">
+                  <div class="pendiente-monto"><span class="label">Total:</span><span class="value">{{ venta.total |
+                      currency }}</span></div>
+                  <div class="pendiente-deuda"><span class="label">Deuda:</span><span class="value text-danger">{{
+                      venta.deuda | currency }}</span></div>
+                </div>
+                <div class="pendiente-footer"><span class="badge-forma">{{ venta.formaPago }}</span><button
+        class="btn-small" (click)="verDetalleVenta(venta.numeroVenta)"><i class="bi bi-eye"></i> Ver
+        detalles</button></div>
+              </div>
+            </div>
+            <ng-template #sinPendientes>
+              <div class="empty-state small"><i class="bi bi-check-circle text-success"></i>
+                <p>No hay ventas pendientes de pago</p>
+              </div>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="cierre-footer">
+    <div class="footer-info">
+      <i class="bi bi-info-circle"></i>
+      <span>Última sincronización del resumen: {{ ultimaActualizacion | date:'HH:mm:ss' }}</span>
+    </div>
+
+    <div class="footer-actions">
+      <button class="btn-outline" (click)="imprimirResumen()" [disabled]="!puedeEmitirReporteActual()">
+        <i class="bi bi-printer"></i> Imprimir
+      </button>
+
+      <button class="btn-primary" (click)="guardarCierre()" *ngIf="cierreActual?.estado === 'abierto' && usaModoDummy">
+        <i class="bi bi-save"></i> Guardar Cambios
+      </button>
+
+      <!-- Botón de Exportar/Importar con Menú Desplegable -->
+      <div class="export-button-container">
+        <button class="btn-export-excel" (click)="toggleExportMenu()" [class.active]="mostrarMenuExport">
+          <i class="bi bi-file-earmark-arrow-down"></i>
+          Exportar/Importar
+          <i class="bi bi-chevron-down ms-1" [class.rotated]="mostrarMenuExport"></i>
+        </button>
+
+        <!-- Menú desplegable - Abre hacia arriba -->
+        <div class="export-dropdown" *ngIf="mostrarMenuExport">
+          <div class="dropdown-header">
+            <i class="bi bi-download"></i>
+            Exportar datos
+          </div>
+          
+          <button class="dropdown-item" (click)="exportarReportePDF()" [disabled]="!puedeEmitirReporteActual()">
+            <i class="bi bi-filetype-pdf text-danger"></i>
+            <div class="item-content">
+              <span class="item-title">Exportar a PDF</span>
+              <small class="item-subtitle">Reporte completo del cierre</small>
+            </div>
+          </button>
+          
+          <button class="dropdown-item" (click)="exportarExcel()" [disabled]="!puedeEmitirReporteActual()">
+            <i class="bi bi-filetype-xlsx text-success"></i>
+            <div class="item-content">
+              <span class="item-title">Exportar a Excel</span>
+              <small class="item-subtitle">Datos para análisis financiero</small>
+            </div>
+          </button>
+          
+          <button class="dropdown-item" (click)="exportarReporteJSON()" [disabled]="!puedeEmitirReporteActual()">
+            <i class="bi bi-filetype-json text-warning"></i>
+            <div class="item-content">
+              <span class="item-title">Exportar a JSON</span>
+              <small class="item-subtitle">Formato para respaldo</small>
+            </div>
+          </button>
+          
+          <div class="dropdown-divider"></div>
+          
+          <div class="dropdown-header">
+            <i class="bi bi-upload"></i>
+            Importar datos
+          </div>
+          
+          <button class="dropdown-item" (click)="importarRespaldo()">
+            <i class="bi bi-folder2-open text-info"></i>
+            <div class="item-content">
+              <span class="item-title">Importar respaldo</span>
+              <small class="item-subtitle">Cargar cierre desde archivo JSON</small>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Inicio Caja Rediseñado -->
+<div class="modal fade" id="inicioCajaModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-xl">
+      
+      <!-- Header compacto con gradiente -->
+      <div class="modal-header-compact">
+        <div class="header-icon-wrapper">
+          <div class="header-icon">
+            <i class="bi bi-play-circle-fill"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0">Iniciar Caja</h5>
+            <p class="modal-subtitle mb-0">Apertura de jornada laboral</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-moderno" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      
+      <form [formGroup]="inicioCajaForm" (ngSubmit)="iniciarCaja()">
+        <div class="modal-body p-4">
+          
+          <!-- Info rápida en chips -->
+          <div class="info-chips mb-4">
+            <div class="chip">
+              <i class="bi bi-building"></i>
+              <span>{{ sedeActual?.nombre || 'Sin sede' }}</span>
+            </div>
+            <div class="chip">
+              <i class="bi bi-person"></i>
+              <span>{{ currentUser?.nombre?.split(' ')[0] || 'Usuario' }}</span>
+            </div>
+            <div class="chip">
+              <i class="bi bi-calendar3"></i>
+              <span>{{ fechaSeleccionada | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="chip">
+              <i class="bi bi-clock"></i>
+              <span>{{ fechaSeleccionada | date:'HH:mm' }}</span>
+            </div>
+          </div>
+
+          <!-- Título de sección -->
+          <div class="section-title">
+            <i class="bi bi-cash-stack"></i>
+            <span>Efectivo inicial</span>
+          </div>
+
+          <!-- Grid de monedas compacto -->
+          <div class="monedas-grid mb-4">
+            <!-- Bolívares -->
+            <div class="moneda-card">
+              <div class="moneda-header">
+                <div class="moneda-icon bg-success">
+                  <i class="bi bi-cash"></i>
+                </div>
+                <span class="moneda-nombre">Bolívares</span>
+                <span class="moneda-codigo">VES</span>
+              </div>
+              <div class="moneda-input">
+                <span class="moneda-simbolo">Bs.</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="efectivoInicialBs" 
+                       step="0.01" 
+                       min="0"
+                       placeholder="0,00"
+                    (focus)="onInputFocus($event)"
+                    (blur)="onInputBlur($event)"
+                       (input)="calcularTotalEfectivoInicial()">
+              </div>
+            </div>
+
+            <!-- Dólares -->
+            <div class="moneda-card">
+              <div class="moneda-header">
+                <div class="moneda-icon bg-primary">
+                  <i class="bi bi-currency-dollar"></i>
+                </div>
+                <span class="moneda-nombre">Dólares</span>
+                <span class="moneda-codigo">USD</span>
+              </div>
+              <div class="moneda-input">
+                <span class="moneda-simbolo">$</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="efectivoInicialUsd" 
+                       step="0.01" 
+                       min="0"
+                       placeholder="0,00"
+                    (focus)="onInputFocus($event)"
+                    (blur)="onInputBlur($event)"
+                       (input)="calcularTotalEfectivoInicial()">
+              </div>
+            </div>
+
+            <!-- Euros -->
+            <div class="moneda-card">
+              <div class="moneda-header">
+                <div class="moneda-icon bg-warning">
+                  <i class="bi bi-currency-euro"></i>
+                </div>
+                <span class="moneda-nombre">Euros</span>
+                <span class="moneda-codigo">EUR</span>
+              </div>
+              <div class="moneda-input">
+                <span class="moneda-simbolo">€</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="efectivoInicialEur" 
+                       step="0.01" 
+                       min="0"
+                       placeholder="0,00"
+                    (focus)="onInputFocus($event)"
+                    (blur)="onInputBlur($event)"
+                       (input)="calcularTotalEfectivoInicial()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Observaciones compactas -->
+          <div class="observaciones-field">
+            <div class="observaciones-header">
+              <i class="bi bi-chat-text"></i>
+              <span>Observaciones</span>
+              <span class="opcional">(opcional)</span>
+            </div>
+            <textarea class="form-control" 
+                      formControlName="observaciones" 
+                      rows="2"
+                      placeholder="Ej: Billetes deteriorados, monedas extras..."></textarea>
+          </div>
+
+          <!-- Info adicional -->
+          <div class="info-footer">
+            <div class="info-item">
+              <i class="bi bi-info-circle"></i>
+              <span>Las ventas se registrarán automáticamente</span>
+            </div>
+          </div>
+
+        </div>
+        
+        <div class="modal-footer-compact">
+          <button type="button" class="btn-cancelar" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-iniciar" [disabled]="inicioCajaForm.invalid">
+            <i class="bi bi-play-fill"></i>
+            <span>Iniciar Caja</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Cierre Caja Rediseñado -->
+<div class="modal fade" id="cierreCajaModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content border-0 shadow-xl">
+      
+      <!-- Header con gradiente (mismo estilo que inicio de caja) -->
+      <div class="modal-header-compact">
+        <div class="header-icon-wrapper">
+          <div class="header-icon">
+            <i class="bi bi-lock-fill"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0">Cierre de Caja</h5>
+            <p class="modal-subtitle mb-0">Conciliación y verificación de fondos</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-moderno" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      
+      <form [formGroup]="cierreForm" (ngSubmit)="realizarCierre()">
+        <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+          
+          <!-- Info rápida en chips -->
+          <div class="info-chips mb-4">
+            <div class="chip">
+              <i class="bi bi-person"></i>
+              <span>{{ currentUser?.nombre?.split(' ')[0] || 'Usuario' }}</span>
+            </div>
+            <div class="chip">
+              <i class="bi bi-calendar3"></i>
+              <span>{{ fechaSeleccionada | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="chip">
+              <i class="bi bi-clock"></i>
+              <span>{{ fechaSeleccionada | date:'HH:mm' }}</span>
+            </div>
+            <div class="chip estado" [ngClass]="{
+              'estado-abierto': cierreActual?.estado === 'abierto' && !esCierrePendienteVisual(cierreActual),
+              'estado-cerrado': cierreActual?.estado === 'cerrado',
+              'estado-pendiente-cierre': esCierrePendienteVisual(cierreActual)
+            }">
+              <i class="bi" [ngClass]="getEstadoIconClass(cierreActual?.estado, cierreActual?.fecha)"></i>
+              <span>{{ getEstadoTexto(cierreActual?.estado, cierreActual?.fecha) }}</span>
+            </div>
+          </div>
+
+          <!-- Tabs modernos -->
+          <div class="tabs-modernos mb-4">
+            <button type="button" class="tab-btn" [class.active]="tabActivoCierre === 'efectivo'" 
+                    (click)="tabActivoCierre = 'efectivo'">
+              <i class="bi bi-cash-stack"></i>
+              <span>Efectivo</span>
+            </button>
+            <button type="button" class="tab-btn" [class.active]="tabActivoCierre === 'punto'" 
+                  *ngIf="tieneMovimientosMetodoCierre('punto')"
+                    (click)="tabActivoCierre = 'punto'">
+              <i class="bi bi-credit-card"></i>
+              <span>Punto</span>
+            </button>
+            <button type="button" class="tab-btn" [class.active]="tabActivoCierre === 'transferencias'" 
+                  *ngIf="tieneMovimientosMetodoCierre('transferencia')"
+                    (click)="tabActivoCierre = 'transferencias'">
+              <i class="bi bi-bank2"></i>
+              <span>Transferencias</span>
+            </button>
+            <button type="button" class="tab-btn" [class.active]="tabActivoCierre === 'pagomovil'" 
+                  *ngIf="tieneMovimientosMetodoCierre('pagomovil')"
+                    (click)="tabActivoCierre = 'pagomovil'">
+              <i class="bi bi-phone"></i>
+              <span>Pago Móvil</span>
+            </button>
+            <button type="button" class="tab-btn" [class.active]="tabActivoCierre === 'zelle'" 
+                  *ngIf="tieneMovimientosMetodoCierre('zelle')"
+                    (click)="tabActivoCierre = 'zelle'">
+              <i class="bi bi-globe2"></i>
+              <span>Zelle</span>
+            </button>
+          </div>
+
+          <!-- Contenido de Tabs -->
+          <div class="tab-contenido">
+            
+            <!-- TAB EFECTIVO -->
+            <div *ngIf="tabActivoCierre === 'efectivo'">
+              <div class="efectivo-grid">
+                <!-- Dólares -->
+                <div class="moneda-card-cierre" *ngIf="tieneActividadEfectivoMoneda('USD')">
+                  <div class="moneda-header bg-primary-light">
+                    <i class="bi bi-currency-dollar"></i>
+                    <span>Dólares (USD)</span>
+                  </div>
+                  <div class="moneda-body">
+                    <div class="info-inicial mb-2" *ngIf="cierreActual?.efectivoInicialDetalle?.USD">
+                      <small class="text-muted">Efectivo inicial:</small>
+                      <strong class="text-primary ms-2">
+                        ${{ cierreActual.efectivoInicialDetalle.USD | number:'1.2-2' }}
+                      </strong>
+                    </div>
+                    <div class="campo-monto">
+                      <label>Monto Real Total en Caja</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">$</span>
+                        <input type="number" 
+                              class="form-control" 
+                              formControlName="efectivoRealUSD" 
+                              step="0.01" 
+                              min="0"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button" 
+                                (click)="autoCompletarEfectivoPorMoneda('USD')"
+                          title="Auto completar con el total esperado en caja física">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="info-sugerencia mb-2 p-2 rounded" style="background: #e8f0fe;">
+                      <small class="text-muted">
+                        <i class="bi bi-calculator"></i>
+                        Total esperado en caja: 
+                        <strong class="text-primary">{{ getTotalEfectivoEsperadoPorMoneda('USD') | number:'1.2-2' }} USD</strong>
+                      </small>
+                      <small class="d-block text-muted" style="font-size: 0.65rem;">
+                        (Inicial: {{ cierreActual?.efectivoInicialDetalle?.USD | number:'1.2-2' }} + 
+                        Movimientos netos: {{ getMovimientoNetoEfectivoPorMoneda('USD') | number:'1.2-2' }})
+                      </small>
+                    </div>
+                    <div class="info-sistema">
+                      <span class="label">Sistema (movimiento neto):</span>
+                      <span class="value">{{ getMovimientoNetoEfectivoPorMoneda('USD') | number:'1.2-2' }} USD</span>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaPorMoneda('USD') !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPorMoneda('USD'))">
+                        Diferencia: {{ getDiferenciaPorMoneda('USD') | number:'1.2-2' }} USD
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Euros -->
+                <div class="moneda-card-cierre" *ngIf="tieneActividadEfectivoMoneda('EUR')">
+                  <div class="moneda-header bg-info-light">
+                    <i class="bi bi-currency-euro"></i>
+                    <span>Euros (EUR)</span>
+                  </div>
+                  <div class="moneda-body">
+                    <div class="info-inicial mb-2" *ngIf="cierreActual?.efectivoInicialDetalle?.EUR">
+                      <small class="text-muted">Efectivo inicial:</small>
+                      <strong class="text-info ms-2">
+                        €{{ cierreActual.efectivoInicialDetalle.EUR | number:'1.2-2' }}
+                      </strong>
+                    </div>
+                    <div class="campo-monto">
+                      <label>Monto Real Total en Caja</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">€</span>
+                        <input type="number" 
+                              class="form-control" 
+                              formControlName="efectivoRealEUR" 
+                              step="0.01" 
+                              min="0"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button" 
+                                (click)="autoCompletarEfectivoPorMoneda('EUR')"
+                          title="Auto completar con el total esperado en caja física">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="info-sugerencia mb-2 p-2 rounded" style="background: #e0f2fe;">
+                      <small class="text-muted">
+                        <i class="bi bi-calculator"></i>
+                        Total esperado en caja: 
+                        <strong class="text-info">{{ getTotalEfectivoEsperadoPorMoneda('EUR') | number:'1.2-2' }} EUR</strong>
+                      </small>
+                      <small class="d-block text-muted" style="font-size: 0.65rem;">
+                        (Inicial: {{ cierreActual?.efectivoInicialDetalle?.EUR | number:'1.2-2' }} + 
+                        Movimientos netos: {{ getMovimientoNetoEfectivoPorMoneda('EUR') | number:'1.2-2' }})
+                      </small>
+                    </div>
+                    <div class="info-sistema">
+                      <span class="label">Sistema (movimiento neto):</span>
+                      <span class="value">{{ getMovimientoNetoEfectivoPorMoneda('EUR') | number:'1.2-2' }} EUR</span>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaPorMoneda('EUR') !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPorMoneda('EUR'))">
+                        Diferencia: {{ getDiferenciaPorMoneda('EUR') | number:'1.2-2' }} EUR
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bolívares -->
+                <div class="moneda-card-cierre" *ngIf="tieneActividadEfectivoMoneda('VES')">
+                  <div class="moneda-header bg-warning-light">
+                    <i class="bi bi-currency-exchange"></i>
+                    <span>Bolívares (VES)</span>
+                  </div>
+                  <div class="moneda-body">
+                    <div class="info-inicial mb-2" *ngIf="cierreActual?.efectivoInicialDetalle?.Bs">
+                      <small class="text-muted">Efectivo inicial:</small>
+                      <strong class="text-warning ms-2">
+                        Bs. {{ cierreActual.efectivoInicialDetalle.Bs | number:'1.2-2' }}
+                      </strong>
+                    </div>
+                    <div class="campo-monto">
+                      <label>Monto Real Total en Caja</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">Bs.</span>
+                        <input type="number" 
+                              class="form-control" 
+                              formControlName="efectivoRealVES" 
+                              step="0.01" 
+                              min="0"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button" 
+                                (click)="autoCompletarEfectivoPorMoneda('VES')"
+                          title="Auto completar con el total esperado en caja física">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="info-sugerencia mb-2 p-2 rounded" style="background: #fef3c7;">
+                      <small class="text-muted">
+                        <i class="bi bi-calculator"></i>
+                        Total esperado en caja: 
+                        <strong class="text-warning">{{ getTotalEfectivoEsperadoPorMoneda('VES') | number:'1.2-2' }} VES</strong>
+                      </small>
+                      <small class="d-block text-muted" style="font-size: 0.65rem;">
+                        (Inicial: {{ cierreActual?.efectivoInicialDetalle?.Bs | number:'1.2-2' }} + 
+                        Movimientos netos: {{ getMovimientoNetoEfectivoPorMoneda('VES') | number:'1.2-2' }})
+                      </small>
+                    </div>
+                    <div class="info-sistema">
+                      <span class="label">Sistema (movimiento neto):</span>
+                      <span class="value">{{ getMovimientoNetoEfectivoPorMoneda('VES') | number:'1.2-2' }} VES</span>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaPorMoneda('VES') !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPorMoneda('VES'))">
+                        Diferencia: {{ getDiferenciaPorMoneda('VES') | number:'1.2-2' }} VES
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB PUNTO DE VENTA -->
+            <div *ngIf="tabActivoCierre === 'punto' && tieneMovimientosMetodoCierre('punto')">
+              <div class="bancos-grid-cierre">
+                <div class="banco-card-cierre" *ngFor="let banco of getDestinosMetodo('punto')">
+                  <div class="banco-header">
+                    <i class="bi bi-bank"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(banco) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(banco)">{{ getDetalleDestino(banco) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(banco)">{{ getReferenciaDestino(banco) }}</span>
+                    </div>
+                    <span class="badge-cantidad">{{ banco.cantidad }} ops</span>
+                  </div>
+                  <div class="banco-body">
+                    <div class="campo-monto">
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number" 
+                              class="form-control" 
+                              [formControlName]="getNombreControlMetodo('punto', banco)" 
+                              step="0.01" 
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button" 
+                                (click)="autoCompletarMetodoPorDestino('punto', banco)"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares:
+                        <strong class="text-success">
+                          Bs. {{ getMontoSistemaEnBolivar(getMontoRealMetodoPorDestino('punto', banco)) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ banco.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ banco.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="banco.total >= 0" [class.text-danger]="banco.total < 0">{{ banco.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row" *ngIf="getTextoMontoOriginalBanco(banco)">
+                        <span class="info-label">Original neto</span>
+                        <span class="info-value">{{ getTextoMontoOriginalBanco(banco) }}</span>
+                      </div>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('punto', banco) !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('punto', banco))">
+                        Diferencia: {{ getDiferenciaMetodoPorDestino('punto', banco) | number:'1.2-2' }} {{ monedaSistema }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB TRANSFERENCIAS -->
+            <div *ngIf="tabActivoCierre === 'transferencias' && tieneMovimientosMetodoCierre('transferencia')">
+              <div class="bancos-grid-cierre" *ngIf="getDestinosMetodo('transferencia').length; else transferenciaGeneral">
+                <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('transferencia')">
+                  <div class="banco-header">
+                    <i class="bi bi-bank2"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(destino) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(destino)">{{ getDetalleDestino(destino) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(destino)">{{ getReferenciaDestino(destino) }}</span>
+                    </div>
+                    <span class="badge-cantidad">{{ destino.cantidad }} ops</span>
+                  </div>
+                  <div class="banco-body">
+                    <div class="campo-monto">
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number"
+                              class="form-control"
+                              [formControlName]="getNombreControlMetodo('transferencia', destino)"
+                              step="0.01"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button"
+                                (click)="autoCompletarMetodoPorDestino('transferencia', destino)"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares:
+                        <strong class="text-success">
+                          Bs. {{ getMontoSistemaEnBolivar(getMontoRealMetodoPorDestino('transferencia', destino)) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ destino.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ destino.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="destino.total >= 0" [class.text-danger]="destino.total < 0">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row" *ngIf="getTextoMontoOriginalBanco(destino)">
+                        <span class="info-label">Original neto</span>
+                        <span class="info-value">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                      </div>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('transferencia', destino) !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('transferencia', destino))">
+                        Diferencia: {{ getDiferenciaMetodoPorDestino('transferencia', destino) | number:'1.2-2' }} {{ monedaSistema }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <ng-template #transferenciaGeneral>
+                <div class="metodo-simple-card">
+                  <div class="card-icon">
+                    <i class="bi bi-bank2"></i>
+                  </div>
+                  <div class="card-content">
+                    <h4>Transferencias Bancarias</h4>
+                    <div class="campo-monto">
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number" 
+                              class="form-control" 
+                              formControlName="transferenciaRealTotal" 
+                              step="0.01" 
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button" 
+                                (click)="autoCompletarTransferencia()"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares: 
+                        <strong class="text-success">
+                          Bs. {{ convertirUSDaVES(cierreForm.get('transferenciaRealTotal')?.value || 0) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ analisisMetodosPago.transferencia.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ analisisMetodosPago.transferencia.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="analisisMetodosPago.transferencia.total >= 0" [class.text-danger]="analisisMetodosPago.transferencia.total < 0">{{ analisisMetodosPago.transferencia.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                        <span class="badge-cantidad">{{ analisisMetodosPago.transferencia.cantidad }} transferencias</span>
+                      </div>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaTransferencia() !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaTransferencia())">
+                        Diferencia: {{ getDiferenciaTransferenciaFormateada() }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </div>
+
+            <!-- TAB PAGO MÓVIL -->
+            <div *ngIf="tabActivoCierre === 'pagomovil' && tieneMovimientosMetodoCierre('pagomovil')">
+
+              <div class="bancos-grid-cierre" *ngIf="getDestinosMetodo('pagomovil').length; else pagomovilGeneral">
+                <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('pagomovil')">
+                  <div class="banco-header">
+                    <i class="bi bi-phone"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(destino) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(destino)">{{ getDetalleDestino(destino) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(destino)">{{ getReferenciaDestino(destino) }}</span>
+                    </div>
+                    <span class="badge-cantidad">{{ destino.cantidad }} ops</span>
+                  </div>
+                  <div class="banco-body">
+                    <div class="campo-monto">
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number"
+                              class="form-control"
+                              [formControlName]="getNombreControlMetodo('pagomovil', destino)"
+                              step="0.01"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button"
+                                (click)="autoCompletarMetodoPorDestino('pagomovil', destino)"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares:
+                        <strong class="text-success">
+                          Bs. {{ getMontoSistemaEnBolivar(getMontoRealMetodoPorDestino('pagomovil', destino)) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ destino.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ destino.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="destino.total >= 0" [class.text-danger]="destino.total < 0">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row" *ngIf="getTextoMontoOriginalBanco(destino)">
+                        <span class="info-label">Original neto</span>
+                        <span class="info-value">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                      </div>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('pagomovil', destino) !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('pagomovil', destino))">
+                        Diferencia: {{ getDiferenciaMetodoPorDestino('pagomovil', destino) | number:'1.2-2' }} {{ monedaSistema }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <ng-template #pagomovilGeneral>
+                <div class="metodo-simple-card">
+                  <div class="card-icon">
+                    <i class="bi bi-phone"></i>
+                  </div>
+                  <div class="card-content">
+                    <h4>Pago Móvil</h4>
+                    <div class="campo-monto">
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number" 
+                              class="form-control" 
+                              formControlName="pagomovilRealTotal" 
+                              step="0.01" 
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button" 
+                                (click)="autoCompletarPagomovil()"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares: 
+                        <strong class="text-success">
+                          Bs. {{ convertirUSDaVES(cierreForm.get('pagomovilRealTotal')?.value || 0) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ analisisMetodosPago.pagomovil.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ analisisMetodosPago.pagomovil.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="analisisMetodosPago.pagomovil.total >= 0" [class.text-danger]="analisisMetodosPago.pagomovil.total < 0">{{ analisisMetodosPago.pagomovil.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                        <span class="badge-cantidad">{{ analisisMetodosPago.pagomovil.cantidad }} operaciones</span>
+                      </div>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaPagomovil() !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPagomovil())">
+                        Diferencia: {{ getDiferenciaPagomovilFormateada() }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </div>
+
+            <!-- TAB ZELLE -->
+            <div *ngIf="tabActivoCierre === 'zelle' && tieneMovimientosMetodoCierre('zelle')">
+              <div class="bancos-grid-cierre" *ngIf="getDestinosMetodo('zelle').length; else zelleGeneral">
+                <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('zelle')">
+                  <div class="banco-header">
+                    <i class="bi bi-globe2"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(destino) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(destino)">{{ getDetalleDestino(destino) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(destino)">{{ getReferenciaDestino(destino) }}</span>
+                    </div>
+                    <span class="badge-cantidad">{{ destino.cantidad }} ops</span>
+                  </div>
+                  <div class="banco-body">
+                    <div class="campo-monto">
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number"
+                              class="form-control"
+                              [formControlName]="getNombreControlMetodo('zelle', destino)"
+                              step="0.01"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button"
+                                (click)="autoCompletarMetodoPorDestino('zelle', destino)"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares:
+                        <strong class="text-success">
+                          Bs. {{ getMontoSistemaEnBolivar(getMontoRealMetodoPorDestino('zelle', destino)) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ destino.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ destino.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="destino.total >= 0" [class.text-danger]="destino.total < 0">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row" *ngIf="getTextoMontoOriginalBanco(destino)">
+                        <span class="info-label">Original neto</span>
+                        <span class="info-value">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                      </div>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('zelle', destino) !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('zelle', destino))">
+                        Diferencia: {{ getDiferenciaMetodoPorDestino('zelle', destino) | number:'1.2-2' }} {{ monedaSistema }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <ng-template #zelleGeneral>
+                <div class="metodo-simple-card">
+                  <div class="card-icon">
+                    <i class="bi bi-globe2"></i>
+                  </div>
+                  <div class="card-content">
+                    <h4>Zelle</h4>
+                    <div class="campo-monto">
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number" 
+                              class="form-control" 
+                              formControlName="zelleReal" 
+                              step="0.01" 
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button" 
+                                (click)="autoCompletarZelle()"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ analisisMetodosPago.zelle.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ analisisMetodosPago.zelle.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="analisisMetodosPago.zelle.total >= 0" [class.text-danger]="analisisMetodosPago.zelle.total < 0">{{ analisisMetodosPago.zelle.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaZelle() !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaZelle())">
+                        Diferencia: {{ getDiferenciaZelleFormateada() }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </div>
+
+          </div>
+
+          <!-- Dashboard de Resultados -->
+          <div class="dashboard-resultados mt-4">
+            <div class="resultados-header">
+              <i class="bi bi-graph-up"></i>
+              <span>Resumen de Conciliación</span>
+            </div>
+            
+            <div class="resultados-grid">
+              <!-- Efectivo -->
+              <div class="resultado-card">
+                <div class="resultado-titulo">
+                  <i class="bi bi-cash-stack"></i>
+                  <span>Arqueo de Efectivo ({{ simboloMonedaSistema }})</span>
+                </div>
+                <div class="resultado-cifras">
+                  <div class="cifra">
+                    <span class="label">Teórico caja física:</span>
+                    <span class="value">{{ getEfectivoTeoricoFormateado() }}</span>
+                  </div>
+                  <div class="cifra">
+                    <span class="label">Real contado:</span>
+                    <span class="value">{{ getEfectivoRealTotalFormateado() }}</span>
+                  </div>
+                  <div class="cifra diferencia" [ngClass]="getDiferenciaTotalClass()">
+                    <span class="label">Diferencia de arqueo:</span>
+                    <span class="value">{{ getDiferenciaEfectivoFormateada() }}</span>
+                  </div>
+                </div>
+                <div class="resultado-referencia-historica">
+                  <div class="resultado-referencia-historica__title">Referencia financiera</div>
+                  <div class="resultado-cifras">
+                    <div class="cifra">
+                      <span class="label">Mov. día a histórico:</span>
+                      <span class="value">{{ getValorHistoricoMovimientosEfectivo() | number:'1.2-2' }} {{ simboloMonedaSistema }}</span>
+                    </div>
+                    <div class="cifra">
+                      <span class="label">Mov. día a tasa cierre:</span>
+                      <span class="value">{{ getValorActualMovimientosEfectivo() | number:'1.2-2' }} {{ simboloMonedaSistema }}</span>
+                    </div>
+                    <div class="cifra" *ngIf="tieneAjusteCambiarioEfectivo()">
+                      <span class="label">Ajuste cambiario:</span>
+                      <span class="value" [ngClass]="getDiferenciaTotalClassValor(getAjusteCambiarioEfectivo())">
+                        {{ getAjusteCambiarioEfectivo() > 0 ? '+' : '' }}{{ getAjusteCambiarioEfectivo() | number:'1.2-2' }} {{ simboloMonedaSistema }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mensaje-alerta alert-success">
+                  <i class="bi bi-info-circle-fill"></i>
+                  <span>El cierre usa arqueo físico por moneda. La referencia histórica se muestra aparte para no mezclar caja real con valorización cambiaria.</span>
+                </div>
+              </div>
+
+              <!-- Resumen General -->
+              <div class="resultado-card">
+                <div class="resultado-titulo">
+                  <i class="bi bi-pie-chart"></i>
+                  <span>Resumen General</span>
+                </div>
+                <div class="resultado-cifras">
+                  <div class="cifra" *ngIf="tieneDiferenciaEfectivo()">
+                    <span class="label">Efectivo:</span>
+                    <span class="value" [ngClass]="getDiferenciaTotalClassValor(getDiferenciaEfectivo())">
+                      {{ getDiferenciaEfectivoFormateada() }}
+                    </span>
+                  </div>
+                  <div class="cifra" *ngIf="tieneDiferenciaPunto()">
+                    <span class="label">Punto:</span>
+                    <span class="value" [ngClass]="getDiferenciaTotalClassValor(getDiferenciaPunto())">
+                      {{ getDiferenciaPuntoFormateada() }}
+                    </span>
+                  </div>
+                  <div class="cifra" *ngIf="tieneDiferenciaTransferencia()">
+                    <span class="label">Transferencias:</span>
+                    <span class="value" [ngClass]="getDiferenciaTotalClassValor(getDiferenciaTransferencia())">
+                      {{ getDiferenciaTransferenciaFormateada() }}
+                    </span>
+                  </div>
+                  <div class="cifra" *ngIf="tieneDiferenciaPagomovil()">
+                    <span class="label">Pago Móvil:</span>
+                    <span class="value" [ngClass]="getDiferenciaTotalClassValor(getDiferenciaPagomovil())">
+                      {{ getDiferenciaPagomovilFormateada() }}
+                    </span>
+                  </div>
+                  <div class="cifra" *ngIf="tieneDiferenciaZelle()">
+                    <span class="label">Zelle:</span>
+                    <span class="value" [ngClass]="getDiferenciaTotalClassValor(getDiferenciaZelle())">
+                      {{ getDiferenciaZelleFormateada() }}
+                    </span>
+                  </div>
+                  <div class="cifra total">
+                    <span class="label">Diferencia Total:</span>
+                    <span class="value fw-bold fs-5" [ngClass]="getDiferenciaTotalClass()">
+                      {{ getDiferenciaTotalFormateada() }}
+                    </span>
+                  </div>
+                </div>
+                <div class="mensaje-alerta" [ngClass]="getMensajeAlertaClass()">
+                  <i class="bi" [ngClass]="getMensajeIcono()"></i>
+                  <span>{{ getMensajeDiferencia() }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notas de Cierre -->
+          <div class="notas-cierre mt-4">
+            <div class="notas-header">
+              <i class="bi bi-chat-text"></i>
+              <span>Notas de Cierre</span>
+              <span class="opcional" [class.text-danger]="comentarioRequerido">
+                {{ comentarioRequerido ? '(requerido)' : '(opcional)' }}
+              </span>
+            </div>
+            <textarea class="form-control" 
+                      formControlName="notasCierre" 
+                      rows="3"
+                      [class.is-invalid]="comentarioRequerido && cierreForm.get('notasCierre')?.invalid && cierreForm.get('notasCierre')?.touched"
+                      placeholder="{{ comentarioRequerido ? 'Explica la diferencia detectada' : 'Observaciones del cierre (opcional)' }}"
+                      (keyup)="actualizarBotonCierre()"></textarea>
+            <div class="invalid-feedback" *ngIf="comentarioRequerido && cierreForm.get('notasCierre')?.invalid && cierreForm.get('notasCierre')?.touched">
+              Debes explicar la diferencia antes de cerrar la caja.
+            </div>
+            <div class="checkbox-option mt-2">
+              <input type="checkbox" formControlName="imprimirResumen" id="imprimirResumen">
+              <label for="imprimirResumen">
+                <i class="bi bi-printer"></i> Imprimir resumen después del cierre
+              </label>
+            </div>
+          </div>
+
+          <!-- Advertencia -->
+          <div class="advertencia-cierre" [class.advertencia-con-diferencia]="hayDiferencia">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div>
+              <strong>Importante</strong>
+              <small>Una vez cerrada la caja, no se podrán modificar las transacciones de este día.
+              Asegúrese de que todos los movimientos estén registrados correctamente.</small>
+            </div>
+          </div>
+
+        </div>
+        
+        <div class="modal-footer-compact">
+          <button type="button" class="btn-cancelar" data-bs-dismiss="modal">
+            Cancelar
+          </button>
+          <button type="submit" 
+                  class="btn-cerrar" 
+                  [class.btn-cerrar-con-diferencia]="hayDiferencia"
+                  [class.btn-cerrar-sin-diferencia]="!hayDiferencia"
+              [disabled]="!puedeCerrarCaja()">
+            <i class="bi" [class.bi-lock-fill]="!hayDiferencia" [class.bi-exclamation-triangle-fill]="hayDiferencia"></i>
+            <span>{{ hayDiferencia ? 'Cerrar con Diferencia' : 'Cerrar Caja' }}</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="transaccionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content modal-transaccion-manual border-0 shadow-lg">
+      <div class="modal-header modal-transaccion-header border-0" [ngClass]="getInfoCardClass()">
+        <div class="d-flex align-items-center gap-2">
+          <div class="modal-transaccion-header__icon">
+            <i class="bi" [ngClass]="transaccionEditando ? 'bi-pencil-square' : 'bi-journal-plus'"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0">{{ transaccionEditando ? 'Editar' : 'Nueva' }} transacción</h5>
+            <small class="modal-transaccion-header__subtitle">{{ currentUser?.nombre || 'Usuario' }} · {{ fechaSeleccionada | date:'dd/MM/yyyy' }}</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form [formGroup]="transaccionForm" (ngSubmit)="guardarTransaccion()">
+        <div class="modal-body modal-transaccion-body p-3">
+          <div class="compact-status-row mb-3" [ngClass]="getInfoCardClass()">
+            <i class="bi" [ngClass]="getInfoIcon()"></i>
+            <span>{{ getInfoTitle() }}</span>
+            <strong>{{ (transaccionForm.get('monto')?.value || 0) | currency }}</strong>
+          </div>
+
+          <div class="row g-3 align-items-start">
+            <div class="col-lg-4">
+              <section class="transaccion-section transaccion-section--compact mb-3">
+                <h6 class="section-title">Tipo</h6>
+                <div class="transaccion-choice-grid">
+                  <button
+                    *ngFor="let tipo of tiposTransaccionManual"
+                    type="button"
+                    class="transaccion-choice-card"
+                    [class.is-active]="tipoTransaccionManualActual === tipo.valor"
+                    [style.--accent-color]="tipo.color"
+                    (click)="seleccionarTipoTransaccion(tipo.valor)">
+                    <div class="transaccion-choice-card__icon">
+                      <i class="bi" [ngClass]="tipo.icono"></i>
+                    </div>
+                    <div class="transaccion-choice-card__body">
+                      <strong>{{ tipo.label }}</strong>
+                    </div>
+                  </button>
+                </div>
+              </section>
+
+              <section class="transaccion-section transaccion-section--compact transaccion-section--payments">
+                <div class="section-heading-inline">
+                  <h6 class="section-title mb-0">Tipo de pago</h6>
+                  <span class="section-badge">{{ metodoPagoSeleccionado?.label || 'Sin seleccionar' }}</span>
+                </div>
+                <div class="field-helper field-helper--tight mb-2">
+                  <i class="bi bi-wallet2"></i>
+                  <span>{{ metodosPago.length }} metodo(s) disponibles para este movimiento.</span>
+                </div>
+                <div class="transaccion-choice-grid transaccion-choice-grid--payments">
+                  <button
+                    *ngFor="let metodo of metodosPago"
+                    type="button"
+                    class="transaccion-choice-card transaccion-choice-card--payment"
+                    [class.is-active]="metodoPagoSeleccionado?.valor === metodo.valor"
+                    [style.--accent-color]="metodo.color"
+                    (click)="seleccionarMetodoPago(metodo.valor)">
+                    <div class="transaccion-choice-card__icon">
+                      <i class="bi" [ngClass]="metodo.icono"></i>
+                    </div>
+                    <div class="transaccion-choice-card__body transaccion-choice-card__body--payment">
+                      <strong>{{ metodo.label }}</strong>
+                      <span>
+                        {{ (cuentasReceptorasConfiguradasPorMetodo[metodo.valor] || []).length > 0
+                          ? ((cuentasReceptorasConfiguradasPorMetodo[metodo.valor] || []).length + ' destino(s) configurado(s)')
+                          : 'Sin destino configurado' }}
+                      </span>
+                    </div>
+                    <div class="transaccion-choice-card__side">
+                      <span class="transaccion-choice-card__meta" [class.is-active]="metodoPagoSeleccionado?.valor === metodo.valor">
+                        {{ metodoPagoSeleccionado?.valor === metodo.valor ? 'Activo' : 'Usar' }}
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <div class="col-lg-8">
+              <section class="transaccion-section transaccion-section--compact">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-cash-stack me-1 text-success"></i>
+                      Monto <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group input-group-modern">
+                      <span class="input-group-text">{{ simboloMonedaSistema }}</span>
+                      <input type="number" class="form-control" formControlName="monto" step="0.01" min="0.01"
+                        (focus)="onInputFocus($event)"
+                        (blur)="onInputBlur($event)"
+                        placeholder="0.00">
+                    </div>
+                  </div>
+
+                  <div class="col-md-8">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-folder2-open me-1 text-warning"></i>
+                      Categoría <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select" formControlName="categoria">
+                      <option *ngFor="let categoria of categoriasTransaccionDisponibles" [value]="categoria.value">
+                        {{ categoria.label }}
+                      </option>
+                    </select>
+                    <div class="field-helper field-helper--tight" *ngIf="categoriaTransaccionActual">
+                      <i class="bi" [ngClass]="categoriaTransaccionActual.icono"></i>
+                      <span>{{ categoriaTransaccionActual.descripcion }}</span>
+                    </div>
+                  </div>
+
+                  <div class="col-md-12">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-card-text me-1"></i>
+                      Descripción <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" formControlName="descripcion" [placeholder]="placeholderDescripcionTransaccion">
+                  </div>
+
+                  <div class="col-md-12" *ngIf="requiereCuentaReceptora">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-diagram-3 me-1 text-primary"></i>
+                      {{ etiquetaCuentaReceptora }} <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select" formControlName="cuentaReceptoraId">
+                      <option value="">{{ placeholderCuentaReceptora }}</option>
+                      <option *ngFor="let cuenta of cuentasReceptorasMetodoSeleccionado" [value]="cuenta.id">
+                        {{ cuenta.displayText }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-12" *ngIf="mostrarAvisoSinCuentasConfiguradas">
+                    <div class="transaction-inline-alert">
+                      <i class="bi bi-exclamation-triangle"></i>
+                      <span>Este método aún no tiene destinos configurados.</span>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6" *ngIf="transaccionForm.get('metodoPago')?.value">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-receipt me-1"></i>
+                      {{ etiquetaCampoComprobante }} <span class="text-danger" *ngIf="transaccionForm.get('metodoPago')?.value !== 'efectivo'">*</span>
+                    </label>
+                    <input type="text" class="form-control" formControlName="comprobante" [placeholder]="placeholderCampoComprobante">
+                  </div>
+
+                  <div class="col-md-12">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-chat-left-text me-1"></i>
+                      Observaciones
+                    </label>
+                    <textarea class="form-control" formControlName="observaciones" rows="2"
+                      placeholder="Motivo o soporte adicional..."></textarea>
+                    <div class="field-helper field-helper--tight">
+                      <i class="bi bi-info-circle"></i>
+                      <span>{{ ayudaObservacionesTransaccion }}</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer modal-footer-transaccion border-0 py-2 px-3">
+          <button type="button" class="btn btn-footer-system btn-footer-system--neutral" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-footer-system btn-footer-system--success" [disabled]="transaccionForm.invalid">
+            <i class="bi bi-check-circle me-2"></i>{{ transaccionEditando ? 'Actualizar' : 'Guardar' }} transacción
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Historial de Cierres -->
+<div class="modal fade historial-cierres-modal" id="historialCierresModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable historial-cierres-modal__dialog">
+    <div class="modal-content historial-cierres-shell">
+      <div class="modal-header historial-cierres-shell__header border-0">
+        <div class="historial-cierres-shell__intro">
+          <div class="historial-cierres-shell__eyebrow">Control histórico</div>
+          <h5 class="modal-title historial-cierres-shell__title">
+            <i class="bi bi-clock-history me-2"></i>
+            Historial de cierres de caja
+          </h5>
+          <p class="historial-cierres-shell__subtitle">Consulta jornadas anteriores, revisa diferencias y abre una vista previa completa de cada cierre.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body historial-cierres-shell__body">
+        <section class="historial-toolbar-card">
+          <div class="historial-toolbar-card__header">
+            <div>
+              <span class="historial-toolbar-card__eyebrow">Rango de consulta</span>
+              <h6>Semana actual por defecto</h6>
+              <p>Puedes cambiar el período según la necesidad operativa o administrativa.</p>
+            </div>
+            <div class="historial-toolbar-card__actions historial-toolbar-card__actions--presets">
+              <button class="btn btn-outline-secondary btn-sm" (click)="aplicarPresetHistorial('semana')">Semana actual</button>
+              <button class="btn btn-outline-secondary btn-sm" (click)="aplicarPresetHistorial('mes')">Mes actual</button>
+              <button class="btn btn-outline-secondary btn-sm" (click)="aplicarPresetHistorial('30dias')">Últimos 30 días</button>
+            </div>
+          </div>
+
+          <div class="historial-toolbar-card__grid">
+            <label class="historial-field">
+              <span>Fecha desde</span>
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="filtroHistorialDesde">
+            </label>
+
+            <label class="historial-field">
+              <span>Fecha hasta</span>
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="filtroHistorialHasta">
+            </label>
+
+            <div class="historial-toolbar-card__cta">
+              <button class="btn btn-sm historial-btn-primary" (click)="cargarHistorialCierres()">
+                <i class="bi bi-search me-2"></i>Actualizar historial
+              </button>
+              <div class="historial-export-dropdown">
+                <button class="btn btn-outline-secondary btn-sm historial-export-dropdown__toggle"
+                  type="button"
+                  (click)="toggleHistorialExportMenu($event)"
+                  [disabled]="!historialCierres.length"
+                  [attr.aria-expanded]="mostrarMenuExportHistorial">
+                  <i class="bi bi-download me-2"></i>Descargar listado
+                  <i class="bi ms-2" [ngClass]="mostrarMenuExportHistorial ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                </button>
+
+                <div class="historial-export-dropdown__menu" *ngIf="mostrarMenuExportHistorial">
+                  <button type="button" class="historial-export-dropdown__item" (click)="exportarHistorial('excel')">
+                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                    <span>Descargar Excel</span>
+                  </button>
+                  <button type="button" class="historial-export-dropdown__item" (click)="exportarHistorial('pdf')">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                    <span>Descargar PDF</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="historial-resumen-grid" *ngIf="historialCierres.length > 0">
+          <article class="historial-resumen-card">
+            <span class="historial-resumen-card__label">Cierres encontrados</span>
+            <strong>{{ historialCierres.length }}</strong>
+          </article>
+          <article class="historial-resumen-card">
+            <span class="historial-resumen-card__label">Ingresos registrados</span>
+            <strong>{{ formatCurrency(getTotalVentasHistorial()) }} {{ monedaSistema }}</strong>
+          </article>
+          <article class="historial-resumen-card">
+            <span class="historial-resumen-card__label">Promedio operativo</span>
+            <strong>{{ formatCurrency(getTotalVentasHistorial() / historialCierres.length) }} {{ monedaSistema }}</strong>
+          </article>
+          <article class="historial-resumen-card" [class.is-positive]="getDiferenciaTotalHistorial() > 0" [class.is-negative]="getDiferenciaTotalHistorial() < 0">
+            <span class="historial-resumen-card__label">Descuadre acumulado</span>
+            <strong>{{ formatCurrency(getDiferenciaTotalHistorial()) }} {{ monedaSistema }}</strong>
+          </article>
+        </section>
+
+        <div class="historial-loading-state" *ngIf="historialCargando">
+          <div class="spinner-border text-primary" role="status"></div>
+          <span>Cargando historial de cierres...</span>
+        </div>
+
+        <ng-container *ngIf="!historialCargando">
+          <section class="historial-cierres-list" *ngIf="historialCierres.length > 0; else historialVacio">
+            <article class="historial-cierre-card" *ngFor="let cierre of historialCierres">
+              <div class="historial-cierre-card__header">
+                <div class="historial-cierre-card__title-block">
+                  <span class="historial-cierre-card__date">Jornada {{ cierre.fecha | date:'dd/MM/yyyy' }}</span>
+                  <h6>Cierre {{ getFechaOperativaCierre(cierre) }}</h6>
+                  <div class="historial-cierre-card__title-meta">
+                    <span>
+                      <i class="bi bi-person"></i>
+                      {{ getUsuarioResponsableCierre(cierre) }}
+                    </span>
+                    <span>
+                      <i class="bi bi-collection"></i>
+                      {{ getTotalTransaccionesCierre(cierre) }} movimientos
+                    </span>
+                  </div>
+                </div>
+
+                <div class="historial-cierre-card__header-side">
+                  <div class="historial-cierre-card__status-group">
+                    <span class="historial-chip historial-chip--status" [ngClass]="getEstadoTecnicoHistorialClase(cierre)">
+                      <i class="bi" [ngClass]="getEstadoTecnicoHistorialIcono(cierre)"></i>
+                      {{ getEstadoTecnicoHistorialTexto(cierre) }}
+                    </span>
+                    <span class="historial-chip historial-chip--neutral">
+                      {{ getEstadoAdministrativoHistorialTexto(cierre) }}
+                    </span>
+                  </div>
+                  <div class="historial-cierre-card__actions">
+                    <button class="btn btn-sm historial-btn-primary" (click)="verDetalleCierre(cierre)">
+                      <i class="bi bi-eye me-1"></i>Ver detalle
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning" (click)="anularCierre(cierre)" *ngIf="cierre.estado === 'cerrado'">
+                      <i class="bi bi-x-circle me-1"></i>Anular
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="historial-cierre-card__metrics">
+                <div class="historial-metric-pill">
+                  <span>Ingresos registrados</span>
+                  <strong>{{ formatCurrency(getTotalVentasCierre(cierre)) }} {{ monedaSistema }}</strong>
+                </div>
+                <div class="historial-metric-pill">
+                  <span>Efectivo contado</span>
+                  <strong>{{ formatCurrency(getEfectivoFinalRealCierre(cierre)) }} {{ monedaSistema }}</strong>
+                </div>
+                <div class="historial-metric-pill" [class.is-positive]="getDiferenciaCierre(cierre) > 0" [class.is-negative]="getDiferenciaCierre(cierre) < 0">
+                  <span>Descuadre de caja</span>
+                  <strong>{{ formatCurrency(getDiferenciaCierre(cierre)) }} {{ monedaSistema }}</strong>
+                </div>
+                <div class="historial-metric-pill">
+                  <span>Neto operacional</span>
+                  <strong>{{ formatCurrency(getNetoOperativoCierre(cierre)) }} {{ monedaSistema }}</strong>
+                </div>
+                <div class="historial-metric-pill">
+                  <span>Egresos operativos</span>
+                  <strong>{{ formatCurrency(getEgresosOperativosCierre(cierre)) }} {{ monedaSistema }}</strong>
+                </div>
+              </div>
+
+              <div class="historial-cierre-card__meta">
+                <div class="historial-cierre-card__chips-wrap" *ngIf="getResumenMetodosHistorial(cierre).length > 0">
+                  <span class="historial-cierre-card__section-label">Métodos registrados</span>
+                  <div class="historial-cierre-card__chips">
+                    <span class="historial-chip" *ngFor="let metodo of getResumenMetodosHistorial(cierre)">
+                      {{ metodo.label }} · {{ formatCurrency(metodo.total) }} {{ monedaSistema }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="historial-cierre-card__note">
+                  <span class="historial-cierre-card__note-label">Observaciones</span>
+                  <p>{{ getObservacionHistorialCierre(cierre) }}</p>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <ng-template #historialVacio>
+            <div class="historial-empty-state">
+              <i class="bi bi-inbox"></i>
+              <h6>No hay cierres registrados en este rango</h6>
+              <p>Ajusta las fechas o usa otro rango rápido para consultar jornadas anteriores.</p>
+            </div>
+          </ng-template>
+        </ng-container>
+      </div>
+
+      <div class="modal-footer historial-cierres-shell__footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade historial-detalle-modal" id="historialDetalleModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
+    <div class="modal-content historial-detalle-shell">
+      <div class="modal-header historial-detalle-shell__header border-0">
+        <div class="historial-detalle-shell__intro historial-detalle-shell__headline">
+          <span class="historial-detalle-shell__eyebrow">Reporte del cierre</span>
+          <h5 class="modal-title historial-detalle-shell__title">
+            {{ historialDetalleSeleccionado ? ('Jornada ' + getFechaJornadaHistorial(historialDetalleSeleccionado)) : 'Vista previa del reporte' }}
+          </h5>
+          <p class="historial-detalle-shell__subtitle" *ngIf="historialDetalleSeleccionado">
+            {{ getEstadoTecnicoHistorialTexto(historialDetalleSeleccionado) }} · {{ getUsuarioResponsableCierre(historialDetalleSeleccionado) }}
+          </p>
+        </div>
+        <div class="historial-detalle-shell__actions">
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="imprimirDetalleHistorial()" [disabled]="historialDetalleCargando || !historialDetallePreviewUrl">
+            <i class="bi bi-printer"></i>
+            Imprimir reporte
+          </button>
+          <button type="button" class="btn-close" aria-label="Close" (click)="cerrarDetalleHistorialModal()"></button>
+        </div>
+      </div>
+
+      <div class="modal-body historial-detalle-shell__body">
+        <div class="historial-loading-state historial-empty-state--detail" *ngIf="historialDetalleCargando">
+          <div class="spinner-border text-primary" role="status"></div>
+          <span>Preparando reporte...</span>
+        </div>
+
+        <div class="historial-detalle-shell__frame-wrap" *ngIf="!historialDetalleCargando && historialDetallePreviewUrl; else historialDetalleSinVista">
+          <div class="historial-detalle-shell__preview-bar" *ngIf="historialDetalleSeleccionado">
+            <span class="historial-detalle-shell__preview-badge" [ngClass]="getEstadoTecnicoHistorialClase(historialDetalleSeleccionado)">
+              <i class="bi" [ngClass]="getEstadoTecnicoHistorialIcono(historialDetalleSeleccionado)"></i>
+              {{ getEstadoTecnicoHistorialTexto(historialDetalleSeleccionado) }}
+            </span>
+          </div>
+          <iframe class="historial-detalle-shell__frame" [src]="historialDetallePreviewUrl" title="Reporte del cierre histórico"></iframe>
+        </div>
+
+        <ng-template #historialDetalleSinVista>
+          <div class="historial-empty-state historial-empty-state--detail" *ngIf="!historialDetalleCargando">
+            <i class="bi bi-file-earmark-text"></i>
+            <h6>No se pudo preparar la vista previa</h6>
+            <p>Intenta abrir nuevamente el detalle del cierre seleccionado.</p>
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="modal-footer historial-detalle-shell__footer border-0">
+        <button type="button" class="btn btn-secondary" (click)="cerrarDetalleHistorialModal()">Cerrar vista previa</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,2746 @@
+<div class="card contenedor-historial-venta" style="margin-bottom: 0rem;">
+  <!-- Header modernizado del módulo -->
+  <div class="historial-presupuesto-header">
+    <div class="historial-presupuesto-header-content">
+      <div class="historial-presupuesto-header-title">
+        <i class="bi bi-clock-history"></i>
+        <div class="historial-presupuesto-header-text">
+          <h1>Historial de Ventas</h1>
+          <div class="historial-presupuesto-header-subtitle">Consulta y gestiona el historial completo de transacciones</div>
+        </div>
+      </div>
+      <div class="historial-presupuesto-header-actions">
+        <div class="historial-presupuesto-header-filters">
+          <button class="btn historial-resumen-btn" (click)="abrirModalResumenFinanciero()" [disabled]="resumenCargando">
+            <i class="bi" [class.bi-graph-up]="!resumenCargando" [class.bi-arrow-repeat]="resumenCargando"
+              [class.spin-icon]="resumenCargando"></i>
+            Resumen Financiero
+          </button>
+
+          <button class="btn-icon-refresh" (click)="recargarEstadisticas()" [disabled]="estadisticasCargando"
+            [class.loading]="estadisticasCargando" title="Actualizar estadísticas">
+            <div class="icon-container">
+              <svg class="refresh-icon" viewBox="0 0 24 24">
+                <path fill="currentColor"
+                  d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
+              </svg>
+              <div class="loading-spinner" *ngIf="estadisticasCargando"></div>
+            </div>
+            <div class="status-indicator"></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <!-- Tarjetas de Resumen -->
+    <div class="row g-3 mb-4 estadisticas-grid">
+      <!-- Total Ventas -->
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-primary">
+          <div class="stat-icon">
+            <i class="bi bi-cart-check"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ getTotalVentas() | number }}</div>
+            <div class="stat-label">Total Ventas</div>
+          </div>
+          <div class="stat-glow"></div>
+        </div>
+      </div>
+
+      <!-- Ventas Completadas -->
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-success">
+          <div class="stat-icon">
+            <i class="bi bi-check-circle"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ getVentasCompletadas() }}</div>
+            <div class="stat-label">Completadas</div>
+            <div class="stat-percentage">{{ ((getVentasCompletadas() / (getTotalVentas() || 1)) * 100) | number:'1.0-0'
+              }}% del total</div>
+          </div>
+          <div class="stat-progress">
+            <div class="progress-bar" [style.width.%]="(getVentasCompletadas() / (getTotalVentas() || 1)) * 100"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ventas Pendientes -->
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-warning">
+          <div class="stat-icon">
+            <i class="bi bi-clock-history"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ getVentasPendientes() }}</div>
+            <div class="stat-label">Pendientes</div>
+            <div class="stat-badge" *ngIf="getVentasPendientes() > 0">
+              <i class="bi bi-exclamation-triangle"></i>
+              Requieren atención
+            </div>
+          </div>
+          <div class="stat-ring">
+            <svg viewBox="0 0 36 36" class="circular-chart">
+              <path class="circle-bg"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path class="circle"
+                [attr.stroke-dasharray]="((getVentasPendientes() / (getTotalVentas() || 1)) * 100) + ', 100'"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <text x="18" y="20.35" class="percentage">{{ ((getVentasPendientes() / (getTotalVentas() || 1)) * 100) |
+                number:'1.0-0' }}%</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ventas Canceladas -->
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-danger">
+          <div class="stat-icon">
+            <i class="bi bi-x-circle"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ getVentasCanceladas() }}</div>
+            <div class="stat-label">Canceladas</div>
+            <div class="stat-subtext">{{ estadisticas?.montoCanceladas | currency:'':'':'1.0-0' }}</div>
+          </div>
+          <div class="stat-sparkline">
+            <svg width="60" height="30" viewBox="0 0 60 30">
+              <polyline points="0,15 10,10 20,25 30,5 40,20 50,8 60,12" stroke="#ef4444" fill="none"
+                stroke-width="1.5" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros y búsquedas - Diseño Ultra Moderno -->
+    <div class="card filtros-modernos mb-4 border-0 shadow-sm" style="margin-top: -30px;">
+      <div class="card-header py-2 px-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-funnel text-primary"></i>
+            <h6 class="mb-0 fw-semibold fs-7">Filtros</h6>
+          </div>
+
+          <!-- Badge de filtros activos -->
+          <span class="badge bg-primary rounded-pill px-2 py-1 fs-8" *ngIf="contarFiltrosActivos() > 0">
+            {{ contarFiltrosActivos() }} activos
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body p-3">
+        <!-- Tabs de Tipo de Venta -->
+        <div class="tipo-venta-mini mb-3">
+          <div class="tipo-venta-mini-tabs">
+            <div class="mini-tab" [class.active]="filtros.tipoVenta === ''"
+              (click)="filtros.tipoVenta = ''; onFiltroChange()" title="Todas las ventas">
+              <i class="bi bi-grid-3x3-gap-fill"></i>
+              <span class="tab-label">Todas</span>
+            </div>
+            <div class="mini-tab" [class.active]="filtros.tipoVenta === 'solo_consulta'"
+              (click)="filtros.tipoVenta = 'solo_consulta'; onFiltroChange()" title="Solo Consultas">
+              <i class="bi bi-person-badge"></i>
+              <span class="tab-label">Consultas</span>
+            </div>
+            <div class="mini-tab" [class.active]="filtros.tipoVenta === 'solo_productos'"
+              (click)="filtros.tipoVenta = 'solo_productos'; onFiltroChange()" title="Solo Productos">
+              <i class="bi bi-box-seam"></i>
+              <span class="tab-label">Productos</span>
+            </div>
+            <div class="mini-tab" [class.active]="filtros.tipoVenta === 'consulta_productos'"
+              (click)="filtros.tipoVenta = 'consulta_productos'; onFiltroChange()" title="Consulta + Productos">
+              <i class="bi bi-journal-medical"></i>
+              <span class="tab-label">Consulta +</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid de filtros compacto -->
+        <div class="filtros-grid-compacto">
+          <!-- Buscador -->
+          <div class="filtro-item-compacto buscador-ampliado">
+            <div class="filtro-icon" [class.searching]="buscando">
+              <i class="bi" [ngClass]="{
+                            'bi-search': !buscando,
+                            'bi-arrow-repeat': buscando
+                        }"></i>
+              <span class="searching-spinner" *ngIf="buscando"></span>
+            </div>
+            <input type="text" class="filtro-input" placeholder="Buscar por nombre, cédula o N° control..."
+              [(ngModel)]="filtros.busquedaGeneral" (ngModelChange)="onBusquedaDinamica($event)">
+          </div>
+
+          <!-- Estado -->
+          <div class="filtro-item-compacto">
+            <div class="filtro-icon">
+              <i class="bi bi-clipboard-check"></i>
+            </div>
+            <select class="filtro-select" [(ngModel)]="filtros.estado" (change)="onFiltroChange()">
+              <option value="">Estado</option>
+              <option value="completada">Completada</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="cancelada">Cancelada</option>
+            </select>
+          </div>
+
+          <!-- Forma de Pago -->
+          <div class="filtro-item-compacto">
+            <div class="filtro-icon">
+              <i class="bi bi-credit-card"></i>
+            </div>
+            <select class="filtro-select" [(ngModel)]="filtros.formaPago" (change)="onFiltroChange()">
+              <option value="">Forma Pago</option>
+              <option value="contado">Contado</option>
+              <option value="de_contado-pendiente">Pendiente</option>
+              <option value="abono">Abono</option>
+              <option value="cashea">Cashea</option>
+            </select>
+          </div>
+
+          <!-- Asesor -->
+          <div class="filtro-item-compacto">
+            <div class="filtro-icon">
+              <i class="bi bi-person-badge"></i>
+            </div>
+            <select class="filtro-select" [(ngModel)]="filtros.asesor" (change)="onFiltroChange()">
+              <option value="">Asesor</option>
+              <option *ngFor="let asesor of asesores" [value]="asesor.id">
+                {{ asesor.nombre.split(' ')[0] }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Especialista -->
+          <div class="filtro-item-compacto">
+            <div class="filtro-icon">
+              <i class="bi bi-heart-pulse"></i>
+            </div>
+            <select class="filtro-select" [(ngModel)]="filtros.especialista" (change)="onFiltroChange()">
+              <option value="">Especialista</option>
+              <option *ngFor="let esp of especialistas" [value]="esp.id">
+                {{ esp.nombre.split(' ')[0] }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Fecha - Selector compacto -->
+          <div class="filtro-item-compacto date-selector" (click)="toggleDatepicker()">
+            <div class="filtro-icon">
+              <i class="bi bi-calendar3"></i>
+            </div>
+            <div class="filtro-date-display">
+              {{ getFechaDisplay() }}
+            </div>
+          </div>
+
+          <!-- Botón limpiar (ocupa toda la fila en móvil) -->
+          <div class="filtro-item-compacto btn-limpiar-wrapper">
+            <button class="btn-limpiar-filtros-compacto" type="button" (click)="limpiarFiltros()">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        <!-- Filtros Activos Chips -->
+        <div class="filtros-activos-chips mt-2" *ngIf="hayFiltrosActivos()">
+          <div class="d-flex flex-wrap gap-1">
+            <span class="filtro-chip" *ngIf="filtros.tipoVenta">
+              <i class="bi" [ngClass]="{
+                            'bi-grid-3x3-gap-fill': filtros.tipoVenta === '',
+                            'bi-person-badge': filtros.tipoVenta === 'solo_consulta',
+                            'bi-box-seam': filtros.tipoVenta === 'solo_productos',
+                            'bi-journal-medical': filtros.tipoVenta === 'consulta_productos'
+                        }"></i>
+              {{ getTipoVentaDisplay(filtros.tipoVenta) }}
+              <i class="bi bi-x ms-1" (click)="filtros.tipoVenta = ''; onFiltroChange()"></i>
+            </span>
+
+            <span class="filtro-chip" *ngIf="filtros.busquedaGeneral">
+              <i class="bi bi-search me-1"></i>"{{filtros.busquedaGeneral}}"
+              <i class="bi bi-x ms-1" (click)="filtros.busquedaGeneral = ''; onFiltroChange()"></i>
+            </span>
+
+            <span class="filtro-chip" *ngIf="filtros.estado">
+              <i class="bi bi-clipboard-check me-1"></i>{{ getEstadoDisplay(filtros.estado) }}
+              <i class="bi bi-x ms-1" (click)="filtros.estado = ''; onFiltroChange()"></i>
+            </span>
+
+            <span class="filtro-chip" *ngIf="filtros.formaPago">
+              <i class="bi bi-credit-card me-1"></i>{{ getFormaPagoDisplay(filtros.formaPago) }}
+              <i class="bi bi-x ms-1" (click)="filtros.formaPago = ''; onFiltroChange()"></i>
+            </span>
+
+            <span class="filtro-chip" *ngIf="filtros.asesor">
+              <i class="bi bi-person-badge me-1"></i>{{ getAsesorNombre(filtros.asesor) }}
+              <i class="bi bi-x ms-1" (click)="filtros.asesor = ''; onFiltroChange()"></i>
+            </span>
+
+            <span class="filtro-chip" *ngIf="filtros.especialista">
+              <i class="bi bi-heart-pulse me-1"></i>{{ getEspecialistaNombre(filtros.especialista) }}
+              <i class="bi bi-x ms-1" (click)="filtros.especialista = ''; onFiltroChange()"></i>
+            </span>
+
+            <span class="filtro-chip" *ngIf="filtros.fechaDesde || filtros.fechaHasta">
+              <i class="bi bi-calendar3 me-1"></i>{{ getFechaDisplay() }}
+              <i class="bi bi-x ms-1" (click)="limpiarFechas(); onFiltroChange()"></i>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Datepicker Flotante -->
+    <div class="modal fade show" [class.d-block]="showDatepicker" tabindex="-1" *ngIf="showDatepicker">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Seleccionar rango de fechas</h5>
+            <button type="button" class="btn-close btn-close-white" (click)="closeDatepicker()"
+              style="color: white !important;"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <!-- Selector de fecha única -->
+              <div class="col-12">
+                <label class="form-label fw-semibold">📌 Fecha única</label>
+                <input type="date" class="form-control" [(ngModel)]="fechaUnica" [max]="maxDate" [min]="minDate"
+                  (change)="onFechaUnicaChange()">
+                <div class="form-text">Selecciona una fecha específica</div>
+              </div>
+
+              <div class="col-12 text-center d-flex align-items-center justify-content-center">
+                <hr class="my-3">
+                <span class="text-muted">O selecciona un rango</span>
+              </div>
+
+              <!-- Rango de fechas -->
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Desde</label>
+                <input type="date" class="form-control" [max]="filtros.fechaHasta || maxDate" [min]="minDate"
+                  [(ngModel)]="filtros.fechaDesde" (change)="onRangoChange()">
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Hasta</label>
+                <input type="date" class="form-control" [min]="filtros.fechaDesde || minDate" [max]="maxDate"
+                  [(ngModel)]="filtros.fechaHasta" (change)="onRangoChange()">
+              </div>
+
+              <!-- Presets rápidos -->
+              <div class="col-12">
+                <label class="form-label fw-semibold">Rangos predefinidos</label>
+                <div class="d-flex flex-wrap gap-2">
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'hoy'"
+                    [class.btn-outline-secondary]="presetActivo !== 'hoy'" (click)="setRangoPreset('hoy')">
+                    Hoy
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'ayer'"
+                    [class.btn-outline-secondary]="presetActivo !== 'ayer'" (click)="setRangoPreset('ayer')">
+                    Ayer
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana'"
+                    [class.btn-outline-secondary]="presetActivo !== 'semana'" (click)="setRangoPreset('semana')">
+                    Esta semana
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana_pasada'"
+                    [class.btn-outline-secondary]="presetActivo !== 'semana_pasada'"
+                    (click)="setRangoPreset('semana_pasada')">
+                    Semana pasada
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes'"
+                    [class.btn-outline-secondary]="presetActivo !== 'mes'" (click)="setRangoPreset('mes')">
+                    Este mes
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes_pasado'"
+                    [class.btn-outline-secondary]="presetActivo !== 'mes_pasado'"
+                    (click)="setRangoPreset('mes_pasado')">
+                    Mes pasado
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'trimestre'"
+                    [class.btn-outline-secondary]="presetActivo !== 'trimestre'" (click)="setRangoPreset('trimestre')">
+                    Este trimestre
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="limpiarFechas()">
+              <i class="bi bi-x-circle me-1"></i> Limpiar
+            </button>
+            <button type="button" class="btn btn-primary" (click)="aplicarFechas()">
+              <i class="bi bi-check-circle me-1"></i> Aplicar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay para cerrar al hacer click fuera -->
+    <div class="modal-backdrop fade show" *ngIf="showDatepicker" (click)="closeDatepicker()"></div>
+
+
+
+    <!-- Lista de ventas - Diseño Mejorado -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+
+        <!-- Controles de ordenamiento mejorados -->
+        <div class="control-ordenamiento-moderno">
+          <div class="ordenamiento-left">
+            <div class="sort-wrapper">
+              <i class="bi bi-arrow-repeat"></i>
+              <select class="sort-select" [(ngModel)]="ordenamiento.campo">
+                <option value="fecha">📅 Fecha</option>
+                <option value="numeroControl">🔢 N° Control</option>
+                <option value="montoTotal">💰 Monto Total</option>
+                <option value="paciente">👤 Paciente</option>
+              </select>
+              <button class="sort-direction" (click)="cambiarOrden()">
+                <i class="bi" [class.bi-arrow-up]="ordenamiento.ascendente"
+                  [class.bi-arrow-down]="!ordenamiento.ascendente"></i>
+              </button>
+            </div>
+            <div class="result-badge">
+              <i class="bi bi-grid-3x3-gap-fill"></i>
+              <span>{{ ventasFiltradas.length }} de {{ paginacion.totalItems }} ventas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mensaje cuando no hay resultados -->
+        <div *ngIf="ventasFiltradas.length === 0" class="empty-state-modern">
+          <div class="empty-icon-wrapper">
+            <i class="bi bi-inbox"></i>
+          </div>
+          <h5>No se encontraron ventas</h5>
+          <p *ngIf="hayFiltrosActivos()">
+            No hay ventas que coincidan con los filtros aplicados.
+          </p>
+          <p *ngIf="!hayFiltrosActivos()">
+            No hay ventas registradas en el historial.
+          </p>
+          <button *ngIf="hayFiltrosActivos()" class="btn-clear-filters" (click)="limpiarFiltros()">
+            <i class="bi bi-arrow-counterclockwise"></i> Limpiar filtros
+          </button>
+        </div>
+
+        <!-- Grid de ventas -->
+        <div class="ventas-grid" *ngIf="ventasFiltradas.length > 0">
+          <div *ngFor="let venta of ventasFiltradas" class="venta-card-moderno">
+            <!-- Header de la tarjeta (siempre visible) -->
+            <div class="venta-header-moderno" (click)="toggleDetalleVenta(venta.key)">
+              <!-- Avatar con estado -->
+              <div class="venta-avatar-moderno">
+                <div class="avatar-status" [ngClass]="{
+                            'status-completada': venta.estado === 'completada',
+                            'status-pendiente': venta.estado === 'pendiente',
+                            'status-cancelada': venta.estado === 'cancelada'
+                        }">
+                  <i class="bi" [class.bi-check-lg]="venta.estado === 'completada'"
+                    [class.bi-clock]="venta.estado === 'pendiente'" [class.bi-x-lg]="venta.estado === 'cancelada'"></i>
+                </div>
+              </div>
+
+              <!-- Información principal -->
+              <div class="venta-info-moderno">
+                <div class="info-header">
+                  <span class="paciente-nombre">{{ venta.paciente.nombre }}</span>
+                  <span class="estatus-pago" [ngClass]="getEstatusPagoClase(venta)">
+                    {{ getEstatusPago(venta) }}
+                  </span>
+                  <span class="tipo-venta-badge" [ngClass]="{
+                                'tipo-consulta': venta.tipoVenta === 'solo_consulta',
+                                'tipo-productos': venta.tipoVenta === 'solo_productos',
+                                'tipo-mixto': venta.tipoVenta === 'consulta_productos'
+                            }">
+                    <i class="bi" [class.bi-person-badge]="venta.tipoVenta === 'solo_consulta'"
+                      [class.bi-box-seam]="venta.tipoVenta === 'solo_productos'"
+                      [class.bi-journal-medical]="venta.tipoVenta === 'consulta_productos'"></i>
+                    {{ getTipoVentaDisplay(venta.tipoVenta) }}
+                  </span>
+                </div>
+                <div class="info-meta">
+                  <span><i class="bi bi-card-text"></i> {{ venta.paciente.cedula }}</span>
+                  <span><i class="bi bi-calendar3"></i> {{ venta.fecha | date:'dd/MM/yyyy' }}</span>
+                  <span><i class="bi bi-clock"></i> {{ venta.fecha | date:'HH:mm' }}</span>
+                  <span><i class="bi bi-hash"></i> {{ venta.numeroControl }}</span>
+                </div>
+                <div class="info-details">
+                  <div class="detail-badge">
+                    <i class="bi bi-person-gear"></i>
+                    <span>{{ venta.asesor.nombre }}</span>
+                  </div>
+                  <div class="detail-badge payment">
+                    <i class="bi" [class.bi-cash]="venta.formaPago === 'contado'"
+                      [class.bi-cash-stack]="venta.formaPago === 'abono'"
+                      [class.bi-calendar-check]="venta.formaPago === 'cashea'"
+                      [class.bi-clock-history]="venta.formaPago === 'de_contado-pendiente'"></i>
+                    <span>{{ getFormaPagoDisplay(venta.formaPago) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Monto y expandir -->
+              <div class="venta-monto-moderno">
+                <div class="monto-valor">{{ formatearMoneda(getTotalVentaSistema(venta), getMonedaSistema()) }}</div>
+                <div class="monto-label">Total</div>
+              </div>
+
+              <div class="venta-expand-moderno">
+                <i class="bi" [class.bi-chevron-down]="!venta.mostrarDetalle"
+                  [class.bi-chevron-up]="venta.mostrarDetalle"></i>
+              </div>
+            </div>
+
+            <!-- Panel expandido con detalles -->
+            <div *ngIf="venta.mostrarDetalle" class="venta-detalle-moderno">
+
+              <!-- Resumen de totales -->
+              <div class="detalle-resumen">
+                <div class="resumen-item">
+                  <i class="bi bi-box-seam"></i>
+                  <div>
+                    <small>Productos</small>
+                    <strong>{{ venta.productos?.length || 0 }} items</strong>
+                  </div>
+                </div>
+                <div class="resumen-item">
+                  <i class="bi bi-calculator"></i>
+                  <div>
+                    <small>Subtotal (sin IVA)</small>
+                    <strong>{{ formatearMoneda(getSubtotalVentaSistema(venta), getMonedaSistema()) }}</strong>
+                  </div>
+                </div>
+                <div class="resumen-item">
+                  <i class="bi bi-percent"></i>
+                  <div>
+                    <small>IVA ({{ venta.impuesto || 16 }}%)</small>
+                    <strong>{{ formatearMoneda(getIvaVentaSistema(venta), getMonedaSistema()) }}</strong>
+                  </div>
+                </div>
+                <div class="resumen-item">
+                  <i class="bi bi-cash-stack"></i>
+                  <div>
+                    <small>Total</small>
+                    <strong class="text-primary">{{ formatearMoneda(getTotalVentaSistema(venta), getMonedaSistema())
+                      }}</strong>
+                  </div>
+                </div>
+                <div class="resumen-item">
+                  <i class="bi bi-cash-coin"></i>
+                  <div>
+                    <small>Pagado</small>
+                    <strong class="text-success">{{ formatearMoneda(getTotalPagadoVentaSistema(venta),
+                      getMonedaSistema()) }}</strong>
+                  </div>
+                </div>
+                <div class="resumen-item" *ngIf="getDeudaPendienteVentaSistema(venta) > 0">
+                  <i class="bi bi-clock-history"></i>
+                  <div>
+                    <small>Deuda pendiente</small>
+                    <strong class="text-danger">{{ formatearMoneda(getDeudaPendienteVentaSistema(venta),
+                      getMonedaSistema()) }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Observaciones -->
+              <div class="detalle-observaciones" *ngIf="getObservacionesGenerales(venta)">
+                <i class="bi bi-chat-left-text"></i>
+                <span>{{ getObservacionesGenerales(venta) }}</span>
+              </div>
+
+              <div class="detalle-traslado-resumen" *ngIf="tieneSolicitudesTraslado(venta)">
+                <i class="bi bi-truck"></i>
+                <span>{{ getResumenSolicitudesTraslado(venta) }}</span>
+              </div>
+
+              <!-- Acciones -->
+              <div class="detalle-acciones">
+                <button class="accion-btn" (click)="verDetalleCompleto(venta)">
+                  <i class="bi bi-eye"></i>
+                  <span>Detalles</span>
+                </button>
+                <button class="accion-btn" (click)="verRecibo(venta)">
+                  <i class="bi bi-receipt"></i>
+                  <span>Recibo</span>
+                </button>
+                <button *ngIf="mostrarBotonRealizarPago(venta)" class="accion-btn success"
+                  (click)="abrirModalPagoCompleto(venta)">
+                  <i class="bi bi-cash-stack"></i>
+                  <span>Realizar Pago</span>
+                </button>
+                <button *ngIf="mostrarBotonAbonar(venta)" class="accion-btn warning" (click)="editarVenta(venta)">
+                  <i class="bi bi-cash-coin"></i>
+                  <span>Abonar</span>
+                </button>
+                <button *ngIf="venta.estado !== 'cancelada'" class="accion-btn danger" (click)="cancelarVenta(venta)">
+                  <i class="bi bi-x-circle"></i>
+                  <span>Anular venta</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- Modal de Confirmación para Cancelar Venta -->
+  <ng-template #cancelarVentaModal let-modal>
+    <div class="modal-header bg-primary text-white cancelar-venta-header">
+      <h5 class="modal-title">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Confirmar Cancelación
+      </h5>
+      <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()"></button>
+    </div>
+
+    <div class="modal-body cancelar-venta-body">
+      <!-- Cambiamos alert-warning por alert-info con fondo azul claro -->
+      <div class="alert alert-info cancelar-venta-alert" role="alert">
+        <h6 class="alert-heading fw-bold">¿Está seguro de que desea cancelar esta venta?</h6>
+        <p class="mb-0 mt-2">
+          <strong>Venta {{ formatNumeroVenta(selectedVenta?.id) }}</strong><br>
+          <span *ngIf="selectedVenta?.paciente?.nombre">Paciente: {{ selectedVenta.paciente.nombre }}</span><br>
+          <span *ngIf="selectedVenta?.montoTotal">Monto: {{ selectedVenta.montoTotal | currency }}</span>
+        </p>
+      </div>
+
+      <div class="form-group mt-3 cancelar-venta-form">
+        <label for="motivoCancelacion" class="form-label">
+          <strong>Motivo de cancelación:</strong>
+        </label>
+        <textarea id="motivoCancelacion" class="form-control" rows="3"
+          placeholder="Ingrese el motivo de la cancelación..." [(ngModel)]="motivoCancelacion" maxlength="500">
+      </textarea>
+        <small class="text-muted">{{ motivoCancelacion?.length || 0 }}/500 caracteres</small>
+      </div>
+    </div>
+
+    <div class="modal-footer cancelar-venta-footer">
+      <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">
+        <i class="bi bi-x-circle me-1"></i> Cancelar
+      </button>
+      <button type="button" class="btn btn-danger" (click)="confirmarCancelacion(modal)">
+        <i class="bi bi-check-circle me-1"></i> Confirmar Cancelación
+      </button>
+    </div>
+  </ng-template>
+
+
+  <!-- Modal de Detalle Completo de Venta - Diseño Simplificado -->
+  <ng-template #detalleVentaModal let-modal>
+    <!-- Header con gradiente -->
+    <div class="modal-header-detalle">
+      <div class="header-content">
+        <div class="header-icon">
+          <i class="bi bi-file-earmark-text"></i>
+        </div>
+        <div class="header-text">
+          <h5 class="modal-title">Detalle de Venta</h5>
+          <div class="header-subtitle">
+            <span class="badge badge-primary">#{{selectedVenta?.numeroControl}}</span>
+            <span class="separator">•</span>
+            <span class="fecha">{{selectedVenta?.fecha | date:'dd/MM/yyyy'}}</span>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Cerrar"></button>
+    </div>
+
+    <div class="modal-body-detalle">
+      <!-- Tarjeta de Información Principal -->
+      <div class="info-card principal">
+        <div class="card-header-detalle">
+          <i class="bi bi-person-circle"></i>
+          <span>Información del Paciente</span>
+        </div>
+        <div class="card-body-detalle">
+          <div class="info-grid-2cols">
+            <!-- Fila 1 -->
+            <div class="info-row">
+              <div class="info-item-detalle">
+                <label>👤 Paciente</label>
+                <div class="value">{{selectedVenta?.paciente?.nombre}}</div>
+              </div>
+              <div class="info-item-detalle">
+                <label>🆔 Cédula</label>
+                <div class="value">{{selectedVenta?.paciente?.cedula || 'No especificada'}}</div>
+              </div>
+            </div>
+
+            <!-- Fila 2 -->
+            <div class="info-row">
+              <div class="info-item-detalle">
+                <label>📧 Email</label>
+                <div class="value">{{selectedVenta?.paciente?.email || 'No especificado'}}</div>
+              </div>
+              <div class="info-item-detalle">
+                <label>📞 Teléfono</label>
+                <div class="value">{{selectedVenta?.paciente?.telefono || 'No especificado'}}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta de Personal Asignado -->
+      <div class="info-card personal">
+        <div class="card-header-detalle">
+          <i class="bi bi-people"></i>
+          <span>Personal Asignado</span>
+        </div>
+        <div class="card-body-detalle">
+          <div class="personal-grid">
+            <!-- Asesor -->
+            <div class="info-item-detalle">
+              <label>👨‍💼 Asesor</label>
+              <div class="value">
+                <div class="nombre-personal">{{selectedVenta?.asesor?.nombre || 'No asignado'}}</div>
+                <div class="cedula-personal" *ngIf="selectedVenta?.asesor?.cedula">
+                  C.I. {{selectedVenta?.asesor?.cedula}}
+                </div>
+                <div class="cedula-personal" *ngIf="!selectedVenta?.asesor?.cedula">
+                  <small class="text-muted">Cédula no disponible</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección de Formulación Clínica (si existe) -->
+      <div class="info-card formulacion" *ngIf="selectedVenta?.historiaMedica?.formulacion">
+        <div class="card-header-detalle">
+          <i class="bi bi-eyeglasses"></i>
+          <span>Formulación Clínica</span>
+        </div>
+        <div class="card-body-detalle">
+          <div class="formulacion-grid">
+            <!-- Ojo Derecho -->
+            <div class="ojo-card">
+              <div class="ojo-header ojo-derecho">
+                <i class="bi bi-eye"></i>
+                <span>Ojo Derecho (OD)</span>
+              </div>
+              <div class="ojo-params">
+                <div class="param">
+                  <span class="param-label">Esfera (Esf)</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.esf || '—'}}</span>
+                </div>
+                <div class="param">
+                  <span class="param-label">Cilindro (Cil)</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.cil || '—'}}</span>
+                </div>
+                <div class="param">
+                  <span class="param-label">Eje</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.eje || '—'}}</span>
+                </div>
+                <div class="param">
+                  <span class="param-label">Add</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.add || '—'}}</span>
+                </div>
+                <div class="param">
+                  <span class="param-label">Altura</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.alt || '—'}}</span>
+                </div>
+                <div class="param">
+                  <span class="param-label">DP</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.dp || '—'}}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ojo Izquierdo -->
+            <div class="ojo-card">
+              <div class="ojo-header ojo-izquierdo">
+                <i class="bi bi-eye"></i>
+                <span>Ojo Izquierdo (OI)</span>
+              </div>
+              <div class="ojo-params">
+                <div class="param">
+                  <span class="param-label">Esfera (Esf)</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.esf || '—'}}</span>
+                </div>
+                <div class="param">
+                  <span class="param-label">Cilindro (Cil)</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.cil || '—'}}</span>
+                </div>
+                <div class="param">
+                  <span class="param-label">Eje</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.eje || '—'}}</span>
+                </div>
+                <div class="param">
+                  <span class="param-label">Add</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.add || '—'}}</span>
+                </div>
+                <div class="param">
+                  <span class="param-label">Altura</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.alt || '—'}}</span>
+                </div>
+                <div class="param">
+                  <span class="param-label">DP</span>
+                  <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.dp || '—'}}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recomendaciones -->
+          <div class="recomendaciones" *ngIf="selectedVenta?.historiaMedica?.recomendaciones">
+            <div class="recomendaciones-header">
+              <i class="bi bi-stars"></i>
+              <span>Recomendaciones</span>
+            </div>
+            <div class="recomendaciones-grid">
+              <div class="recomendacion-item">
+                <span class="rec-label">Montura</span>
+                <span class="rec-value">{{ getValorRecomendacionVenta(selectedVenta?.historiaMedica?.recomendaciones, 'montura') }}</span>
+              </div>
+              <div class="recomendacion-item">
+                <span class="rec-label">Material</span>
+                <span class="rec-value">{{ getValorRecomendacionVenta(selectedVenta?.historiaMedica?.recomendaciones, 'material') }}</span>
+              </div>
+              <div class="recomendacion-item">
+                <span class="rec-label">Cristal</span>
+                <span class="rec-value">{{ getValorRecomendacionVenta(selectedVenta?.historiaMedica?.recomendaciones, 'cristal') }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta de Productos y Servicios -->
+      <div class="info-card productos">
+        <div class="card-header-detalle">
+          <i class="bi bi-cart"></i>
+          <span>Productos y Servicios</span>
+        </div>
+        <div class="card-body-detalle">
+          <div class="productos-list-compacto">
+
+            <!-- ========== CONSULTA MÉDICA (si existe) ========== -->
+            <div *ngIf="selectedVenta?.consulta" class="producto-item-compacto consulta-item">
+              <!-- Header de la consulta -->
+              <div class="producto-header-compacto">
+                <div class="producto-titulo">
+                  <span class="producto-nombre">Consulta Médica</span>
+                  <span class="consulta-badge" [ngClass]="{
+                                  'badge-costo': selectedVenta.consulta.montoTotal > 0,
+                                  'badge-sin-costo': selectedVenta.consulta.montoTotal === 0
+                              }">
+                    {{ selectedVenta.consulta.montoTotal > 0 ? 'Con costo' : 'Sin costo' }}
+                  </span>
+                </div>
+                <div class="consulta-info">
+                  <span *ngIf="!selectedVenta.consulta.esFormulaExterna" class="especialista-nombre">
+                    <i class="bi bi-person-badge"></i>
+                    {{ getTipoEspecialistaConsulta(selectedVenta.consulta) }}
+                  </span>
+                  <span *ngIf="selectedVenta.consulta.esFormulaExterna" class="badge-externa">
+                    <i class="bi bi-box-arrow-up-right"></i> Fórmula externa
+                  </span>
+                </div>
+              </div>
+
+              <!-- Detalle de la consulta -->
+              <div class="consulta-detalle">
+                <div class="detalle-fila">
+                  <span class="detalle-label">Especialista:</span>
+                  <span class="detalle-valor">{{ getNombreEspecialistaConsulta(selectedVenta.consulta) }}</span>
+                </div>
+                <div class="detalle-fila" *ngIf="!selectedVenta.consulta.esFormulaExterna">
+                  <span class="detalle-label">Tipo:</span>
+                  <span class="detalle-valor">{{ getTipoEspecialistaConsulta(selectedVenta.consulta) }}</span>
+                </div>
+                <div class="detalle-fila" *ngIf="getCedulaEspecialistaConsulta(selectedVenta.consulta)">
+                  <span class="detalle-label">Cédula:</span>
+                  <span class="detalle-valor">{{ getCedulaEspecialistaConsulta(selectedVenta.consulta) }}</span>
+                </div>
+                <div class="detalle-fila" *ngIf="getLugarEspecialistaConsulta(selectedVenta.consulta)">
+                  <span class="detalle-label">Consultorio:</span>
+                  <span class="detalle-valor">{{ getLugarEspecialistaConsulta(selectedVenta.consulta) }}</span>
+                </div>
+              </div>
+
+              <!-- Línea de cálculo de la consulta (si tiene costo) -->
+              <div *ngIf="selectedVenta.consulta.montoTotal > 0" class="calculo-linea consulta-calculo">
+                <div class="calculo-parte">
+                  <span class="cantidad">1 consulta ×</span>
+                  <span class="precio-base">{{ getMontoParaMostrar(selectedVenta, selectedVenta.consulta.montoTotal,
+                    selectedVenta?.moneda) }}</span>
+                  <span class="moneda">{{ getSimboloMonedaSistema() }}</span>
+                </div>
+                <span class="igual">=</span>
+                <div class="calculo-parte total-final">
+                  <span class="total-producto">{{ getMontoParaMostrar(selectedVenta, selectedVenta.consulta.montoTotal,
+                    selectedVenta?.moneda) }}</span>
+                </div>
+              </div>
+
+              <!-- Desglose de pagos de la consulta (si aplica) -->
+              <div *ngIf="selectedVenta.consulta.pagoMedico > 0 || selectedVenta.consulta.pagoOptica > 0"
+                class="consulta-desglose">
+                <div class="desglose-item" *ngIf="selectedVenta.consulta.pagoMedico > 0">
+                  <span class="desglose-label">Pago médico:</span>
+                  <span class="desglose-valor">{{ getMontoParaMostrar(selectedVenta, selectedVenta.consulta.pagoMedico,
+                    selectedVenta?.moneda) }}</span>
+                </div>
+                <div class="desglose-item" *ngIf="selectedVenta.consulta.pagoOptica > 0">
+                  <span class="desglose-label">Pago óptica:</span>
+                  <span class="desglose-valor">{{ getMontoParaMostrar(selectedVenta, selectedVenta.consulta.pagoOptica,
+                    selectedVenta?.moneda) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ========== PRODUCTOS ========== -->
+            <div *ngFor="let producto of getProductosSegurosDetalle()" class="producto-item-compacto">
+              <!-- Header del producto -->
+              <div class="producto-header-compacto">
+                <div class="producto-titulo">
+                  <span class="producto-nombre">{{producto.nombre}}</span>
+                  <span class="producto-codigo">{{producto.codigo}}</span>
+                </div>
+              </div>
+
+              <div class="detalle-traslado-resumen" *ngIf="producto.solicitudTraslado">
+                <span class="traslado-pill-icon">
+                  <i class="bi bi-truck"></i>
+                  Traslado
+                </span>
+                <div class="traslado-pill-content">
+                  <span class="traslado-pill-text">{{ getTextoTrasladoDetalle(producto.solicitudTraslado) }}</span>
+                </div>
+              </div>
+
+              <!-- Línea principal de cálculo -->
+              <div class="calculo-linea">
+                <div class="calculo-parte">
+                  <span class="cantidad">{{producto.cantidad}} und ×</span>
+                  <span class="precio-base">{{ getMontoParaMostrar(selectedVenta, producto.precioUnitarioSinIva,
+                    selectedVenta?.moneda) }}</span>
+                </div>
+                <span *ngIf="producto.tieneIva" class="separador-calc">+</span>
+                <div *ngIf="producto.tieneIva" class="calculo-parte">
+                  <span class="iva-total">{{ getMontoParaMostrar(selectedVenta, producto.ivaTotalProducto,
+                    selectedVenta?.moneda) }}</span>
+                  <span class="iva-label">IVA</span>
+                </div>
+                <span class="igual">=</span>
+                <div class="calculo-parte total-final">
+                  <span class="total-producto">{{ getMontoParaMostrar(selectedVenta, producto.total,
+                    selectedVenta?.moneda) }}</span>
+                </div>
+              </div>
+
+              <!-- Información de IVA por unidad (solo si aplica) -->
+              <div *ngIf="producto.tieneIva && producto.cantidad > 1" class="info-iva-unidad">
+                <span class="info-label">IVA por unidad:</span>
+                <span class="info-valor">{{ getMontoParaMostrar(selectedVenta, producto.ivaPorUnidad,
+                  selectedVenta?.moneda) }}</span>
+              </div>
+            </div>
+
+            <!-- Mensaje cuando no hay productos ni consulta -->
+            <div
+              *ngIf="(!selectedVenta?.consulta || selectedVenta.consulta.montoTotal === 0) && (!selectedVenta?.productos || selectedVenta.productos.length === 0)"
+              class="empty-message">
+              <i class="bi bi-info-circle"></i>
+              <span>No hay productos o servicios registrados</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta de Configuración de Pago -->
+      <div class="info-card pago">
+        <div class="card-header-detalle">
+          <i class="bi bi-credit-card"></i>
+          <span>Configuración de Pago</span>
+        </div>
+        <div class="card-body-detalle">
+          <div class="pago-grid-compact">
+
+            <!-- Fila 1: Información Básica -->
+            <div class="pago-row">
+              <div class="pago-item-compact">
+                <label>Forma de Pago</label>
+                <div class="value highlight">{{getFormaPagoDisplay(selectedVenta?.formaPago)}}</div>
+              </div>
+              <div class="pago-item-compact">
+                <label>Moneda</label>
+                <div class="value">{{getMonedaDisplay(selectedVenta?.moneda)}}</div>
+              </div>
+              <div class="pago-item-compact" *ngIf="selectedVenta?.descuento > 0">
+                <label>Descuento</label>
+                <div class="value discount">{{selectedVenta?.descuento || 0}}%</div>
+              </div>
+            </div>
+
+            <!-- ========== CONTADO: Pago completado ========== -->
+            <div *ngIf="selectedVenta?.formaPago === 'contado'" class="pago-especifico">
+              <div class="pago-row">
+                <div class="pago-item-compact full-width">
+                  <div class="alert alert-success">
+                    <div class="alert-icon">
+                      <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <div class="alert-content">
+                      <strong>Pago completado</strong>
+                      <span>El pago se realizó en su totalidad</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pago-detalle-contado">
+                <div class="pago-subitem">
+                  <span>Total pagado:</span>
+                  <strong>{{ getMontoParaMostrar(selectedVenta, selectedVenta?.formaPagoCompleto?.totalPagado
+                    || selectedVenta?.total, selectedVenta?.moneda) }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="selectedVenta?.formaPago === 'de_contado-pendiente'" class="pago-especifico">
+              <div class="pago-row">
+                <div class="pago-item-compact full-width">
+                  <div class="alert" [ngClass]="getDeudaPendiente(selectedVenta) > 0 ? 'alert-warning' : 'alert-success'">
+                    <div class="alert-icon">
+                      <i class="bi" [class.bi-hourglass-split]="getDeudaPendiente(selectedVenta) > 0"
+                        [class.bi-check-circle-fill]="getDeudaPendiente(selectedVenta) <= 0"></i>
+                    </div>
+                    <div class="alert-content">
+                      <strong>{{ getDeudaPendiente(selectedVenta) > 0 ? 'Pago contado pendiente' : 'Pago contado registrado' }}</strong>
+                      <span>
+                        {{ getDeudaPendiente(selectedVenta) > 0 ? 'La venta espera un único pago de contado.' : 'El pago único ya fue registrado en la venta.' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pago-detalle-pendiente">
+                <div class="pago-subitem">
+                  <span>Pendiente:</span>
+                  <strong class="text-warning">{{ formatearMoneda(getDeudaPendiente(selectedVenta), selectedVenta?.moneda) }}</strong>
+                </div>
+                <div class="pago-subitem" *ngIf="getTotalPagadoVenta(selectedVenta) > 0">
+                  <span>Registrado:</span>
+                  <strong>{{ formatearMoneda(getTotalPagadoVenta(selectedVenta), selectedVenta?.moneda) }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- CASHEA: Plan de pagos -->
+            <div *ngIf="selectedVenta?.formaPago === 'cashea'" class="pago-especifico">
+              <div class="pago-row">
+                <div class="pago-item-compact">
+                  <label><i class="bi bi-graph-up"></i> Nivel</label>
+                  <div class="value small">{{selectedVenta?.nivelCashea || '--'}}</div>
+                </div>
+                <div class="pago-item-compact">
+                  <label><i class="bi bi-cash-coin"></i> Inicial</label>
+                  <div class="value small">
+                    {{ getMontoParaMostrar(selectedVenta, selectedVenta?.montoInicial,
+                    selectedVenta?.moneda) }}
+                  </div>
+                </div>
+                <div class="pago-item-compact">
+                  <label><i class="bi bi-calendar-week"></i> Cuotas</label>
+                  <div class="value small">
+                    {{selectedVenta?.cantidadCuotas}}x
+                    {{ getMontoParaMostrar(selectedVenta, selectedVenta?.montoPorCuota,
+                    selectedVenta?.moneda) }}
+                  </div>
+                </div>
+                <div class="pago-item-compact" *ngIf="selectedVenta?.cuotasAdelantadas?.length > 0">
+                  <label><i class="bi bi-lightning"></i> Adelantadas</label>
+                  <div class="value small info">
+                    {{selectedVenta?.cuotasAdelantadas?.length}}
+                    ({{ getMontoParaMostrar(selectedVenta, getTotalCuotasAdelantadas(),
+                    selectedVenta?.moneda) }})
+                  </div>
+                </div>
+              </div>
+
+              <div class="pago-detalle-pendiente">
+                <div class="pago-subitem">
+                  <span>Total pendiente:</span>
+                  <strong class="text-warning">{{formatearMoneda(selectedVenta?.formaPagoCompleto?.deuda ||
+                    selectedVenta?.total, selectedVenta?.moneda)}}</strong>
+                </div>
+                <div class="pago-subitem" *ngIf="selectedVenta?.formaPagoCompleto?.totalPagado > 0">
+                  <span>Abonado:</span>
+                  <strong>{{formatearMoneda(selectedVenta?.formaPagoCompleto?.totalPagado,
+                    selectedVenta?.moneda)}}</strong>
+                </div>
+              </div>
+
+              <div class="pago-row mt-2" *ngIf="getCuotasCasheaDetalle(selectedVenta).length > 0">
+                <div class="pago-item-compact full-width">
+                  <label><i class="bi bi-calendar2-week"></i> Cuotas Cashea</label>
+                  <div class="d-flex flex-wrap gap-2 mb-2">
+                    <span class="badge text-bg-success">Adelantadas: {{ getCuotasCasheaAdelantadas(selectedVenta).length }}</span>
+                    <span class="badge text-bg-warning">Pendientes: {{ getCuotasCasheaPendientes(selectedVenta).length }}</span>
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <span *ngFor="let cuota of getCuotasCasheaDetalle(selectedVenta)" class="badge"
+                      [ngClass]="cuota.pagada ? 'text-bg-success' : 'text-bg-light border text-dark'">
+                      Cuota {{ cuota.numero }} · {{ formatearMoneda(cuota.monto, selectedVenta?.moneda) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ========== ABONO: Pago parcial ========== -->
+            <div *ngIf="selectedVenta?.formaPago === 'abono'" class="pago-especifico">
+              <div class="pago-row">
+                <div class="pago-item-compact">
+                  <label><i class="bi bi-check-circle"></i> Abonado</label>
+                  <div class="value small success">
+                    <!-- Monto convertido a moneda del sistema -->
+                    <span class="monto-convertido">
+                      {{ getMontoParaMostrar(selectedVenta, selectedVenta?.formaPagoCompleto?.totalPagado,
+                      selectedVenta?.moneda) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="pago-item-compact">
+                  <label><i class="bi bi-clock"></i> Pendiente</label>
+                  <div class="value small warning">
+                    <!-- Monto convertido a moneda del sistema -->
+                    <span class="monto-convertido">
+                      {{ getMontoParaMostrar(selectedVenta, selectedVenta?.formaPagoCompleto?.deuda,
+                      selectedVenta?.moneda) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="pago-item-compact">
+                  <label><i class="bi bi-percent"></i> Progreso</label>
+                  <div class="value small">{{ getPorcentajeAbonado() }}%</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta de Métodos de Pago -->
+      <div class="info-card metodos-pago-detalle" *ngIf="getHistorialPagosDetalle(selectedVenta).length">
+        <div class="card-header-detalle">
+          <i class="bi bi-wallet2"></i>
+          <span>Métodos de Pago</span>
+        </div>
+        <div class="card-body-detalle">
+          <div class="metodos-grid">
+            <div *ngFor="let pagoGroup of getHistorialPagosDetalle(selectedVenta)" class="pago-group">
+              <div class="pago-group-header justify-content-between flex-wrap gap-2">
+                <div>
+                  <strong>{{ pagoGroup.titulo || ('Pago #' + (pagoGroup.numero_pago || 0)) }}</strong>
+                  <div class="small text-muted" *ngIf="pagoGroup.fechaRegistro || pagoGroup.fecha">
+                    {{ (pagoGroup.fechaRegistro || pagoGroup.fecha) | date:'dd/MM/yyyy HH:mm' }}
+                  </div>
+                </div>
+                <div class="text-end">
+                  <div class="fw-semibold">{{ formatearMoneda(pagoGroup.montoAbonado || 0, selectedVenta?.moneda) }}</div>
+                  <div class="small text-muted">
+                    {{ getMontoParaMostrar(selectedVenta, pagoGroup.montoAbonado || 0, selectedVenta?.moneda) }}
+                  </div>
+                </div>
+              </div>
+
+              <div *ngFor="let metodo of pagoGroup.metodosPago" class="metodo-item-detalle">
+                <div class="metodo-icono">
+                  <i [class]="'bi ' + getIconoMetodoPago(metodo.tipo)"></i>
+                </div>
+                <div class="metodo-info-detalle">
+                  <div class="metodo-tipo">{{ getTipoPagoDisplay(metodo.tipo) }}</div>
+
+                  <!-- DISPLAY MONTOS EN SU MONEDA ORIGINAL -->
+                  <div class="montos-linea">
+                    <!-- Monto en su moneda original con el símbolo correcto -->
+                    <div class="monto-original fw-bold" [ngClass]="{
+                                'text-success': metodo.moneda === 'dolar',
+                                'text-info': metodo.moneda === 'bolivar',
+                                'text-warning': metodo.moneda === 'euro'
+                            }">
+                      {{ formatearMoneda(metodo.monto, metodo.moneda) }}
+                    </div>
+                    <div class="monto-convertido text-muted small" *ngIf="metodo.moneda !== getMonedaSistema()">
+                      {{ getMontoParaMostrar(selectedVenta, metodo.monto, metodo.moneda) }}
+                    </div>
+                  </div>
+
+                  <!-- INFORMACIÓN ADICIONAL -->
+                  <div class="metodo-detalles-adicionales">
+                    <div class="detalle-adicional" *ngIf="metodo.referencia">
+                      <i class="bi bi-receipt"></i>
+                      <span>Ref: {{metodo.referencia}}</span>
+                    </div>
+                    <div class="detalle-adicional" *ngIf="metodo.bancoNombre">
+                      <i class="bi bi-building"></i>
+                      <span>Banco: {{metodo.bancoNombre}}</span>
+                    </div>
+                    <div class="detalle-adicional" *ngIf="metodo.bancoReceptorNombre">
+                      <i class="bi bi-arrow-left-right"></i>
+                      <span>Receptor: {{metodo.bancoReceptorNombre}}</span>
+                    </div>
+                    <div class="detalle-adicional" *ngIf="metodo.notaPago">
+                      <i class="bi bi-chat-left-text"></i>
+                      <span>{{metodo.notaPago}}</span>
+                    </div>
+                    <div class="detalle-adicional">
+                      <i class="bi bi-calendar"></i>
+                      <span>{{metodo.fechaRegistro | date:'dd/MM/yyyy HH:mm'}}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div *ngIf="pagoGroup.observaciones" class="pago-group-observaciones">
+                <i class="bi bi-info-circle"></i>
+                <span>{{ pagoGroup.observaciones }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta de Resumen Financiero -->
+      <div class="info-card resumen">
+        <div class="card-header-detalle">
+          <i class="bi bi-calculator"></i>
+          <span>Resumen Financiero</span>
+        </div>
+        <div class="card-body-detalle">
+          <div class="resumen-financiero-premium">
+            <div class="resumen-hero-total">
+              <div class="hero-copy">
+                <span class="hero-kicker">Total de la venta</span>
+                <div class="hero-amount">{{ getMontoParaMostrar(selectedVenta, getTotalVenta(selectedVenta), selectedVenta?.moneda)
+                  }}</div>
+                <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="hero-reference">≈ {{
+                  formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getTotalVenta(selectedVenta)), 'bolivar') }}</small>
+              </div>
+              <div class="hero-icon-shell">
+                <i class="bi bi-cash-stack"></i>
+              </div>
+            </div>
+
+            <div class="resumen-balance-strip" *ngIf="debeMostrarResumenDeSaldo(selectedVenta)">
+              <div class="balance-chip success">
+                <span class="chip-label">{{ getEtiquetaPagadoResumen(selectedVenta) }}</span>
+                <strong>{{ getMontoParaMostrar(selectedVenta, getTotalPagadoVenta(selectedVenta), selectedVenta?.moneda)
+                  }}</strong>
+              </div>
+
+              <div class="balance-chip warning">
+                <span class="chip-label">{{ getEtiquetaPendienteResumen(selectedVenta) }}</span>
+                <strong>{{ getMontoParaMostrar(selectedVenta, getDeudaPendiente(selectedVenta), selectedVenta?.moneda)
+                  }}</strong>
+              </div>
+            </div>
+
+            <div class="resumen-grid detalle-financiero-grid">
+              <div class="resumen-item subtotal-card">
+                <div class="resumen-label-wrap">
+                  <span class="resumen-label">Subtotal</span>
+                  <small class="resumen-caption">Base sin impuesto</small>
+                </div>
+                <div class="resumen-values-wrap">
+                  <span class="resumen-value">{{ getMontoParaMostrar(selectedVenta, getSubtotalVenta(selectedVenta), selectedVenta?.moneda)
+                    }}</span>
+                  <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ {{
+                    formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getSubtotalVenta(selectedVenta)), 'bolivar') }}</small>
+                </div>
+              </div>
+
+              <div class="resumen-item iva-card">
+                <div class="resumen-label-wrap">
+                  <span class="resumen-label">IVA Total</span>
+                  <small class="resumen-caption">Impuesto aplicado</small>
+                </div>
+                <div class="resumen-values-wrap">
+                  <span class="resumen-value">{{ getMontoParaMostrar(selectedVenta, getIvaVenta(selectedVenta),
+                    selectedVenta?.moneda) }}</span>
+                  <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ {{
+                    formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getIvaVenta(selectedVenta)), 'bolivar') }}</small>
+                </div>
+              </div>
+
+              <div class="resumen-item descuento-card" *ngIf="selectedVenta?.totalDescuento">
+                <div class="resumen-label-wrap">
+                  <span class="resumen-label">Descuento</span>
+                  <small class="resumen-caption">Monto rebajado</small>
+                </div>
+                <div class="resumen-values-wrap">
+                  <span class="resumen-value">-{{ getMontoParaMostrar(selectedVenta, selectedVenta?.totalDescuento, selectedVenta?.moneda)
+                    }}</span>
+                  <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ -{{
+                    formatearMoneda(getMontoReferenciaBolivar(selectedVenta, selectedVenta?.totalDescuento), 'bolivar') }}</small>
+                </div>
+              </div>
+
+              <div class="resumen-item total total-card">
+                <div class="resumen-label-wrap">
+                  <span class="resumen-label">Total Final</span>
+                  <small class="resumen-caption">Monto consolidado</small>
+                </div>
+                <div class="resumen-values-wrap">
+                  <span class="resumen-value">{{ getMontoParaMostrar(selectedVenta, getTotalVenta(selectedVenta), selectedVenta?.moneda)
+                    }}</span>
+                  <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ {{
+                    formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getTotalVenta(selectedVenta)), 'bolivar') }}</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="resumen-footnote">
+              <i class="bi bi-info-circle"></i>
+              <span>Los importes se muestran en moneda del sistema y solo se agrega referencia en bolívares cuando aporta contexto.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-card observaciones" *ngIf="getObservacionesGenerales(selectedVenta)">
+        <div class="card-header-detalle">
+          <i class="bi bi-chat-left-text"></i>
+          <span>Observaciones</span>
+        </div>
+        <div class="card-body-detalle">
+          <p class="observaciones-text">{{ getObservacionesGenerales(selectedVenta) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer del Modal -->
+    <div class="modal-footer-detalle">
+      <div class="footer-actions">
+        <button type="button" class="btn btn-secondary btn-detalle" (click)="modal.dismiss()">
+          <i class="bi bi-x-circle me-2"></i>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+
+  <!-- Modal de Realizar Abono -->
+  <ng-template #editarVentaModal let-modal>
+    <div class="modal-content modal-abono-completo">
+      <!-- Header compacto -->
+      <div class="modal-header-compact">
+        <div class="header-content">
+          <div class="header-icon">
+            <i class="bi bi-pencil-square"></i>
+          </div>
+          <div class="header-text">
+            <h5 class="modal-title">Realizar Abono</h5>
+            <div class="header-subtitle">
+              <span class="badge">#{{selectedVenta?.numeroControl}}</span>
+              <span class="separator">•</span>
+              <span>{{selectedVenta?.paciente?.nombre}}</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-close" (click)="modal.dismiss()" aria-label="Cerrar"></button>
+      </div>
+
+      <form [formGroup]="editarVentaForm" (ngSubmit)="guardarEdicionVenta(modal)" class="modal-abono-layout">
+      <div class="modal-body-compact modal-body-scrollable">
+        <!-- Resumen rápido -->
+        <div class="resumen-mini">
+          <!-- Total Venta -->
+          <div class="mini-card">
+            <div class="mini-header">
+              <div class="mini-icon total">
+                <i class="bi bi-currency-dollar"></i>
+              </div>
+              <span class="mini-label">Total venta</span>
+            </div>
+            <div class="mini-valores">
+              <div class="mini-principal">
+                <span class="mini-monto">{{ formatearMoneda(selectedVenta?.total, getMonedaVenta()) }}</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Abonado -->
+          <div class="mini-card">
+            <div class="mini-header">
+              <div class="mini-icon abonado">
+                <i class="bi bi-check-circle"></i>
+              </div>
+              <span class="mini-label">Abonado</span>
+            </div>
+            <div class="mini-valores">
+              <div class="mini-principal">
+                <span class="mini-monto">{{ formatearMoneda(selectedVenta?.montoAbonado, getMonedaVenta()) }}</span>
+              </div>
+              <div class="mini-progreso">
+                <div class="progreso-bar"
+                  [style.width.%]="(selectedVenta?.montoAbonado || 0) / (selectedVenta?.total || 1) * 100"></div>
+                <span class="progreso-text">{{ ((selectedVenta?.montoAbonado || 0) / (selectedVenta?.total || 1) * 100)
+                  |
+                  number:'1.0-0' }}%</span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Pendiente -->
+          <div class="mini-card destacado">
+            <div class="mini-header">
+              <div class="mini-icon pendiente">
+                <i class="bi bi-clock"></i>
+              </div>
+              <span class="mini-label">Pendiente</span>
+            </div>
+            <div class="mini-valores">
+              <div class="mini-principal">
+                <span class="mini-monto destacado">{{ formatearMoneda(calcularMontoDeuda(), getMonedaVenta()) }}</span>
+              </div>
+              <div *ngIf="mostrarConversionBs()" class="mini-conversion destacado">
+                <span class="conversion-simbolo">⇄</span>
+                <span class="conversion-monto">{{ getConversionBs(calcularMontoDeuda()) | number:'1.2-2' }}</span>
+                <span class="conversion-label">Bs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+          <!-- Sección inngrese monto -->
+          <div class="seccion-compacta">
+            <!-- Header principal con botón -->
+            <div class="seccion-header">
+              <div class="header-content">
+                <div class="header-icon-title">
+                  <i class="bi bi-cash-coin text-primary header-icon"></i>
+                  <div class="header-text">
+                    <h3 class="seccion-titulo">Monto del Abono</h3>
+                    <p class="seccion-description">Configura el monto para este abono</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid-compact">
+              <!-- Monto abonado - MONEDA DE VENTA -->
+              <div class="form-group-compact">
+                <div class="form-label-compact form-label-compact-split">
+                  <label class="mb-0">
+                    <i class="bi bi-currency-dollar"></i>
+                    Nuevo monto a abonar
+                  </label>
+                  <button type="button" class="btn btn-abono-total"
+                    [disabled]="getMontoMaximoPermitido() <= 0" (click)="aplicarMontoCompletoAbono()">
+                    <i class="bi bi-magic me-1"></i>
+                    Abonar todo
+                  </button>
+                </div>
+                <div class="input-group-compact">
+                  <input type="text" class="form-control form-control-compact" [value]="montoAbonadoTemporal"
+                    inputmode="decimal" placeholder="0,00" (focus)="onMontoAbonadoFocus()"
+                    (input)="onMontoAbonadoInput($event)" (blur)="onMontoAbonadoBlur()">
+                  <span class="input-suffix">{{ getSimboloMonedaVenta() }}</span>
+                </div>
+                <!-- Mostrar la conversión como hint si hay un valor ingresado -->
+                <div class="input-hint">
+                  <span *ngIf="editarVentaForm.get('montoAbonado')?.value">
+                    {{ getConversionDisplay() }}
+                  </span>
+                  <span *ngIf="!editarVentaForm.get('montoAbonado')?.value">
+                    Máx: {{ getSimboloMonedaVenta() }} {{ getMontoMaximoPermitido() | number:'1.2-2' }} (Deuda
+                    pendiente)
+                    <span *ngIf="mostrarConversionBs() && getMonedaVenta() !== 'bolivar'" class="conversion-bs">
+                      ⇄ {{getConversionBs(getMontoMaximoPermitido()) | number:'1.2-2'}} Bs
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Barra de progreso  -->
+              <div class="form-group-compact">
+                <label class="form-label-compact">
+                  <i class="bi bi-graph-up"></i>
+                  Progreso Total
+                </label>
+                <div class="progreso-compact">
+                  <div class="progreso-info">
+                    <span class="progreso-porcentaje">{{ calcularPorcentajeAbonadoEnModal() }}%</span>
+                    <span class="progreso-montos">
+                      {{ getSimboloMonedaVenta() }} {{ ((selectedVenta?.montoAbonado || 0) +
+                      (editarVentaForm.get('montoAbonado')?.value || 0)) | number:'1.2-2' }} /
+                      {{ getSimboloMonedaVenta() }} {{ selectedVenta?.total | number:'1.2-2' }}
+                    </span>
+                  </div>
+                  <div class="progress-bar-compact">
+                    <div class="progress-fill" [style.width.%]="calcularPorcentajeAbonadoEnModal()"></div>
+                  </div>
+
+                  <!-- Label de deuda restante -->
+                  <div class="deuda-restante-info">
+                    <small class="deuda-label">
+                      <i class="bi bi-clock-history"></i>
+                      Saldo pendiente:
+                      <strong class="deuda-monto">
+                        {{ getSimboloMonedaVenta() }} {{ calcularDeudaRestante() | number:'1.2-2' }}
+                      </strong>
+                      <span *ngIf="mostrarConversionBs() && getMonedaVenta() !== 'bolivar'" class="conversion-bs">
+                        (⇄ {{ getConversionBs(calcularDeudaRestante()) | number:'1.2-2' }} Bs)
+                      </span>
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección de Métodos de Pago  -->
+          <div class="seccion-compacta">
+            <!-- Header principal con botón -->
+            <div class="seccion-header">
+              <div class="header-content">
+                <div class="header-icon-title">
+                  <i class="bi bi-wallet2 text-primary header-icon"></i>
+                  <div class="header-text">
+                    <h3 class="seccion-titulo">Métodos de Pago</h3>
+                    <p class="seccion-description">Agrega y configura los métodos de pago para este abono</p>
+                  </div>
+                </div>
+              </div>
+              <div class="header-actions">
+                <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()" title="Agregar método"
+                  [disabled]="metodosPagoArray.length >= 5">
+                  <i class="bi bi-plus-circle"></i>
+                  Agregar Método
+                  <span *ngIf="metodosPagoArray.length > 0" class="ms-1">
+                    ({{metodosPagoArray.length}}/5)
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Contenido de métodos de pago -->
+            <div class="metodos-pago-section">
+                <!-- Contador de métodos -->
+                <div class="metodos-counter" *ngIf="metodosPagoArray.length > 0">
+                    <i class="bi bi-list-check text-primary"></i>
+                    <span>{{ metodosPagoArray.length }} método{{ metodosPagoArray.length > 1 ? 's' : '' }} configurado{{
+                        metodosPagoArray.length > 1 ? 's' : '' }}</span>
+                </div>
+
+                <div formArrayName="metodosPago" class="metodos-grid" *ngIf="metodosPagoArray.length > 0">
+                    <div *ngFor="let metodoControl of metodosPagoArray.controls; let i = index" [formGroupName]="i"
+                        class="metodo-card">
+
+                        <!-- Header con número y acciones -->
+                        <div class="metodo-card-header">
+                            <div class="metodo-number">
+                                <i class="bi bi-123 text-secondary"></i>
+                                <span>Método #{{ i + 1 }}</span>
+                                <span class="estado-metodo" [ngClass]="{
+                                    'estado-vacio': metodoEstaVacio(metodoControl),
+                                    'estado-incompleto': metodoTieneDatosParciales(metodoControl),
+                                    'estado-completo': metodoEstaCompleto(metodoControl)
+                                }">
+                                    <i class="bi" [class.bi-dash-circle-fill]="metodoEstaVacio(metodoControl)"
+                                        [class.bi-exclamation-circle-fill]="metodoTieneDatosParciales(metodoControl)"
+                                        [class.bi-check-circle-fill]="metodoEstaCompleto(metodoControl)"></i>
+                                    {{
+                                    metodoEstaVacio(metodoControl) ? 'Vacío' :
+                                    metodoTieneDatosParciales(metodoControl) ? 'Incompleto' :
+                                    'Completo'
+                                    }}
+                                </span>
+                            </div>
+                            <button class="btn btn-remove" (click)="removerMetodoPago(i)" title="Eliminar método"
+                                [disabled]="metodosPagoArray.length === 1">
+                                <i class="bi bi-trash text-danger"></i>
+                            </button>
+                        </div>
+
+                        <div class="metodo-content">
+                            <!-- Selector de tipo de método -->
+                            <div class="campo-principal">
+                                <label class="form-label compact-label">
+                                    <i class="bi bi-credit-card text-primary"></i>
+                                    Tipo de Pago
+                                </label>
+                                <select class="form-select modern-select" formControlName="tipo" (change)="onMetodoPagoChange(i)"
+                                    [ngClass]="{'campo-invalido': metodoControl.get('tipo')?.invalid && metodoControl.get('tipo')?.touched}">
+                                    <option value="" disabled selected>Elige un método de pago</option>
+                                  <option *ngFor="let tipo of tiposPago" [value]="tipo.value">{{ tipo.label }}</option>
+                                </select>
+                                <small *ngIf="metodoControl.get('tipo')?.invalid && metodoControl.get('tipo')?.touched"
+                                    class="text-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> Campo requerido
+                                </small>
+                            </div>
+
+                            <!-- Campos condicionales -->
+                            <div class="campos-condicionales" *ngIf="metodoControl.get('tipo')?.value">
+
+                                <!-- Selector de moneda para efectivo (SOLO para tipo efectivo) -->
+                                <div *ngIf="metodoControl.get('tipo')?.value === 'efectivo'"
+                                    class="campo-adicional moneda-selector">
+                                    <div class="moneda-header">
+                                        <i class="bi bi-currency-exchange text-success"></i>
+                                        <span class="moneda-label">Moneda del Efectivo</span>
+                                    </div>
+                                    <div class="moneda-buttons-compact">
+                                        <button type="button" class="moneda-btn-compact"
+                                            [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'USD'"
+                                            (click)="seleccionarMonedaEfectivo(i, 'usd')" title="Dólar Americano">
+                                            <span class="moneda-symbol-compact">$</span>
+                                            <span class="moneda-text-compact">USD</span>
+                                        </button>
+                                        <button type="button" class="moneda-btn-compact"
+                                            [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'EUR'"
+                                            (click)="seleccionarMonedaEfectivo(i, 'eur')" title="Euro">
+                                            <span class="moneda-symbol-compact">€</span>
+                                            <span class="moneda-text-compact">EUR</span>
+                                        </button>
+                                        <button type="button" class="moneda-btn-compact"
+                                            [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'Bs'"
+                                            (click)="seleccionarMonedaEfectivo(i, 'bs')" title="Bolívar">
+                                            <span class="moneda-symbol-compact">Bs</span>
+                                            <span class="moneda-text-compact">VES</span>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted" style="font-size: 11px; display: block; margin-top: 3px;">
+                                        <i class="bi bi-info-circle"></i> Selecciona la moneda del efectivo
+                                    </small>
+                                </div>
+
+                                <!-- Campo Banco (para punto, transferencia, pagomovil) -->
+                                <div *ngIf="necesitaBanco(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                    <label class="form-label compact-label">
+                                        <i class="bi bi-bank"></i>
+                                    {{ getEtiquetaBancoPrincipal(metodoControl.get('tipo')?.value) }}
+                                    </label>
+                                  <ng-select [items]="getBancosDisponiblesPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText" bindValue="codigo"
+                                        formControlName="bancoObject" (change)="onBancoChange($event, i)"
+                                        [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
+                                    [placeholder]="getPlaceholderBancoPrincipal(metodoControl.get('tipo')?.value)"
+                                        [class.ng-select-invalid]="metodoControl.get('bancoObject')?.invalid && metodoControl.get('bancoObject')?.touched">
+                                    </ng-select>
+                                    <small
+                                        *ngIf="metodoControl.get('bancoObject')?.invalid && metodoControl.get('bancoObject')?.touched"
+                                        class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i> Selecciona un banco
+                                    </small>
+                                </div>
+
+                                <div *ngIf="necesitaBancoReceptor(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                  <label class="form-label compact-label">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    Cuenta receptora
+                                  </label>
+                                  <ng-select [items]="getCuentasReceptorasPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText"
+                                    formControlName="bancoReceptorObject" (change)="onBancoReceptorChange($event, i)"
+                                    [compareWith]="compararCuentaReceptora" [searchable]="true" [clearable]="true"
+                                    [placeholder]="getPlaceholderCuentaReceptora(metodoControl.get('tipo')?.value)"
+                                    [class.ng-select-invalid]="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched">
+                                    <ng-template ng-label-tmp let-item="item">
+                                      <span *ngIf="item">{{ item.nombre }} - {{ item.accountDescription || item.ownerName || item.ownerId }}</span>
+                                    </ng-template>
+                                    <ng-template ng-option-tmp let-item="item">
+                                      <div class="banco-option" *ngIf="item">
+                                        <div class="banco-codigo">{{ item.displayTitle || item.nombre }}</div>
+                                        <div class="banco-nombre">{{ item.displaySubtitle || item.accountDescription || item.ownerName || item.ownerId }}</div>
+                                      </div>
+                                    </ng-template>
+                                  </ng-select>
+                                  <small *ngIf="getCuentasReceptorasPorMetodo(metodoControl.get('tipo')?.value).length === 0"
+                                    class="text-warning">
+                                    <i class="bi bi-info-circle"></i> No hay cuentas receptoras configuradas para este método
+                                  </small>
+                                  <small
+                                    *ngIf="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched"
+                                    class="text-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> Selecciona la cuenta receptora
+                                  </small>
+                                </div>
+
+                                <!-- Campo Referencia -->
+                                <div *ngIf="necesitaReferencia(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                    <label class="form-label compact-label">
+                                        <i class="bi bi-hash"></i>
+                                        N° de Referencia
+                                    </label>
+                                    <input type="text" class="form-control modern-input" formControlName="referencia"
+                                        [placeholder]="getPlaceholderReferencia(metodoControl.get('tipo')?.value)" maxlength="20"
+                                        [class.campo-invalido]="metodoControl.get('referencia')?.invalid && metodoControl.get('referencia')?.touched" />
+                                    <small
+                                        *ngIf="metodoControl.get('referencia')?.invalid && metodoControl.get('referencia')?.touched"
+                                        class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i> Ingresa el número de referencia
+                                    </small>
+                                </div>
+
+                                    <div *ngIf="mostrarNotaPago(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                      <label class="form-label compact-label">
+                                        <i class="bi bi-journal-text"></i>
+                                        Nota del pago
+                                      </label>
+                                      <input type="text" class="form-control modern-input" formControlName="notaPago"
+                                        placeholder="Ej: Pago desde otra cuenta o detalle adicional" maxlength="120" />
+                                    </div>
+
+                                <!-- Campo Monto -->
+                                <div class="campo-monto">
+                                    <label class="form-label compact-label">
+                                        <i class="bi bi-cash-stack"></i>
+                                        Monto recibido ({{ getSimboloParaMetodo(i) }})
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">{{ getSimboloParaMetodo(i) }}</span>
+                                        <input type="text" class="form-control modern-input"
+                                          [value]="montosTemporalesMetodos[i] || ''" inputmode="decimal" placeholder="0,00"
+                                            (focus)="onMontoMetodoFocus(i)" (input)="onMontoMetodoInput(i, $event)"
+                                            (blur)="onMontoMetodoBlur(i)"
+                                            [class.campo-invalido]="metodoControl.get('monto')?.invalid && metodoControl.get('monto')?.touched" />
+                                    </div>
+                                                                   
+                                    <small *ngIf="metodoControl.get('monto')?.invalid && metodoControl.get('monto')?.touched" class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        <span *ngIf="metodoControl.get('monto')?.errors?.['required']">Ingresa un monto válido</span>
+                                        <span *ngIf="metodoControl.get('monto')?.errors?.['min']">El monto debe ser mayor a 0</span>
+                                        <span *ngIf="metodoControl.get('monto')?.errors?.['max']">El monto excede el máximo permitido</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer con información -->
+                        <div class="metodo-footer" *ngIf="metodoControl.get('tipo')?.value">
+                            <div class="footer-info">
+                                <span class="maximo-text">
+                                    <i class="bi bi-graph-up text-info"></i>
+                              Máx. disponible: {{ getMontoMaximoParaMetodo(i) | number:'1.2-2' }} {{ getSimboloParaMetodo(i) }}
+                                </span>
+
+                                <span *ngIf="mostrarConversionABolivares() && metodoControl.get('monto')?.value && metodoControl.get('monto')?.value > 0"
+                                    class="conversion-text">
+                                    <i class="bi bi-calculator text-primary"></i>
+                              Equivale a {{ getMontoMetodoEnMonedaVenta(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                              <span *ngIf="getMonedaParaMetodo(i) !== 'bolivar'" class="conversion-moneda-venta">
+                                · {{ getConversionBs(metodoControl.get('monto')?.value, getMonedaParaMetodo(i)) | number:'1.2-2' }} Bs
+                              </span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Estado vacío -->
+                        <div class="metodo-empty" *ngIf="!metodoControl.get('tipo')?.value">
+                            <i class="bi bi-credit-card-2-front text-muted"></i>
+                            <span>Selecciona un tipo de pago para continuar</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estado vacío general -->
+                <div class="empty-state" *ngIf="metodosPagoArray.length === 0">
+                    <div class="empty-icon">
+                        <i class="bi bi-wallet text-muted"></i>
+                    </div>
+                    <h5>No hay métodos de pago</h5>
+                    <p>Agrega al menos un método de pago para continuar con el abono</p>
+                    <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()">
+                        <i class="bi bi-plus-circle"></i>
+                        Agregar Primer Método
+                    </button>
+                </div>
+
+                <!-- Resumen de pagos (después de agregar métodos) -->
+                <div *ngIf="metodosPagoArray.length > 0" class="resumen-pagos-elegante">
+                    <div class="resumen-header">
+                        <div class="resumen-icon">
+                            <i class="bi bi-calculator"></i>
+                        </div>
+                        <div class="resumen-title">
+                            <h6>Resumen de Pagos</h6>
+                            <small>Total en {{getMonedaVentaDisplay()}}</small>
+                        </div>
+                    </div>
+
+                    <div class="resumen-body">
+                        <div class="resumen-item">
+                            <span class="resumen-label">Total métodos:</span>
+                            <span class="resumen-value total-methods">
+                                {{ calcularTotalMetodosPagoEnMonedaVenta() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                            </span>
+                        </div>
+
+                        <div class="resumen-item" [class.has-difference]="!validarPagoCompleto()">
+                            <span class="resumen-label">Diferencia:</span>
+                            <span class="resumen-value difference">
+                                {{ calcularDiferenciaMetodos() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                                <i *ngIf="!validarPagoCompleto()" class="bi bi-exclamation-triangle warning-icon"></i>
+                            </span>
+                        </div>
+
+                        <div class="resumen-item total">
+                            <span class="resumen-label">Monto a abonar:</span>
+                            <span class="resumen-value grand-total">
+                                {{ editarVentaForm.get('montoAbonado')?.value || 0 | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div *ngIf="!validarPagoCompleto()" class="resumen-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <span>Los métodos de pago no coinciden con el monto a abonar</span>
+                    </div>
+                </div>
+            </div>
+          </div>
+
+          <!-- Sección de Observaciones (Nueva) -->
+          <div class="seccion-compacta"
+            *ngIf="selectedVenta?.observaciones || editarVentaForm.get('observaciones')?.value">
+            <div class="seccion-header">
+              <i class="bi bi-chat-left-text"></i>
+              <span class="seccion-titulo">Observaciones del Abono</span>
+            </div>
+
+            <div class="form-grid-compact">
+              <div class="form-group-compact" style="grid-column: 1 / -1;">
+                <label class="form-label-compact">
+                  <i class="bi bi-pencil"></i>
+                  Notas adicionales (opcional)
+                </label>
+                <textarea class="form-control form-control-compact" formControlName="observaciones" rows="3"
+                  placeholder="Ej: Cliente pagará el resto la próxima semana, se le entregó recibo, etc."
+                  maxlength="500"></textarea>
+                <div class="input-hint">
+                  <i class="bi bi-info-circle"></i>
+                  <span>Información adicional sobre este abono. Máx. 500 caracteres.</span>
+                  <span class="float-end text-muted">
+                    {{ editarVentaForm.get('observaciones')?.value?.length || 0 }}/500
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+      </div>
+
+        <!-- Footer modal -->
+        <div class="modal-footer-detalle modal-footer-fixed-abono">
+          <div class="footer-actions">
+            <button type="button" class="btn btn-secondary btn-detalle" (click)="modal.dismiss()">
+              <i class="bi bi-x-circle me-2"></i>
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-success btn-detalle"
+              [disabled]="editarVentaForm.invalid || !validarPagoCompleto()" (click)="guardarEdicionVenta(modal)">
+              <i class="bi bi-check-circle me-2"></i>
+              Guardar Abono
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </ng-template>
+
+
+  <!-- Modal de Realizar Pago para contado-pendiente -->
+  <ng-template #realizarPagoModal let-modal>
+    <div class="modal-content modal-pago-completo">
+      <!-- Header simple y claro -->
+      <div class="modal-header-compact">
+        <div class="header-content">
+          <div class="header-icon">
+            <i class="bi bi-cash-stack text-success"></i>
+          </div>
+          <div class="header-text">
+            <h5 class="modal-title fw-bold">Realizar Pago</h5>
+            <div class="header-subtitle">
+              <span class="badge bg-primary">#{{selectedVenta?.numeroControl}}</span>
+              <span class="separator">•</span>
+              <span class="fw-semibold">{{selectedVenta?.paciente?.nombre}}</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-close" (click)="modal.dismiss()" aria-label="Cerrar"></button>
+      </div>
+
+      <div class="modal-body-compact modal-body-scrollable">
+        <!-- Resumen MUY simple: Solo lo que se debe pagar -->
+        <div class="resumen-simple">
+          <div class="deuda-card">
+            <div class="deuda-header">
+              <i class="bi bi-currency-dollar text-warning"></i>
+              <span class="deuda-label">Monto a pagar</span>
+            </div>
+            <div class="deuda-content">
+              <div class="deuda-monto">
+                <span class="monto-principal">{{ formatearMoneda(calcularMontoDeuda(), getMonedaVenta()) }}</span>
+                <span *ngIf="mostrarConversionBs() && getMonedaVenta() !== 'bolivar'" class="monto-conversion">
+                  ≈ {{ getConversionBs(calcularMontoDeuda()) | number:'1.2-2' }} Bs
+                </span>
+              </div>
+              <div class="deuda-info">
+                <small class="text-muted">
+                  <i class="bi bi-info-circle"></i> Pago único - Total de la deuda pendiente
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulario simple -->
+        <form [formGroup]="editarVentaForm" (ngSubmit)="guardarPagoCompleto(modal)">
+
+          <!-- Sección de Métodos de Pago -->
+          <div class="seccion-compacta">
+            <!-- Header principal de la sección -->
+            <div class="seccion-header">
+              <div class="header-content">
+                <div class="header-icon-title">
+                  <i class="bi bi-wallet2 text-primary header-icon"></i>
+                  <div class="header-text">
+                    <h3 class="seccion-titulo">Métodos de Pago</h3>
+                    <p class="seccion-description">Seleccione cómo el cliente realizará el pago</p>
+                  </div>
+                </div>
+              </div>
+              <div class="header-actions">
+                <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()" title="Agregar método"
+                  [disabled]="metodosPagoArray.length >= 5">
+                  <i class="bi bi-plus-circle"></i>
+                  Agregar Método
+                  <span *ngIf="metodosPagoArray.length > 0" class="ms-1">
+                    ({{metodosPagoArray.length}}/5)
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Contenido de métodos de pago -->
+            <div class="metodos-pago-section">
+                <div class="metodos-counter" *ngIf="metodosPagoArray.length > 0">
+                    <i class="bi bi-list-check text-primary"></i>
+                    <span>{{ metodosPagoArray.length }} método{{ metodosPagoArray.length > 1 ? 's' : '' }} configurado{{
+                        metodosPagoArray.length > 1 ? 's' : '' }}</span>
+                </div>
+
+                <div formArrayName="metodosPago" class="metodos-grid" *ngIf="metodosPagoArray.length > 0">
+                    <div *ngFor="let metodoControl of metodosPagoArray.controls; let i = index" [formGroupName]="i"
+                        class="metodo-card">
+
+                        <div class="metodo-card-header">
+                            <div class="metodo-number">
+                                <i class="bi bi-123 text-secondary"></i>
+                                <span>Método #{{ i + 1 }}</span>
+                                <span class="estado-metodo" [ngClass]="{
+                                    'estado-vacio': metodoEstaVacio(metodoControl),
+                                    'estado-incompleto': metodoTieneDatosParciales(metodoControl),
+                                    'estado-completo': metodoEstaCompleto(metodoControl)
+                                }">
+                                    <i class="bi" [class.bi-dash-circle-fill]="metodoEstaVacio(metodoControl)"
+                                        [class.bi-exclamation-circle-fill]="metodoTieneDatosParciales(metodoControl)"
+                                        [class.bi-check-circle-fill]="metodoEstaCompleto(metodoControl)"></i>
+                                    {{
+                                    metodoEstaVacio(metodoControl) ? 'Vacío' :
+                                    metodoTieneDatosParciales(metodoControl) ? 'Incompleto' :
+                                    'Completo'
+                                    }}
+                                </span>
+                            </div>
+                            <button class="btn btn-remove" (click)="removerMetodoPago(i)" title="Eliminar método"
+                                [disabled]="metodosPagoArray.length === 1">
+                                <i class="bi bi-trash text-danger"></i>
+                            </button>
+                        </div>
+
+                        <div class="metodo-content">
+                            <div class="campo-principal">
+                                <label class="form-label compact-label">
+                                    <i class="bi bi-credit-card text-primary"></i>
+                                    Tipo de Pago
+                                </label>
+                                <select class="form-select modern-select" formControlName="tipo" (change)="onMetodoPagoChange(i)"
+                                    [ngClass]="{'campo-invalido': metodoControl.get('tipo')?.invalid && metodoControl.get('tipo')?.touched}">
+                                    <option value="" disabled selected>Elige un método de pago</option>
+                                  <option *ngFor="let tipo of tiposPago" [value]="tipo.value">{{ tipo.label }}</option>
+                                </select>
+                                <small *ngIf="metodoControl.get('tipo')?.invalid && metodoControl.get('tipo')?.touched"
+                                    class="text-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> Campo requerido
+                                </small>
+                            </div>
+
+                            <div class="campos-condicionales" *ngIf="metodoControl.get('tipo')?.value">
+                                <div *ngIf="metodoControl.get('tipo')?.value === 'efectivo'"
+                                    class="campo-adicional moneda-selector">
+                                    <div class="moneda-header">
+                                        <i class="bi bi-currency-exchange text-success"></i>
+                                        <span class="moneda-label">Moneda del Efectivo</span>
+                                    </div>
+                                    <div class="moneda-buttons-compact">
+                                        <button type="button" class="moneda-btn-compact"
+                                            [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'USD'"
+                                            (click)="seleccionarMonedaEfectivo(i, 'usd')" title="Dólar Americano">
+                                            <span class="moneda-symbol-compact">$</span>
+                                            <span class="moneda-text-compact">USD</span>
+                                        </button>
+                                        <button type="button" class="moneda-btn-compact"
+                                            [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'EUR'"
+                                            (click)="seleccionarMonedaEfectivo(i, 'eur')" title="Euro">
+                                            <span class="moneda-symbol-compact">€</span>
+                                            <span class="moneda-text-compact">EUR</span>
+                                        </button>
+                                        <button type="button" class="moneda-btn-compact"
+                                            [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'Bs'"
+                                            (click)="seleccionarMonedaEfectivo(i, 'bs')" title="Bolívar">
+                                            <span class="moneda-symbol-compact">Bs</span>
+                                            <span class="moneda-text-compact">VES</span>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted" style="font-size: 11px; display: block; margin-top: 3px;">
+                                        <i class="bi bi-info-circle"></i> Selecciona la moneda del efectivo
+                                    </small>
+                                </div>
+
+                                <div *ngIf="necesitaBanco(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                    <label class="form-label compact-label">
+                                        <i class="bi bi-bank"></i>
+                                    {{ getEtiquetaBancoPrincipal(metodoControl.get('tipo')?.value) }}
+                                    </label>
+                                  <ng-select [items]="getBancosDisponiblesPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText" bindValue="codigo"
+                                        formControlName="bancoObject" (change)="onBancoChange($event, i)"
+                                        [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
+                                    [placeholder]="getPlaceholderBancoPrincipal(metodoControl.get('tipo')?.value)"
+                                        [class.ng-select-invalid]="metodoControl.get('bancoObject')?.invalid && metodoControl.get('bancoObject')?.touched">
+                                    </ng-select>
+                                    <small
+                                        *ngIf="metodoControl.get('bancoObject')?.invalid && metodoControl.get('bancoObject')?.touched"
+                                        class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i> Selecciona un banco
+                                    </small>
+                                </div>
+
+                                <div *ngIf="necesitaBancoReceptor(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                  <label class="form-label compact-label">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    Cuenta receptora
+                                  </label>
+                                  <ng-select [items]="getCuentasReceptorasPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText"
+                                    formControlName="bancoReceptorObject" (change)="onBancoReceptorChange($event, i)"
+                                    [compareWith]="compararCuentaReceptora" [searchable]="true" [clearable]="true"
+                                    [placeholder]="getPlaceholderCuentaReceptora(metodoControl.get('tipo')?.value)"
+                                    [class.ng-select-invalid]="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched">
+                                    <ng-template ng-label-tmp let-item="item">
+                                      <span *ngIf="item">{{ item.nombre }} - {{ item.accountDescription || item.ownerName || item.ownerId }}</span>
+                                    </ng-template>
+                                    <ng-template ng-option-tmp let-item="item">
+                                      <div class="banco-option" *ngIf="item">
+                                        <div class="banco-codigo">{{ item.displayTitle || item.nombre }}</div>
+                                        <div class="banco-nombre">{{ item.displaySubtitle || item.accountDescription || item.ownerName || item.ownerId }}</div>
+                                      </div>
+                                    </ng-template>
+                                  </ng-select>
+                                  <small *ngIf="getCuentasReceptorasPorMetodo(metodoControl.get('tipo')?.value).length === 0"
+                                    class="text-warning">
+                                    <i class="bi bi-info-circle"></i> No hay cuentas receptoras configuradas para este método
+                                  </small>
+                                  <small
+                                    *ngIf="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched"
+                                    class="text-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> Selecciona la cuenta receptora
+                                  </small>
+                                </div>
+
+                                <div *ngIf="necesitaReferencia(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                    <label class="form-label compact-label">
+                                        <i class="bi bi-hash"></i>
+                                        N° de Referencia
+                                    </label>
+                                    <input type="text" class="form-control modern-input" formControlName="referencia"
+                                        [placeholder]="getPlaceholderReferencia(metodoControl.get('tipo')?.value)" maxlength="20"
+                                        [class.campo-invalido]="metodoControl.get('referencia')?.invalid && metodoControl.get('referencia')?.touched" />
+                                    <small
+                                        *ngIf="metodoControl.get('referencia')?.invalid && metodoControl.get('referencia')?.touched"
+                                        class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i> Ingresa el número de referencia
+                                    </small>
+                                </div>
+
+                                <div *ngIf="mostrarNotaPago(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                  <label class="form-label compact-label">
+                                    <i class="bi bi-journal-text"></i>
+                                    Nota del pago
+                                  </label>
+                                  <input type="text" class="form-control modern-input" formControlName="notaPago"
+                                    placeholder="Ej: Pago desde otra cuenta o detalle adicional" maxlength="120" />
+                                </div>
+
+                                <div class="campo-monto">
+                                    <label class="form-label compact-label">
+                                        <i class="bi bi-cash-stack"></i>
+                                        Monto recibido ({{ getSimboloParaMetodo(i) }})
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">{{ getSimboloParaMetodo(i) }}</span>
+                                        <input type="text" class="form-control modern-input"
+                                          [value]="montosTemporalesMetodos[i] || ''" inputmode="decimal" placeholder="0,00"
+                                            (focus)="onMontoMetodoFocus(i)" (input)="onMontoMetodoInput(i, $event)"
+                                            (blur)="onMontoMetodoBlur(i)"
+                                            [class.campo-invalido]="metodoControl.get('monto')?.invalid && metodoControl.get('monto')?.touched" />
+                                    </div>
+
+                                    <small *ngIf="metodoControl.get('monto')?.invalid && metodoControl.get('monto')?.touched" class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        <span *ngIf="metodoControl.get('monto')?.errors?.['required']">Ingresa un monto válido</span>
+                                        <span *ngIf="metodoControl.get('monto')?.errors?.['min']">El monto debe ser mayor a 0</span>
+                                        <span *ngIf="metodoControl.get('monto')?.errors?.['max']">El monto excede el máximo permitido</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metodo-footer" *ngIf="metodoControl.get('tipo')?.value">
+                            <div class="footer-info">
+                                <span class="maximo-text">
+                                    <i class="bi bi-graph-up text-info"></i>
+                              Máx. disponible: {{ getMontoMaximoParaMetodo(i) | number:'1.2-2' }} {{ getSimboloParaMetodo(i) }}
+                                </span>
+
+                                <span *ngIf="mostrarConversionABolivares() && metodoControl.get('monto')?.value && metodoControl.get('monto')?.value > 0"
+                                    class="conversion-text">
+                                    <i class="bi bi-calculator text-primary"></i>
+                              Equivale a {{ getMontoMetodoEnMonedaVenta(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                              <span *ngIf="getMonedaParaMetodo(i) !== 'bolivar'" class="conversion-moneda-venta">
+                                · {{ getConversionBs(metodoControl.get('monto')?.value, getMonedaParaMetodo(i)) | number:'1.2-2' }} Bs
+                              </span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="metodo-empty" *ngIf="!metodoControl.get('tipo')?.value">
+                            <i class="bi bi-credit-card-2-front text-muted"></i>
+                            <span>Selecciona un tipo de pago para continuar</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empty-state" *ngIf="metodosPagoArray.length === 0">
+                    <div class="empty-icon">
+                        <i class="bi bi-wallet text-muted"></i>
+                    </div>
+                    <h5>No hay métodos de pago</h5>
+                    <p>Agrega al menos un método de pago para continuar con el pago</p>
+                    <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()">
+                        <i class="bi bi-plus-circle"></i>
+                        Agregar Primer Método
+                    </button>
+                </div>
+
+                <div *ngIf="metodosPagoArray.length > 0" class="resumen-pagos-elegante">
+                    <div class="resumen-header">
+                        <div class="resumen-icon">
+                            <i class="bi bi-calculator"></i>
+                        </div>
+                        <div class="resumen-title">
+                            <h6>Resumen de Pagos</h6>
+                            <small>Total en {{getMonedaVentaDisplay()}}</small>
+                        </div>
+                    </div>
+
+                    <div class="resumen-body">
+                        <div class="resumen-item">
+                            <span class="resumen-label">Total métodos:</span>
+                            <span class="resumen-value total-methods">
+                                {{ calcularTotalMetodosPagoEnMonedaVenta() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                            </span>
+                        </div>
+
+                        <div class="resumen-item" [class.has-difference]="!validarPagoCompleto()">
+                            <span class="resumen-label">Diferencia:</span>
+                            <span class="resumen-value difference">
+                                {{ calcularDiferenciaMetodos() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                                <i *ngIf="!validarPagoCompleto()" class="bi bi-exclamation-triangle warning-icon"></i>
+                            </span>
+                        </div>
+
+                        <div class="resumen-item total">
+                            <span class="resumen-label">Monto a pagar:</span>
+                            <span class="resumen-value grand-total">
+                                {{ editarVentaForm.get('montoAbonado')?.value || 0 | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div *ngIf="!validarPagoCompleto()" class="resumen-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <span>Los métodos de pago no coinciden con el monto a pagar</span>
+                    </div>
+                </div>
+            </div>
+          </div>
+
+          <!-- Observaciones Compactas -->
+          <div class="observaciones-compact">
+            <div class="observaciones-header-compact">
+              <div class="observaciones-titulo-compact">
+                <i class="bi bi-chat-right-text text-primary me-2"></i>
+                <span class="fw-medium">Notas adicionales</span>
+                <small class="text-muted ms-2">(opcional)</small>
+              </div>
+              <div class="observaciones-contador-compact">
+                <small class="text-muted">{{ editarVentaForm.get('observaciones')?.value?.length || 0 }}/500</small>
+              </div>
+            </div>
+
+            <div class="observaciones-input-compact">
+              <textarea class="form-control form-control-sm observaciones-textarea-compact"
+                formControlName="observaciones" rows="1"
+                placeholder="Ej: Recibo entregado, pago en efectivo, contacto adicional..." maxlength="500"
+                (focus)="expandirTextarea($event)" (blur)="contraerTextarea($event)"></textarea>
+
+              <div class="observaciones-hints">
+                <div class="hints-items">
+                  <span class="hint-item" (click)="agregarObservacionRapida('Recibo entregado')">
+                    <i class="bi bi-receipt"></i> Recibo
+                  </span>
+                  <span class="hint-item" (click)="agregarObservacionRapida('Pago en efectivo')">
+                    <i class="bi bi-cash"></i> Efectivo
+                  </span>
+                  <span class="hint-item" (click)="agregarObservacionRapida('Pago transferencia')">
+                    <i class="bi bi-bank"></i> Transferencia
+                  </span>
+                  <span class="hint-item" (click)="agregarObservacionRapida('Cliente puntual')">
+                    <i class="bi bi-clock"></i> Puntual
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Footer simple -->
+      <div class="modal-footer-fixed">
+        <div class="footer-content">
+          <div class="footer-actions">
+            <button type="button" class="btn btn-outline-secondary btn-footer" (click)="modal.dismiss()">
+              <i class="bi bi-x-circle me-1"></i>
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-success btn-footer"
+              [disabled]="editarVentaForm.invalid || !validarPagoCompleto()" (click)="guardarPagoCompleto(modal)">
+              <i class="bi bi-check-circle me-1"></i>
+              Registrar Pago
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+
+
+
+
+  <!-- Modal de Recibo -->
+  <div class="modal fade" id="reciboModal" [class.show]="mostrarModalRecibo"
+    [style.display]="mostrarModalRecibo ? 'block' : 'none'" tabindex="-1" [attr.aria-hidden]="!mostrarModalRecibo">
+    <div class="modal-dialog">
+      <div class="modal-content recibo-compacto recibo-viewer-shell">
+        <button type="button" class="recibo-floating-close" (click)="cerrarModalRecibo()" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+
+        <div class="recibo-preview-shell">
+          <iframe *ngIf="previewReciboUrl" class="recibo-preview-frame" [src]="previewReciboUrl"
+            title="Vista previa del recibo" id="contenidoRecibo"></iframe>
+          <div *ngIf="!previewReciboUrl" class="recibo-preview-empty">
+            <i class="bi bi-receipt"></i>
+            <span>No se pudo preparar la vista previa del recibo.</span>
+          </div>
+        </div>
+
+        <div class="recibo-floating-actions">
+          <div class="footer-actions">
+            <div class="footer-section-left">
+              <div class="btn-group" ngbDropdown>
+                <button type="button" class="btn btn-compartir btn-recibo" ngbDropdownToggle>
+                  <i class="bi bi-share me-2"></i>
+                  Compartir
+                </button>
+                <div class="dropdown-menu" ngbDropdownMenu>
+                  <button ngbDropdownItem (click)="descargarPDF()">
+                    <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                    Descargar PDF
+                  </button>
+                  <div class="dropdown-divider"></div>
+                  <button ngbDropdownItem (click)="compartirWhatsApp()">
+                    <i class="bi bi-whatsapp text-success me-2"></i>
+                    WhatsApp
+                  </button>
+                  <button ngbDropdownItem (click)="copiarEnlace()">
+                    <i class="bi bi-link text-info me-2"></i>
+                    Copiar Enlace
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="footer-section-right">
+              <button type="button" class="btn btn-outline-secondary btn-recibo" (click)="imprimirRecibo()">
+                <i class="bi bi-printer me-2"></i>
+                Imprimir
+              </button>
+
+              <button type="button" class="btn btn-primary btn-recibo" (click)="cerrarModalRecibo()">
+                <i class="bi bi-check me-2"></i>
+                Listo
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Modal de Resumen Financiero -->
+  <ng-template #modalResumenFinanciero let-modal>
+    <div class="resumen-v2-shell">
+      <div class="resumen-v2-header">
+        <div>
+          <span class="resumen-v2-kicker">Panel Ejecutivo</span>
+          <h3>Resumen financiero de ventas</h3>
+          <p>Lectura consolidada de facturación, cobranza, deuda pendiente y distribución por modalidad.</p>
+        </div>
+        <button type="button" class="resumen-v2-close" (click)="modal.close()" aria-label="Cerrar resumen">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="resumen-v2-body" #resumenExportable>
+        <section class="resumen-v2-filters">
+          <div class="resumen-v2-filters-top">
+            <div>
+              <h4>Filtros del análisis</h4>
+              <p>{{ getPeriodoResumenTexto() }} · {{ getFormaPagoResumenTexto() }}</p>
+            </div>
+            <div class="resumen-v2-filters-actions">
+              <span class="resumen-v2-badge" *ngIf="contarFiltrosActivos() > 0">
+                {{ contarFiltrosActivos() }} filtro{{ contarFiltrosActivos() > 1 ? 's' : '' }} activo{{ contarFiltrosActivos() > 1 ? 's' : '' }}
+              </span>
+              <button type="button" class="btn-periodo-rapido" [class.active]="resumenFiltros.periodo === 'hoy'"
+                (click)="aplicarPeriodoResumen('hoy')">
+                Hoy
+              </button>
+              <button type="button" class="btn-periodo-rapido" [class.active]="resumenFiltros.periodo === 'semana'"
+                (click)="aplicarPeriodoResumen('semana')">
+                Semana
+              </button>
+              <button type="button" class="btn-periodo-rapido" [class.active]="resumenFiltros.periodo === 'mes'"
+                (click)="aplicarPeriodoResumen('mes')">
+                Mes
+              </button>
+              <button type="button" class="btn-toggle-avanzado" (click)="toggleFiltrosAvanzados()">
+                <i class="bi bi-sliders me-1"></i>
+                {{ mostrarFiltrosAvanzados ? 'Ocultar filtros' : 'Más filtros' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="resumen-v2-filters-grid" *ngIf="mostrarFiltrosAvanzados">
+            <label>
+              <span>Fecha desde</span>
+              <input type="date" [(ngModel)]="resumenFiltros.fechaDesde" (change)="actualizarResumen()">
+            </label>
+            <label>
+              <span>Fecha hasta</span>
+              <input type="date" [(ngModel)]="resumenFiltros.fechaHasta" (change)="actualizarResumen()">
+            </label>
+            <label>
+              <span>Año</span>
+              <select [(ngModel)]="resumenFiltros.anio" (change)="actualizarResumen()">
+                <option [ngValue]="0">Todos</option>
+                <option *ngFor="let anio of anosDisponibles" [ngValue]="anio">{{ anio }}</option>
+              </select>
+            </label>
+            <label>
+              <span>Mes</span>
+              <select [(ngModel)]="resumenFiltros.mes" (change)="actualizarResumen()">
+                <option [ngValue]="0">Todos</option>
+                <option *ngFor="let mes of mesesDisponibles; let i = index" [ngValue]="i + 1">{{ mes }}</option>
+              </select>
+            </label>
+            <label>
+              <span>Asesor</span>
+              <select [(ngModel)]="resumenFiltros.asesor" (change)="actualizarResumen()">
+                <option value="">Todos los asesores</option>
+                <option *ngFor="let asesor of asesores" [value]="asesor.id">{{ asesor.nombre }}</option>
+              </select>
+            </label>
+            <label>
+              <span>Forma de pago</span>
+              <select [(ngModel)]="resumenFiltros.formaPago" (change)="actualizarResumen()">
+                <option value="">Todas</option>
+                <option value="contado">Contado</option>
+                <option value="de_contado-pendiente">Contado pendiente</option>
+                <option value="abono">Abono</option>
+                <option value="cashea">Cashea</option>
+                <option value="credito">Crédito</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="resumen-v2-chip-row" *ngIf="contarFiltrosActivos() > 0">
+            <button type="button" class="filtro-chip" *ngIf="resumenFiltros.periodo" (click)="limpiarFiltroPeriodo()">
+              {{ getPeriodoDisplay() }} <i class="bi bi-x"></i>
+            </button>
+            <button type="button" class="filtro-chip" *ngIf="resumenFiltros.anio" (click)="limpiarFiltroAnio()">
+              Año {{ resumenFiltros.anio }} <i class="bi bi-x"></i>
+            </button>
+            <button type="button" class="filtro-chip" *ngIf="resumenFiltros.mes" (click)="limpiarFiltroMes()">
+              {{ getMesDisplay() }} <i class="bi bi-x"></i>
+            </button>
+            <button type="button" class="filtro-chip" *ngIf="resumenFiltros.asesor" (click)="limpiarFiltroAsesor()">
+              {{ getAsesorNombre(resumenFiltros.asesor) }} <i class="bi bi-x"></i>
+            </button>
+            <button type="button" class="filtro-chip" *ngIf="resumenFiltros.formaPago" (click)="limpiarFiltroFormaPago()">
+              {{ getFormaPagoDisplay(resumenFiltros.formaPago) }} <i class="bi bi-x"></i>
+            </button>
+            <button type="button" class="filtro-chip is-clear" (click)="limpiarTodosLosFiltros()">Limpiar todo</button>
+          </div>
+        </section>
+
+        <ng-container *ngIf="!resumenCargando; else resumenLoadingState">
+          <ng-container *ngIf="!resumenError; else resumenErrorState">
+            <section class="resumen-v2-kpis">
+              <article class="resumen-kpi-card is-primary">
+                <span>Total facturado</span>
+                <strong>{{ getMontoTotalGeneral() }}</strong>
+                <small>{{ getCantidadVentasResumen() }} operaciones registradas</small>
+              </article>
+              <article class="resumen-kpi-card is-success">
+                <span>Total cobrado</span>
+                <strong>{{ getMontoCobrado() }}</strong>
+                <small>{{ getPorcentajeRecaudo() | number:'1.0-1' }}% del total facturado</small>
+              </article>
+              <article class="resumen-kpi-card is-warning">
+                <span>Saldo pendiente</span>
+                <strong>{{ getDeudaPendienteTotal() }}</strong>
+                <small>{{ getPorcentajePendiente() | number:'1.0-1' }}% pendiente de recaudo</small>
+              </article>
+              <article class="resumen-kpi-card is-neutral">
+                <span>Ticket promedio</span>
+                <strong>{{ getTicketPromedio() }}</strong>
+                <small>{{ getAsesorResumenTexto() }}</small>
+              </article>
+            </section>
+
+            <section class="resumen-v2-overview">
+              <article class="resumen-story-card">
+                <div class="story-header">
+                  <span class="story-pill">Estado del período</span>
+                  <h4>{{ getEstadoCobranza() }}</h4>
+                </div>
+                <p>{{ getEstadoCobranzaDetalle() }}</p>
+                <dl>
+                  <div>
+                    <dt>Período</dt>
+                    <dd>{{ getFechaRango() }}</dd>
+                  </div>
+                  <div>
+                    <dt>Asesor</dt>
+                    <dd>{{ getAsesorResumenTexto() }}</dd>
+                  </div>
+                  <div>
+                    <dt>Forma líder</dt>
+                    <dd>{{ getFormaPagoLiderTexto() }}</dd>
+                  </div>
+                </dl>
+              </article>
+
+              <article class="resumen-health-card">
+                <div class="health-ring" [style.--recaudo]="getPorcentajeRecaudo()">
+                  <span>{{ getPorcentajeRecaudo() | number:'1.0-0' }}%</span>
+                  <small>recaudado</small>
+                </div>
+                <div class="health-metrics">
+                  <div>
+                    <span>Abonos</span>
+                    <strong>{{ getTotalAbonosRecibidos() }}</strong>
+                  </div>
+                  <div>
+                    <span>Deuda por Cashea</span>
+                    <strong>{{ getDeudaPorCashea() }}</strong>
+                  </div>
+                  <div>
+                    <span>Deuda por abonos</span>
+                    <strong>{{ getDeudaPorAbonos() }}</strong>
+                  </div>
+                  <div>
+                    <span>Contado pendiente</span>
+                    <strong>{{ getDeudaPorContadoPendiente() }}</strong>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="resumen-v2-snapshots">
+              <article class="resumen-snapshot-card">
+                <span>Pico diario</span>
+                <strong>{{ getPicoDiarioResumen() }}</strong>
+                <small>Máximo nivel de facturación diaria dentro del rango actual.</small>
+              </article>
+              <article class="resumen-snapshot-card">
+                <span>Corte mensual más reciente</span>
+                <strong>{{ getCorteMensualResumen() }}</strong>
+                <small>Último cierre mensual consolidado con datos reales del backend.</small>
+              </article>
+              <article class="resumen-snapshot-card">
+                <span>Asesor destacado</span>
+                <strong>{{ getMejorAsesorResumen() }}</strong>
+                <small>Ranking calculado por monto facturado acumulado.</small>
+              </article>
+            </section>
+
+            <section class="resumen-v2-breakdown">
+              <article class="resumen-table-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Distribución por modalidad</h4>
+                    <p>Participación sobre el total facturado</p>
+                  </div>
+                </div>
+                <div class="resumen-table-list">
+                  <div class="resumen-table-row" *ngFor="let item of getResumenFormasPago(); trackBy: trackByItem"
+                    [ngClass]="item.accentClass">
+                    <div class="row-main">
+                      <span class="row-icon"><i class="bi" [ngClass]="item.icono"></i></span>
+                      <div>
+                        <strong>{{ item.label }}</strong>
+                        <small>{{ item.cantidad }} ventas</small>
+                      </div>
+                    </div>
+                    <div class="row-metric">
+                      <strong>{{ item.montoFormateado }}</strong>
+                      <small>{{ item.participacion | number:'1.0-1' }}%</small>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="resumen-table-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Composición de deuda</h4>
+                    <p>Cómo se reparte el saldo pendiente</p>
+                  </div>
+                </div>
+                <div class="resumen-table-list">
+                  <div class="resumen-table-row" *ngFor="let item of getComposicionDeuda(); trackBy: trackByItem"
+                    [ngClass]="item.accentClass">
+                    <div class="row-main">
+                      <span class="row-icon"><i class="bi bi-circle-fill"></i></span>
+                      <div>
+                        <strong>{{ item.label }}</strong>
+                        <small>{{ item.descripcion }}</small>
+                      </div>
+                    </div>
+                    <div class="row-metric">
+                      <strong>{{ item.montoFormateado }}</strong>
+                      <small>{{ item.porcentaje | number:'1.0-1' }}%</small>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="resumen-v2-charts">
+              <article class="resumen-chart-card is-lg">
+                <div class="section-heading">
+                  <div>
+                    <h4>Evolución diaria</h4>
+                    <p>Últimos 14 puntos con facturación y cobranza real</p>
+                  </div>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenSerieDiariaChart"></canvas>
+                </div>
+              </article>
+
+              <article class="resumen-chart-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Cierre mensual</h4>
+                    <p>Comparativo mensual facturado vs. cobrado</p>
+                  </div>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenSerieMensualChart"></canvas>
+                </div>
+              </article>
+
+              <article class="resumen-chart-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Ranking comercial</h4>
+                    <p>Top asesores por facturación acumulada</p>
+                  </div>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenAsesoresChart"></canvas>
+                </div>
+              </article>
+            </section>
+
+            <section class="resumen-v2-insights">
+              <article class="resumen-table-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Ranking de asesores</h4>
+                    <p>Detalle operativo del período seleccionado</p>
+                  </div>
+                </div>
+                <div class="ranking-list">
+                  <div class="ranking-row" *ngFor="let item of resumenVista.rankingAsesoresTop; let i = index; trackBy: trackByItem">
+                    <div class="ranking-main">
+                      <span class="ranking-position">{{ i + 1 }}</span>
+                      <div>
+                        <strong>{{ item.asesorNombre }}</strong>
+                        <small>{{ item.ventas }} ventas · {{ formatearMoneda(item.cobrado, monedaSistema) }} cobrados</small>
+                      </div>
+                    </div>
+                    <div class="row-metric">
+                      <strong>{{ item.facturadoFormateado }}</strong>
+                      <small>{{ formatearMoneda(item.pendiente, monedaSistema) }} pendientes</small>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="resumen-table-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Últimos cortes mensuales</h4>
+                    <p>Vista rápida de desempeño reciente</p>
+                  </div>
+                </div>
+                <div class="mini-period-list">
+                  <div class="mini-period-row" *ngFor="let item of resumenVista.seriesMensualReciente; trackBy: trackByItem">
+                    <div>
+                      <strong>{{ item.label }}</strong>
+                      <small>{{ item.ventas }} ventas</small>
+                    </div>
+                    <div class="row-metric">
+                      <strong>{{ formatearMoneda(item.facturado, monedaSistema) }}</strong>
+                      <small>{{ formatearMoneda(item.cobrado, monedaSistema) }} cobrados</small>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="resumen-v2-charts">
+              <article class="resumen-chart-card is-lg">
+                <div class="section-heading">
+                  <div>
+                    <h4>Participación por forma de pago</h4>
+                    <p>Distribución del monto facturado</p>
+                  </div>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenFormasPagoChart"></canvas>
+                </div>
+              </article>
+
+              <article class="resumen-chart-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Cobranza del período</h4>
+                    <p>Facturado, cobrado y pendiente</p>
+                  </div>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenCobranzaChart"></canvas>
+                </div>
+              </article>
+
+              <article class="resumen-chart-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Detalle de deuda</h4>
+                    <p>Saldo pendiente por categoría</p>
+                  </div>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenDeudaChart"></canvas>
+                </div>
+              </article>
+            </section>
+          </ng-container>
+        </ng-container>
+      </div>
+
+      <div class="resumen-v2-footer">
+        <div class="resumen-v2-export-actions">
+          <button type="button" class="btn btn-excel-moderno" (click)="generarInformeDesdeModal()">
+            <i class="bi bi-file-earmark-excel me-2"></i>
+            Excel
+          </button>
+          <button type="button" class="btn btn-outline-secondary" (click)="descargarResumenCSV()">
+            <i class="bi bi-filetype-csv me-2"></i>
+            CSV
+          </button>
+          <button type="button" class="btn btn-outline-secondary" (click)="descargarResumenJSON()">
+            <i class="bi bi-braces me-2"></i>
+            JSON
+          </button>
+          <button type="button" class="btn btn-pdf-moderno" (click)="descargarResumenPDF()">
+            <i class="bi bi-file-earmark-pdf me-2"></i>
+            PDF
+          </button>
+        </div>
+        <button type="button" class="btn btn-secondary" (click)="modal.close()">
+          <i class="bi bi-x-circle me-2"></i>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template #resumenLoadingState>
+    <section class="resumen-v2-state">
+      <div class="state-spinner"></div>
+      <h4>Calculando resumen financiero</h4>
+      <p>Estamos consolidando ventas, abonos y saldos pendientes para este período.</p>
+    </section>
+  </ng-template>
+
+  <ng-template #resumenErrorState>
+    <section class="resumen-v2-state is-error">
+      <div class="state-icon"><i class="bi bi-exclamation-triangle"></i></div>
+      <h4>No fue posible generar el resumen</h4>
+      <p>{{ resumenError }}</p>
+      <button type="button" class="btn btn-primary" (click)="actualizarResumen()">
+        <i class="bi bi-arrow-repeat me-2"></i>
+        Reintentar
+      </button>
+    </section>
+  </ng-template>

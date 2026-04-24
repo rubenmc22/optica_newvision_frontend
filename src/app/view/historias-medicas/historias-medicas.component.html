@@ -1,0 +1,1838 @@
+<div class="container-fluid py-4">
+  <!-- Módulo Modernizado de Historias Médicas -->
+  <div class="historias-modernas">
+    <!-- Encabezado moderno -->
+    <div class="card card-moderna">
+      <div class="card-header-moderno">
+        <div class="header-content">
+          <div class="header-icon">
+            <i class="bi bi-journal-medical"></i>
+          </div>
+          <div class="header-text">
+            <h4 class="header-title">Historias Médicas</h4>
+            <div class="header-subtitle">Gestión y consulta de historiales médicos</div>
+          </div>
+        </div>
+        <button class="btn btn-agregar-historia" (click)="crearHistoriaNueva()">
+          <i class="bi bi-plus-circle"></i>
+          Nueva Historia
+        </button>
+      </div>
+
+      <div class="card-body-moderno">
+        <!-- Filtros modernos -->
+        <div class="filtros-modernos">
+          <div class="filtro-item">
+            <label class="form-label-moderno">
+              <i class="bi bi-geo-alt"></i>
+              Filtrar por sede
+            </label>
+            <select [(ngModel)]="sedeFiltro" (change)="actualizarPacientesPorSede()" class="form-select modern-select">
+              <option value="">Todas las sedes</option>
+              <option *ngFor="let sede of sedesDisponibles" [value]="sede.key ? sede.key.toLowerCase() : ''">
+                {{ sede.nombre }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filtro-item filtro-busqueda-paciente">
+            <label class="form-label-moderno">
+              <i class="bi bi-search"></i>
+              Buscar paciente
+            </label>
+            <ng-select [items]="pacientesFiltradosPorSede" bindLabel="informacionPersonal.nombreCompleto"
+              [selectOnTab]="true" [clearable]="true" [searchable]="true" [(ngModel)]="pacienteSeleccionado"
+              (search)="actualizarFiltroTexto($event)" (change)="seleccionarHistoriasPorPaciente($event)"
+              [searchFn]="filtrarPorNombreOCedula" placeholder="Buscar por nombre o cédula..."
+              class="ng-select-moderno">
+
+              <ng-template ng-option-tmp let-item="item">
+                <div class="paciente-option">
+                  <div class="paciente-nombre">{{item.informacionPersonal.nombreCompleto}}</div>
+                  <div class="paciente-cedula">{{item.informacionPersonal.cedula}}</div>
+                </div>
+              </ng-template>
+
+              <ng-template ng-notfound-tmp>
+                <div class="ng-notfound">
+                  <i class="bi bi-search"></i>
+                  No se encontraron pacientes
+                </div>
+              </ng-template>
+            </ng-select>
+          </div>
+        </div>
+
+        <!-- Mensaje si no hay historial -->
+        <div *ngIf="mostrarSinHistorial && !cargando" class="alert-moderno alert-info">
+          <i class="bi bi-info-circle"></i>
+          <div class="alert-content">
+            <strong>Sin historial médico</strong>
+            <span>Este paciente no posee historial médico registrado.</span>
+          </div>
+        </div>
+
+        <!-- Panel principal - ESTRUCTURA VERTICAL -->
+        <div class="panel-vertical" *ngIf="mostrarElementos">
+
+          <!-- SECCIÓN SUPERIOR: LISTADO DE HISTORIAS -->
+          <div class="panel-superior">
+            <div class="card card-secundaria" [class.collapsed]="panelSuperiorColapsado">
+              <div class="card-header-secundario" (click)="togglePanelSuperior()">
+                <div class="header-left">
+                  <div class="header-icon">
+                    <i class="bi bi-clock-history"></i>
+                  </div>
+                  <div class="header-text">
+                    <div class="header-title">Historiales del Paciente</div>
+                  </div>
+                </div>
+                <div class="header-right">
+                  <span class="historial-count">{{historial?.length || 0}}</span>
+                  <button class="collapse-toggle" [class.collapsed]="panelSuperiorColapsado">
+                    <i class="bi bi-chevron-down"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="card-body-secundario">
+                <div class="lista-historias-vertical">
+                  <div *ngFor="let historia of historial" class="item-historia-vertical"
+                    [class.active]="historiaSeleccionada?.id === historia.id" (click)="verDetalle(historia)">
+
+                    <div class="historia-header-vertical">
+                      <div class="historia-info-principal">
+                        <div class="historia-motivo-vertical">
+                          {{
+                          historia.datosConsulta.motivo.includes('Otro')
+                          ? historia.datosConsulta.otroMotivo || '— Sin motivo especificado —'
+                          : historia.datosConsulta.motivo.join(', ')
+                          }}
+                        </div>
+                        <div class="historia-meta-vertical">
+                          <span class="historia-numero-vertical">#{{ historia.nHistoria || '' }}</span>
+                          <span class="historia-fecha-vertical">{{ formatearFecha(historia.auditoria.fechaCreacion)
+                            }}</span>
+                          <!-- INDICADOR DE FÓRMULA EXTERNA -->
+                          <span *ngIf="historia.datosConsulta?.formulaExterna" class="badge-externa">
+                            <i class="bi bi-file-earmark-text"></i> Externa
+                          </span>
+                        </div>
+                      </div>
+                      <div class="historia-medico-vertical">
+                        <i class="bi bi-person-badge"></i>
+                        {{ obtenerNombreMedicoEspecialista(historia) }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN INFERIOR: DETALLE DE HISTORIA -->
+          <div class="panel-inferior" *ngIf="historiaSeleccionada">
+            <div class="card card-secundaria" [class.collapsed]="panelInferiorColapsado">
+              <div class="card-header-detalle" (click)="togglePanelInferior()">
+                <div class="header-left">
+                  <div class="header-icon">
+                    <i class="bi bi-eye-fill"></i>
+                  </div>
+                  <div class="header-text">
+                    <div class="header-title-wrapper">
+                      <div class="header-title">Detalle del Examen</div>
+                      <!-- INDICADOR DE FÓRMULA EXTERNA -->
+                      <span *ngIf="historiaSeleccionada?.datosConsulta?.formulaExterna" class="badge-externa-detalle">
+                        <i class="bi bi-file-earmark-text"></i> Externa
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="header-right">
+                  <div class="detalle-numero">
+                    <span class="numero-label">N° historia:</span>
+                    <span class="numero-valor">{{ historiaSeleccionada?.nHistoria || '' }}</span>
+                  </div>
+                  <button class="collapse-toggle" [class.collapsed]="panelInferiorColapsado">
+                    <i class="bi bi-chevron-down"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="card-body-detalle">
+                <!-- TARJETA DE REFERENCIA DESTACADA (justo después del header) -->
+                <div class="referencia-destacada"
+                    *ngIf="historiaSeleccionada?.datosConsulta?.formulaExterna && obtenerMedicoReferido(historiaSeleccionada)">
+                  <div class="referencia-contenido-destacado">
+                    <div class="referencia-icono-destacado">
+                      <i class="bi bi-prescription2"></i>
+                    </div>
+                    <div class="referencia-info-destacado">
+                      <div class="referencia-tag">
+                        <span>Médico Referido</span>
+                      </div>
+                      <div class="referencia-medico-destacado">
+                        <i class="bi bi-person-badge"></i>
+                        <strong>{{ obtenerNombreMedicoReferido(historiaSeleccionada) }}</strong>
+                        <span class="separador-destacado">|</span>
+                        <i class="bi bi-geo-alt"></i>
+                        <span>{{ obtenerLugarMedicoReferido(historiaSeleccionada) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Datos del paciente -->
+                <div class="seccion-datos">
+                  <div class="seccion-header">
+                    <i class="bi bi-person-vcard"></i>
+                    <h6>Datos del Paciente</h6>
+                  </div>
+                  <div class="datos-grid">
+                    <div class="dato-item">
+                      <label>Nombre</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.nombreCompleto }}</div>
+                    </div>
+                    <div class="dato-item">
+                      <label>Cédula</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.cedula }}</div>
+                    </div>
+                    <div class="dato-item">
+                      <label>Teléfono</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.telefono }}</div>
+                    </div>
+                    <div class="dato-item">
+                      <label>Edad</label>
+                      <div class="dato-valor">
+                        {{ calcularEdad(pacienteSeleccionado?.informacionPersonal?.fechaNacimiento) }} años
+                      </div>
+                    </div>
+
+                    <!-- Segunda fila: Ocupación y Motivo (cada uno ocupa 2 columnas) -->
+                    <div class="dato-item">
+                      <label>Ocupación</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.ocupacion }}</div>
+                    </div>
+                    <div class="dato-item motivo-item">
+                      <label>Motivo</label>
+                      <div class="dato-valor">{{ getMotivoVisual() }}</div>
+                    </div>
+
+                    <!-- Tercera fila: Dirección (ocupa toda la fila) -->
+                    <div class="dato-item direccion-item">
+                      <label>Dirección</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.direccion }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Historia Clínica -->
+                <div class="seccion-datos">
+                  <div class="seccion-header">
+                    <i class="bi bi-heart-pulse"></i>
+                    <h6>Historia Clínica</h6>
+                  </div>
+
+                  <div class="datos-grid">
+                    <div class="dato-item">
+                      <label>Usa Lentes</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.usuarioLentes || 'No especificado' }}</div>
+                    </div>
+
+                    <div class="dato-item">
+                      <label>Cristal Actual</label>
+                      <div class="dato-valor"> {{ getTipoCristalActualConModelo() }}</div>
+                    </div>
+
+                    <!-- <div class="dato-item" *ngIf="historiaSeleccionada?.datosConsulta?.tipoCristalActual === 'LENTES_CONTACTO'">
+                    <label>Modelo de Lentes de Contacto</label>
+                    <div class="dato-valor">{{ getModeloLenteContactoActual() || 'No especificado' }}</div>
+                  </div>-->
+
+                    <div class="dato-item">
+                      <label>Última Graduación</label>
+                      <div class="dato-valor">
+                        {{ historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion ?
+                        (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No especificado' }}
+                      </div>
+                    </div>
+
+                    <div class="dato-item">
+                      <label>Fotofobia</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || 'No especificado'}}
+                      </div>
+                    </div>
+
+                    <div class="dato-item">
+                      <label>Alergias</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.alergicoA || 'No especificado'
+                        }}</div>
+                    </div>
+
+                    <div class="dato-item">
+                      <label>Cirugía Ocular</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular || 'No especificado'}}</div>
+                    </div>
+                    <div class="dato-item">
+                      <label>Tipo de Cirugía</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || 'No especificada' }}</div>
+                    </div>
+                    <div class="dato-item">
+                      <label>Traumatismo Ocular</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular || 'No especificado'}}</div>
+                    </div>
+                    <div class="dato-item">
+                      <label>Uso de Dispositivos</label>
+                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.usoDispositivo || 'No especificado' }}</div>
+                    </div>
+                  </div>
+
+                  <!-- Antecedentes y Patologías -->
+                  <div class="datos-tags">
+                    <div class="tags-group">
+                      <label>Antecedentes Personales</label>
+                      <div class="tags-container">
+                        <ng-container
+                          *ngIf="(pacienteSeleccionado?.historiaClinica?.antecedentesPersonales ?? []).length > 0; else sinAntecedentes">
+                          <span
+                            *ngFor="let antecedente of pacienteSeleccionado?.historiaClinica?.antecedentesPersonales ?? []"
+                            class="tag tag-success">
+                            {{ antecedente }}
+                          </span>
+                        </ng-container>
+                        <ng-template #sinAntecedentes>
+                          <span class="tag tag-secondary">No reportados</span>
+                        </ng-template>
+                      </div>
+                    </div>
+
+                    <div class="tags-group">
+                      <label>Antecedentes Familiares</label>
+                      <div class="tags-container">
+                        <ng-container
+                          *ngIf="(pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares ?? []).length > 0; else sinFamiliares">
+                          <span
+                            *ngFor="let antecedente of pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares ?? []"
+                            class="tag tag-info">
+                            {{ antecedente }}
+                          </span>
+                        </ng-container>
+                        <ng-template #sinFamiliares>
+                          <span class="tag tag-secondary">No reportados</span>
+                        </ng-template>
+                      </div>
+                    </div>
+
+                    <!-- Sección de Patologías Generales  -->
+                    <div class="tags-group">
+                      <label>Patologías Generales</label>
+                      <div class="tags-container">
+                        <ng-container *ngIf="getPatologiasProcesadas().length > 0; else sinPatologias">
+                          <span *ngFor="let patologia of getPatologiasProcesadas()" class="tag tag-secondary">
+                            {{ patologia }}
+                          </span>
+                        </ng-container>
+                        <ng-template #sinPatologias>
+                          <span class="tag tag-secondary">No reportados</span>
+                        </ng-template>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Exámenes Oculares -->
+                <div class="seccion-examenes">
+                  <!-- Lensometría Mejorada -->
+                  <div class="examen-card">
+                    <div class="examen-header">
+                      <i class="bi bi-eyeglasses"></i>
+                      <h6 class="examen-header-title">Lensometría</h6>
+                    </div>
+
+                    <div class="table-responsive-moderna">
+                      <table class="tabla-examen tabla-lensometria">
+                        <thead>
+                          <tr>
+                            <th>Ojo</th>
+                            <th>ESF</th>
+                            <th>CIL</th>
+                            <th>EJE</th>
+                            <th>ADD</th>
+                            <th>AV Lejos</th>
+                            <th class="merged-cell">AV Lejos BI</th>
+                            <th>AV Cerca</th>
+                            <th class="merged-cell">AV Cerca BI</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><strong>OD</strong></td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.esf_od)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.esf_od) }}
+                            </td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.cil_od)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.cil_od) }}
+                            </td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.eje_od || '—' }}</td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.add_od)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.add_od) }}
+                            </td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_od || '—' }}</td>
+                            <td rowspan="2" class="merged-cell">
+                              {{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_bi || '—' }}
+                            </td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_od || '—' }}</td>
+                            <td rowspan="2" class="merged-cell">
+                              {{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_bi || '—' }}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><strong>OI</strong></td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.esf_oi)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.esf_oi) }}
+                            </td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.cil_oi)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.cil_oi) }}
+                            </td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.eje_oi || '—' }}</td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.add_oi)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.add_oi) }}
+                            </td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_oi || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_oi || '—' }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- AVSC - AVAE - OTROS Mejorado -->
+                  <div class="examen-card">
+                    <div class="examen-header">
+                      <i class="bi bi-eye"></i>
+                      <h6 class="examen-header-title">AVSC - AVAE - OTROS</h6>
+                    </div>
+
+                    <div class="table-responsive-moderna">
+                      <table class="tabla-examen tabla-avsc">
+                        <thead>
+                          <tr>
+                            <th>Ojo</th>
+                            <th>AVSC Lejos</th>
+                            <th>AVSC Cerca</th>
+                            <th>AVAE</th>
+                            <th>OTROS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><strong>OD</strong></td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_lejos_od || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_cerca_od || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avae_od || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_od || '—' }}</td>
+                          </tr>
+                          <tr>
+                            <td><strong>OI</strong></td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_lejos_oi || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_cerca_oi || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avae_oi || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_oi || '—' }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- Hora de evaluación -->
+                  <div class="hora-evaluacion">
+                    <i class="bi bi-clock"></i>
+                    <span>Hora de evaluación: {{ horaEvaluacion || 'No registrada' }}</span>
+                  </div>
+
+                  <!-- Refracción y Refracción Final Mejoradas -->
+                  <div class="examenes-grid">
+                    <!-- Refracción Mejorada -->
+                    <div class="examen-card">
+                      <div class="examen-header">
+                        <i class="bi bi-prescription2"></i>
+                        <h6 class="examen-header-title">Refracción</h6>
+                      </div>
+
+                      <div class="table-responsive-moderna">
+                        <table class="tabla-examen tabla-refraccion">
+                          <thead>
+                            <tr>
+                              <th>Ojo</th>
+                              <th>ESF</th>
+                              <th>CIL</th>
+                              <th>EJE</th>
+                              <th>ADD</th>
+                              <th>AVCCL</th>
+                              <th class="merged-cell">AVCCL BI</th>
+                              <th>AVCCC</th>
+                              <th class="merged-cell">AVCCC BI</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td><strong>OD</strong></td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.esf_od)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.esf_od) }}
+                              </td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.cil_od)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.cil_od) }}
+                              </td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.eje_od || '—' }}</td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.add_od)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.add_od) }}
+                              </td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_od || '—' }}</td>
+                              <td rowspan="2" class="merged-cell">
+                                {{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_bi || '—' }}
+                              </td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_od || '—' }}</td>
+                              <td rowspan="2" class="merged-cell">
+                                {{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_bi || '—' }}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td><strong>OI</strong></td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.esf_oi)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.esf_oi) }}
+                              </td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.cil_oi)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.cil_oi) }}
+                              </td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.eje_oi || '—' }}</td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.add_oi)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.add_oi) }}
+                              </td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_oi || '—' }}</td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_oi || '—' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- Refracción Final Mejorada -->
+                    <div class="examen-card">
+                      <div class="examen-header">
+                        <i class="bi bi-prescription"></i>
+                        <h6 class="examen-header-title">Refracción Final</h6>
+                      </div>
+
+                      <div class="table-responsive-moderna">
+                        <table class="tabla-examen tabla-refraccion-final">
+                          <thead>
+                            <tr>
+                              <th>Ojo</th>
+                              <th>ESF</th>
+                              <th>CIL</th>
+                              <th>EJE</th>
+                              <th>ADD</th>
+                              <th>ALT</th>
+                              <th>DP</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td><strong>OD</strong></td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_od)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_od) }}
+                              </td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_od)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_od) }}
+                              </td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.eje_od || '—' }}</td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_od)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_od) }}
+                              </td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.alt_od || '—' }}</td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.dp_od || '—' }}</td>
+                            </tr>
+                            <tr>
+                              <td><strong>OI</strong></td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_oi)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_oi) }}
+                              </td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_oi)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_oi) }}
+                              </td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.eje_oi || '—' }}</td>
+                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_oi)">
+                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_oi) }}
+                              </td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.alt_oi || '—' }}</td>
+                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.dp_oi || '—' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Diagnóstico y Tratamiento -->
+                <div class="seccion-datos">
+                  <div class="diagnostico-grid">
+                    <div class="diagnostico-item">
+                      <div class="seccion-header">
+                        <i class="bi bi-clipboard-check"></i>
+                        <h6>Diagnóstico</h6>
+                      </div>
+                      <div class="dato-valor-large">
+                        {{ historiaSeleccionada?.diagnosticoTratamiento?.diagnostico || 'No especificado' }}
+                      </div>
+                    </div>
+                    <div class="diagnostico-item">
+                      <div class="seccion-header">
+                        <i class="bi bi-capsule"></i>
+                        <h6>Tratamiento</h6>
+                      </div>
+                      <div class="dato-valor-large">
+                        {{ historiaSeleccionada?.diagnosticoTratamiento?.tratamiento || 'No especificado' }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Recomendaciones -->
+                <div class="seccion-datos">
+                  <div class="seccion-header">
+                    <i class="bi bi-chat-square-text"></i>
+                    <h6>Recomendaciones</h6>
+                  </div>
+
+                  <ng-container
+                    *ngIf="historiaSeleccionada?.recomendaciones as recomendaciones; else sinRecomendaciones">
+                    <!-- En la sección de recomendaciones de la vista -->
+                    <div class="recomendaciones-grid">
+                      <div *ngFor="let rec of recomendaciones; let i = index" class="recomendacion-card">
+                        <div class="recomendacion-header">
+                          <i class="bi bi-eyeglasses"></i>
+                          <span>Lente #{{ i + 1 }}</span>
+                        </div>
+                        <div class="recomendacion-body">
+                          <div class="recomendacion-item">
+                            <label>Categorías recomendadas</label>
+                            <div class="dato-valor">{{ getCategoriasRecomendadasLabel(rec) }}</div>
+                          </div>
+
+                          <div class="recomendacion-item" *ngIf="getCristalRecomendadoLabel(rec) !== 'No aplica'">
+                            <label>Tipo de cristal</label>
+                            <div class="dato-valor">{{ getCristalRecomendadoLabel(rec) }}</div>
+                          </div>
+
+                          <div class="recomendacion-item" *ngIf="getTipoLenteContactoRecomendado(rec) as tipoLenteContacto">
+                            <label>Tipo de lentes de contacto</label>
+                            <div class="dato-valor">{{ getTipoLenteContactoLabel(tipoLenteContacto) }}</div>
+                          </div>
+
+                          <div class="medidas-section" *ngIf="getMedidasRecomendacion(rec) as medidas">
+                            <div class="medidas-header">
+                              <i class="bi bi-rulers"></i>
+                              <label>Medidas del lente</label>
+                            </div>
+                            <div class="medidas-grid">
+                              <div class="medida-item" *ngIf="medidas.horizontal">
+                                <label>Horizontal:</label>
+                                <span>{{ medidas.horizontal }} cm</span>
+                              </div>
+                              <div class="medida-item" *ngIf="medidas.vertical">
+                                <label>Vertical:</label>
+                                <span>{{ medidas.vertical }} cm</span>
+                              </div>
+                              <div class="medida-item" *ngIf="medidas.diagonal">
+                                <label>Diagonal:</label>
+                                <span>{{ medidas.diagonal }} cm</span>
+                              </div>
+                              <div class="medida-item" *ngIf="medidas.puente">
+                                <label>Puente:</label>
+                                <span>{{ medidas.puente }} cm</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="recomendacion-item full-width">
+                            <label>Observaciones</label>
+                            <div class="dato-valor">{{ rec.observaciones || 'Sin observaciones' }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </ng-container>
+                  <ng-template #sinRecomendaciones>
+                    <div class="empty-state">
+                      <i class="bi bi-info-circle"></i>
+                      <span>No se registraron recomendaciones de lentes</span>
+                    </div>
+                  </ng-template>
+                </div>
+
+                <!-- Declaración de Conformidad -->
+                <div class="seccion-conformidad">
+                  <div class="conformidad-header">
+                    <i class="bi bi-pen"></i>
+                    <h6>Declaración de Conformidad</h6>
+                  </div>
+                  <div class="conformidad-content">
+                    {{ notaConformidad }}
+                  </div>
+                </div>
+
+                <!-- Firmas -->
+                <div class="seccion-firmas">
+                  <div class="firmas-grid">
+                    <div class="firma-item">
+                      <div class="firma-label">Firma del Paciente</div>
+                      <div class="firma-space"></div>
+                      <div class="firma-info">
+                        <div>Nombre: {{ pacienteSeleccionado?.informacionPersonal?.nombreCompleto }}</div>
+                        <div>C.I: {{ pacienteSeleccionado?.informacionPersonal?.cedula }}</div>
+                      </div>
+                    </div>
+
+                    <div class="firma-item">
+                      <div class="firma-label">Firma del Especialista</div>
+                      <div class="firma-space"></div>
+                      <div class="firma-info">
+                        <div>{{ obtenerNombreEspecialista(historiaSeleccionada) }}</div>
+                        <div>C.I: {{ obtenerCedulaEspecialista(historiaSeleccionada) }}</div>
+                        <div>{{ obtenerCargoEspecialista(historiaSeleccionada) }}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="asesor-responsable">
+                    <div class="firma-label">Asesor Responsable</div>
+                    <div class="firma-info">
+                      <div>{{ historiaSeleccionada?.auditoria?.creadoPor?.nombre || 'Nombre del asesor' }}</div>
+                      <div>C.I: {{ historiaSeleccionada?.auditoria?.creadoPor?.cedula || 'Cedula' }}</div>
+                      <div>{{ historiaSeleccionada?.auditoria?.creadoPor?.cargo || 'No disponible' }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-footer-moderno">
+                <button class="btn btn-secondary-moderno" (click)="imprimirHistoriaMedica()">
+                  <i class="bi bi-printer"></i> Imprimir
+                </button>
+
+                <button class="btn btn-primary-moderno"
+                  *ngIf="sedePacienteSeleccionado && sedePacienteSeleccionado === sedeActiva"
+                  (click)="editarHistoria(historiaSeleccionada)">
+                  <i class="bi bi-pencil-square"></i> Editar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal modernizado para agregar/editar historia -->
+<div class="modal fade" id="historiaModal" tabindex="-1" aria-labelledby="historiaModalLabel" data-bs-backdrop="static"
+  aria-hidden="true" (hidden.bs.modal)="limpiarModal()" (shown.bs.modal)="onModalShown()">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content modal-moderna">
+
+      <!-- Header moderno -->
+      <div class="modal-header-moderno">
+        <div class="modal-header-content">
+          <div class="modal-icon">
+            <i class="bi" [ngClass]="modoEdicion ? 'bi-pencil-square' : 'bi-journal-plus'"></i>
+          </div>
+          <div class="modal-title-content">
+            <h5 class="modal-title">{{ modoEdicion ? 'Editar Historia Médica' : 'Nueva Historia Médica' }}</h5>
+            <p class="modal-subtitle">{{ modoEdicion ? 'Actualice la información de la historia' : 'Complete los datos de la nueva historia médica' }}</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-moderno" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <!-- Body moderno -->
+      <div class="modal-body-moderno">
+        <form [formGroup]="historiaForm" class="form-moderno">
+          <!-- Sección Paciente -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-person-vcard"></i>
+              </div>
+              <h6 class="section-title">Datos del Paciente</h6>
+            </div>
+
+            <div class="section-content">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-person me-2"></i>
+                      Paciente <span class="required">*</span>
+                    </label>
+                    <ng-select [items]="pacientesFiltrados" bindLabel="informacionPersonal.nombreCompleto"
+                      formControlName="paciente" [compareWith]="compararPacientes" [searchFn]="searchFn"
+                      placeholder="Buscar por nombre o cédula..." [clearable]="true" (change)="onPacienteSeleccionado()"
+                      class="ng-select-moderno">
+
+                      <ng-template ng-option-tmp let-item="item">
+                        <div class="paciente-option">
+                          <div class="paciente-nombre">{{ item.informacionPersonal.nombreCompleto }}</div>
+                          <div class="paciente-cedula">{{ item.informacionPersonal.cedula }}</div>
+                        </div>
+                      </ng-template>
+
+                      <ng-template ng-label-tmp let-item="item">
+                        <div class="paciente-seleccionado">
+                          {{ item?.informacionPersonal?.nombreCompleto }} - CI: {{ item?.informacionPersonal?.cedula }}
+                        </div>
+                      </ng-template>
+                    </ng-select>
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-clipboard-heart me-2"></i>
+                      Motivo de Consulta <span class="required">*</span>
+                    </label>
+                    <ng-select [items]="motivosConsulta" [multiple]="true" formControlName="motivo" [searchable]="true"
+                      placeholder="Seleccione un motivo..." (change)="onMotivoChange($event)" class="ng-select-moderno">
+                    </ng-select>
+                  </div>
+                </div>
+
+                <!-- Input para "Otro" motivo -->
+                <div *ngIf="mostrarInputOtroMotivo" class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-chat-square-text me-2"></i>
+                      Especifique el motivo <span class="required">*</span>
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="otroMotivo"
+                      placeholder="Ingrese el motivo de consulta...">
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-eyeglasses me-2"></i>
+                      Tipo de cristal actual
+                    </label>
+                    <ng-select [items]="tiposCristales" bindLabel="label" bindValue="value"
+                      formControlName="tipoCristalActual" [searchable]="true" placeholder="Seleccione un tipo..."
+                      (change)="onTipoCristalChange($event)" class="ng-select-moderno">
+                    </ng-select>
+                  </div>
+                </div>
+
+                <!-- Select para tipo de lentes de contacto (se muestra solo si se selecciona "Lentes de contacto") -->
+                <div class="col-md-4" *ngIf="mostrarSelectLentesContacto">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-eye me-2"></i>
+                      Tipo de Lente de Contacto
+                    </label>
+                    <ng-select [items]="tiposLentesContacto" bindLabel="label" bindValue="value"
+                      formControlName="tipoLentesContacto" [searchable]="true" placeholder="Seleccione el tipo..."
+                      class="ng-select-moderno">
+                    </ng-select>
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-calendar3 me-2"></i>
+                      Fecha última graduación
+                    </label>
+                    <ng-select [items]="ultimaGraduacionOpciones" bindLabel="label" bindValue="key"
+                      formControlName="ultimaGraduacion" [searchable]="false" [clearable]="false"
+                      placeholder="Seleccione un rango..." class="ng-select-moderno">
+                    </ng-select>
+                  </div>
+                </div>
+
+               <div class="col-md-4">
+                <div class="form-group-moderno">
+                  <label class="form-label-moderno">
+                    <i class="bi bi-person-badge me-2"></i>
+                    Especialista <span class="required">*</span>
+                  </label>
+                  <ng-select 
+                    [items]="medicoTratante.length > 0 ? medicoTratante : []" 
+                    bindLabel="nombre"
+                    formControlName="medico" 
+                    [searchable]="true" 
+                    [disabled]="medicoTratante.length === 0"
+                    placeholder="Seleccione un médico..." 
+                    (change)="onMedicoChange($event)"
+                    class="ng-select-moderno">  
+                  </ng-select>
+
+                  <div class="form-error"
+                    *ngIf="historiaForm.get('medico')?.invalid && historiaForm.get('medico')?.touched">
+                    <i class="bi bi-exclamation-circle"></i> Seleccione un Especialista
+                  </div>
+                </div>
+              </div>
+              </div>
+
+              <div class="formula-externa-nota-global" *ngIf="esMedicoExternoSeleccionado()">
+                <div class="nota-header">
+                  <i class="bi bi-info-circle-fill"></i>
+                  <strong>📋 Registro de Fórmula Externa</strong>
+                </div>
+                <div class="nota-body">
+                  <p>Active esta opción cuando el paciente acuda con una <strong>fórmula externa</strong> (prescripción
+                    de otro médico).</p>
+                  <div class="nota-casos">
+                    <div class="caso">
+                      <i class="bi bi-file-text"></i>
+                      <div>
+                        <strong>🔹 Solo registro:</strong> Seleccione <strong>MÉDICO EXTERNO</strong> y complete los
+                        datos del médico referido.
+                      </div>
+                    </div>
+                    <div class="caso">
+                      <i class="bi bi-arrow-repeat"></i>
+                      <div>
+                        <strong>🔹 Rectificación:</strong> Si el paciente requiere <strong>ajuste de la
+                          fórmula</strong>, debe seleccionar un especialista interno (Oftalmólogo u Optometrista) y
+                        realizar una nueva consulta.
+                      </div>
+                    </div>
+                  </div>
+                  <div class="nota-ejemplo">
+                    <i class="bi bi-lightbulb"></i>
+                    <span><strong>Ejemplo:</strong> Paciente trae fórmula del Dr. Juan Pérez. Si solo registramos la
+                      fórmula → seleccionar MÉDICO EXTERNO. Si necesita ajuste → seleccionar especialista interno y
+                      realizar nueva consulta.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección Examen Ocular -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-eye"></i>
+              </div>
+              <div class="section-title-content"
+                style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h6 class="section-title">Examen Ocular</h6>
+
+                <!-- SWITCH DE FÓRMULA EXTERNA EN EL HEADER -->
+                <div class="formula-externa-header" *ngIf="esMedicoExternoSeleccionado()">
+                  <div class="formula-externa-switch">
+                    <label class="switch-moderno">
+                      <input type="checkbox" formControlName="esFormulaExterna" [checked]="true" [disabled]="true" (click)="prevenirCambio($event)">
+                      <span class="slider-moderno round"></span>
+                    </label>
+                    <span class="switch-label text-primary">
+                      <i class="bi bi-box-arrow-up-right"></i>
+                      Fórmula Externa
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-content">
+              <!-- CAMPOS PARA FÓRMULA EXTERNA (DENTRO DEL CONTENT) -->
+              <div class="formula-externa-fields" *ngIf="historiaForm.get('esFormulaExterna')?.value">
+                <!-- Grid de campos -->
+                <div class="formula-externa-grid">
+                  <div class="formula-externa-grid-item">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-person-badge me-2"></i>
+                        Médico Oftalmólogo Referido <span class="required">*</span>
+                      </label>
+                      <input type="text" class="form-control-moderno" formControlName="medicoReferido"
+                        placeholder="Nombre del médico que emitió la fórmula...">
+                      <small class="form-text text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Nombre del especialista externo que realizó la fórmula
+                      </small>
+                      <div class="form-error"
+                        *ngIf="historiaForm.get('medicoReferido')?.invalid && historiaForm.get('medicoReferido')?.touched">
+                        <i class="bi bi-exclamation-circle"></i> Este campo es requerido para fórmula externa
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="formula-externa-grid-item">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        Lugar del Consultorio <span class="required">*</span>
+                      </label>
+                      <input type="text" class="form-control-moderno" formControlName="lugarConsultorio"
+                        placeholder="Ciudad, clínica o consultorio...">
+                      <small class="form-text text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Ubicación donde se realizó la consulta externa
+                      </small>
+                      <div class="form-error"
+                        *ngIf="historiaForm.get('lugarConsultorio')?.invalid && historiaForm.get('lugarConsultorio')?.touched">
+                        <i class="bi bi-exclamation-circle"></i> Este campo es requerido para fórmula externa
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Mensaje informativo según el caso -->
+                <div class="formula-externa-info"
+                  *ngIf="historiaForm.get('medico')?.value && historiaForm.get('medico')?.value?.id !== 'EXTERNO'">
+                  <i class="bi bi-arrow-repeat"></i>
+                  <span>
+                    <strong>Rectificación de fórmula externa:</strong>
+                    El especialista {{ getNombreMedicoSeleccionado() }}
+                    verificará y ajustará la fórmula del Dr. {{ historiaForm.get('medicoReferido')?.value || 'externo'
+                    }}.
+                    <span *ngIf="esOftalmologoSeleccionado()" class="badge bg-warning text-dark ms-2">
+                      <i class="bi bi-cash"></i> Generará costo de consulta
+                    </span>
+                    <span *ngIf="esOptometristaSeleccionado()" class="badge bg-info text-dark ms-2">
+                      <i class="bi bi-gift"></i> Sin costo
+                    </span>
+                  </span>
+                </div>
+
+                <div class="formula-externa-info"
+                  *ngIf="!historiaForm.get('medico')?.value || historiaForm.get('medico')?.value?.id === 'EXTERNO'">
+                  <i class="bi bi-box-arrow-up-right"></i>
+                  <span>
+                    <strong>Fórmula externa pura:</strong>
+                    Solo se registrará la fórmula del Dr. {{ historiaForm.get('medicoReferido')?.value || 'externo' }}.
+                    <span class="badge bg-secondary text-white ms-2">Sin costo</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Separador visual -->
+              <div class="section-divider" *ngIf="historiaForm.get('esFormulaExterna')?.value"></div>
+
+
+              <!-- Lensometría -->
+              <div class="examen-subseccion">
+                <div class="subseccion-header">
+                  <i class="bi bi-eyeglasses"></i>
+                  <h6>Lensometría</h6>
+                </div>
+
+                <div class="lensometria-moderna lensometria-scroll-fixed">
+                  <!-- filas OD y OI  -->
+                  <div class="lensometria-filas-container">
+                    <!-- Cabecera de campos -->
+                    <div class="lensometria-header">
+                      <div class="campo-label">Ojo</div>
+                      <div class="campo-label">ESF</div>
+                      <div class="campo-label">CIL</div>
+                      <div class="campo-label">EJE</div>
+                      <div class="campo-label">ADD</div>
+                      <div class="campo-label">AV Lejos</div>
+                      <div class="campo-label">AV Cerca</div>
+                    </div>
+
+                    <!-- Fila OD -->
+                    <div class="lensometria-fila ojo-fila">
+                      <div class="ojo-label">
+                        <span class="ojo-tag ojo-od">OD</span>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['esf']" formControlName="len_esf_od" [searchable]="true"
+                          placeholder="ESF" class="ng-select-moderno" (keydown)="handleKeydown($event)"
+                          (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                          formControlName="len_cil_od" placeholder="CIL" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                          formControlName="len_eje_od" placeholder="EJE" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                          formControlName="len_add_od" placeholder="ADD" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                          formControlName="len_av_lejos_od" placeholder="AV Lejos" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                          formControlName="len_av_cerca_od" placeholder="AV Cerca" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+                    </div>
+
+                    <!-- Fila OI -->
+                    <div class="lensometria-fila ojo-fila">
+                      <div class="ojo-label">
+                        <span class="ojo-tag ojo-oi">OI</span>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                          formControlName="len_esf_oi" placeholder="ESF" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                          formControlName="len_cil_oi" placeholder="CIL" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                          formControlName="len_eje_oi" placeholder="EJE" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                          formControlName="len_add_oi" placeholder="ADD" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                          formControlName="len_av_lejos_oi" placeholder="AV Lejos" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                          formControlName="len_av_cerca_oi" placeholder="AV Cerca" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!--sección binocular  -->
+                  <div class="lensometria-binocular binocular-top">
+                    <div class="binocular-header">
+                      <i class="bi bi-eye"></i>
+                      <span>Binocular</span>
+                    </div>
+
+                    <div class="binocular-campos">
+                      <div class="binocular-campo">
+                        <label>AV Lejos</label>
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                          formControlName="len_av_lejos_bi" placeholder="AV lejos BI" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="binocular-campo">
+                        <label>AV Cerca</label>
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                          formControlName="len_av_cerca_bi" placeholder="AV cerca BI" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- AVSC - AVAE - OTROS -->
+              <div class="examen-subseccion">
+                <div class="subseccion-header">
+                  <i class="bi bi-eye"></i>
+                  <h6>AVSC - AVAE - OTROS</h6>
+                </div>
+
+                <div class="lensometria-moderna lensometria-scroll-fixed">
+                  <!-- Cabecera de campos (4 columnas) -->
+                  <div class="avsc-header">
+                    <div class="campo-label">Ojo</div>
+                    <div class="campo-label">AVSC Lejos</div>
+                    <div class="campo-label">AVSC Cerca</div>
+                    <div class="campo-label">AVAE</div>
+                    <div class="campo-label">OTROS</div>
+                  </div>
+
+                  <!-- Fila OD -->
+                  <div class="avsc-fila ojo-fila">
+                    <div class="ojo-label">
+                      <span class="ojo-tag ojo-od">OD</span>
+                    </div>
+
+                    <!-- AVSC Lejos  -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                        formControlName="avsc_lejos_od" placeholder="AVSC Lejos" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <!-- AVSC Cerca  -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                        formControlName="avsc_cerca_od" placeholder="AVSC Cerca" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <!-- AVAE -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                        formControlName="avae_od" placeholder="AVAE" [searchable]="true" class="ng-select-moderno"
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <!-- OTROS OD -->
+                    <div class="campo-input">
+                      <input type="text" class="form-control-small" formControlName="otros_od"
+                        placeholder="Observaciones" (keydown)="handleKeydown($event)">
+                    </div>
+                  </div>
+
+                  <!-- Fila OI -->
+                  <div class="avsc-fila ojo-fila">
+                    <div class="ojo-label">
+                      <span class="ojo-tag ojo-oi">OI</span>
+                    </div>
+
+                    <!-- AVSC Lejos OI -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                        formControlName="avsc_lejos_oi" placeholder="AVSC Lejos" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <!-- AVSC Cerca OI -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                        formControlName="avsc_cerca_oi" placeholder="AVSC Cerca" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <!-- AVAE OI -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                        formControlName="avae_oi" placeholder="AVAE" [searchable]="true" class="ng-select-moderno"
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <!-- OTROS OI -->
+                    <div class="campo-input">
+                      <input type="text" class="form-control-small" formControlName="otros_oi"
+                        placeholder="Observaciones" (keydown)="handleKeydown($event)">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Refracción -->
+              <div class="examen-subseccion">
+                <div class="subseccion-header">
+                  <i class="bi bi-prescription2"></i>
+                  <h6>Refracción</h6>
+                </div>
+
+                <div class="lensometria-moderna lensometria-scroll-fixed">
+                  <!-- Tabla de datos OD/OI -->
+                  <div class="lensometria-filas-container">
+                    <!-- Cabecera de campos -->
+                    <div class="lensometria-header">
+                      <div class="campo-label">Ojo</div>
+                      <div class="campo-label">ESF</div>
+                      <div class="campo-label">CIL</div>
+                      <div class="campo-label">EJE</div>
+                      <div class="campo-label">ADD</div>
+                      <div class="campo-label">AVCCL</div>
+                      <div class="campo-label">AVCCC</div>
+                    </div>
+
+                    <!-- Fila OD -->
+                    <div class="lensometria-fila ojo-fila">
+                      <div class="ojo-label">
+                        <span class="ojo-tag ojo-od">OD</span>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                          formControlName="ref_esf_od" placeholder="ESF" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                          formControlName="ref_cil_od" placeholder="CIL" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                          formControlName="ref_eje_od" placeholder="EJE" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                          formControlName="ref_add_od" placeholder="ADD" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                          formControlName="ref_avccl_od" placeholder="AVCCL" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                          formControlName="ref_avccc_od" placeholder="AVCCC" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+                    </div>
+
+                    <!-- Fila OI -->
+                    <div class="lensometria-fila ojo-fila">
+                      <div class="ojo-label">
+                        <span class="ojo-tag ojo-oi">OI</span>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                          formControlName="ref_esf_oi" placeholder="ESF" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                          formControlName="ref_cil_oi" placeholder="CIL" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                          formControlName="ref_eje_oi" placeholder="EJE" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                          formControlName="ref_add_oi" placeholder="ADD" [searchable]="true" class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                          formControlName="ref_avccl_oi" placeholder="AVCCL" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="campo-select">
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                          formControlName="ref_avccc_oi" placeholder="AVCCC" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Sección binocular para Refracción -->
+                  <div class="lensometria-binocular binocular-top">
+                    <div class="binocular-header">
+                      <i class="bi bi-eye"></i>
+                      <span>Binocular</span>
+                    </div>
+
+                    <div class="binocular-campos">
+                      <div class="binocular-campo">
+                        <label>AVCCL</label>
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                          formControlName="ref_avccl_bi" placeholder="AVCCL BI" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+
+                      <div class="binocular-campo">
+                        <label>AVCCC</label>
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                          formControlName="ref_avccc_bi" placeholder="AVCCC BI" [searchable]="true"
+                          class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                        </ng-select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Refracción Final -->
+              <div class="examen-subseccion">
+                <div class="subseccion-header">
+                  <i class="bi bi-prescription"></i>
+                  <h6>Refracción Final</h6> <span class="required">*</span>
+                </div>
+
+                <div class="lensometria-moderna lensometria-scroll-fixed">
+                  <!-- Cabecera de campos -->
+                  <div class="lensometria-header">
+                    <div class="campo-label">Ojo</div>
+                    <div class="campo-label">ESF</div>
+                    <div class="campo-label">CIL</div>
+                    <div class="campo-label">EJE</div>
+                    <div class="campo-label">ADD</div>
+                    <div class="campo-label">ALT</div>
+                    <div class="campo-label">DP</div>
+                  </div>
+
+                  <!-- Fila OD -->
+                  <div class="lensometria-fila ojo-fila">
+                    <div class="ojo-label">
+                      <span class="ojo-tag ojo-od">OD</span>
+                    </div>
+
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                        formControlName="ref_final_esf_od" placeholder="ESF" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                        formControlName="ref_final_cil_od" placeholder="CIL" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                        formControlName="ref_final_eje_od" placeholder="EJE" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                        formControlName="ref_final_add_od" placeholder="ADD" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <div class="campo-input">
+                      <input type="text" class="form-control-small" formControlName="ref_final_alt_od" placeholder="ALT"
+                        (keydown)="handleKeydown($event)">
+                    </div>
+
+                    <div class="campo-input">
+                      <input type="text" class="form-control-small" formControlName="ref_final_dp_od" placeholder="DP"
+                        (keydown)="handleKeydown($event)">
+                    </div>
+                  </div>
+
+                  <!-- Fila OI -->
+                  <div class="lensometria-fila ojo-fila">
+                    <div class="ojo-label">
+                      <span class="ojo-tag ojo-oi">OI</span>
+                    </div>
+
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                        formControlName="ref_final_esf_oi" placeholder="ESF" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                        formControlName="ref_final_cil_oi" placeholder="CIL" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                        formControlName="ref_final_eje_oi" placeholder="EJE" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                        formControlName="ref_final_add_oi" placeholder="ADD" [searchable]="true"
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
+                      </ng-select>
+                    </div>
+
+                    <div class="campo-input">
+                      <input type="text" class="form-control-small" formControlName="ref_final_alt_oi" placeholder="ALT"
+                        (keydown)="handleKeydown($event)">
+                    </div>
+
+                    <div class="campo-input">
+                      <input type="text" class="form-control-small" formControlName="ref_final_dp_oi" placeholder="DP"
+                        (keydown)="handleKeydown($event)">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección Diagnóstico y Tratamiento -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-clipboard-check"></i>
+              </div>
+              <h6 class="section-title">Diagnóstico y Tratamiento</h6>
+            </div>
+
+            <div class="section-content">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-clipboard-check me-2"></i>
+                      Diagnóstico <span class="required">*</span>
+                    </label>
+                    <textarea class="form-control-moderno" rows="3" placeholder="Indique el diagnóstico encontrado.."
+                      formControlName="diagnostico"></textarea>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-capsule me-2"></i>
+                      Tratamiento <span class="required">*</span>
+                    </label>
+                    <textarea class="form-control-moderno" placeholder="Indique el tratamiento.." rows="3"
+                      formControlName="tratamiento"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección Recomendaciones -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-chat-square-text"></i>
+              </div>
+              <div class="section-title-content">
+                <h6 class="section-title">Recomendaciones/Indicaciones</h6>
+                <button class="btn-agregar-recomendacion" type="button" (click)="agregarRecomendacion()">
+                  <i class="bi bi-plus-circle"></i>
+                  Añadir recomendación
+                </button>
+              </div>
+            </div>
+
+            <div class="section-content">
+              <div formArrayName="recomendaciones">
+                <div *ngFor="let grupo of recomendaciones.controls; let i = index" [formGroupName]="i"
+                  class="recomendacion-card">
+                  <div class="recomendacion-header">
+                    <i class="bi bi-eyeglasses"></i>
+                    <span>Recomendación #{{ i + 1 }}</span>
+                    <button class="btn-eliminar-recomendacion" type="button" (click)="eliminarRecomendacion(i)"
+                      *ngIf="recomendaciones.length > 1">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+
+                  <div class="recomendacion-body">
+                    <div class="row g-3">
+                      <div class="col-12">
+                        <div class="categorias-recomendadas-builder" formArrayName="categorias">
+                          <div class="recomendacion-contexto recomendacion-contexto--espera"
+                            *ngIf="getCategoriasRecomendadas(i).length === 0">
+                            <i class="bi bi-grid"></i>
+                            <div>
+                              <strong>Arma la recomendación por categorías</strong>
+                              <span>Agrega solo las categorías que realmente necesite el paciente. Cristal no obliga a incluir montura.</span>
+                            </div>
+                          </div>
+
+                          <div *ngFor="let categoriaControl of getCategoriasRecomendadas(i).controls; let j = index"
+                            [formGroupName]="j" class="categoria-recomendada-card">
+                            <div class="categoria-recomendada-card__header">
+                              <span class="categoria-recomendada-card__badge">
+                                Categoría #{{ j + 1 }}
+                              </span>
+                              <button type="button" class="btn-eliminar-categoria-recomendada"
+                                (click)="eliminarCategoriaRecomendada(i, j)">
+                                <i class="bi bi-x-lg"></i>
+                              </button>
+                            </div>
+
+                            <div class="row g-3 align-items-start">
+                              <div class="col-md-4">
+                                <div class="form-group-moderno">
+                                  <label class="form-label-moderno">Categoría <span class="required">*</span></label>
+                                  <ng-select [items]="getOpcionesCategoriasRecomendables(i, j)" bindLabel="label"
+                                    bindValue="value" formControlName="categoria" [searchable]="true"
+                                    placeholder="Seleccione la categoría..."
+                                    (change)="onCategoriaRecomendadaChange(i, j, $event)" class="ng-select-moderno">
+                                  </ng-select>
+                                </div>
+                              </div>
+
+                              <div class="col-md-8" *ngIf="categoriaControl.get('categoria')?.value">
+                                <div class="form-group-moderno">
+                                  <label class="form-label-moderno">
+                                    Producto de {{ getLabelCategoriaRecomendable(categoriaControl.get('categoria')?.value) }}
+                                  </label>
+                                  <ng-select [items]="getProductosPorCategoriaRecomendada(i, j)" bindLabel="nombre"
+                                    [ngOptionDisabled]="'disabled'" formControlName="producto" [searchable]="true"
+                                    [clearable]="true" [compareWith]="compararProductoRecomendado"
+                                    class="ng-select-moderno"
+                                    placeholder="Seleccione el producto del inventario..."
+                                    (change)="onProductoCategoriaChange(i)">
+                                    <ng-template ng-option-tmp let-item="item">
+                                      <div class="producto-recomendado-option"
+                                        [class.producto-recomendado-option--agotado]="esProductoRecomendadoSinStock(item)">
+                                        <strong>{{ getEtiquetaProductoRecomendado(item) }}</strong>
+                                        <span class="producto-recomendado-option__estado"
+                                          [class.agotado]="esProductoRecomendadoSinStock(item)">
+                                          {{ getMensajeStockProductoRecomendado(item) }}
+                                        </span>
+                                      </div>
+                                    </ng-template>
+                                  </ng-select>
+                                  <small class="recomendacion-stock-help">
+                                    {{ getMensajeDisponibilidadCategoria(i, j) }}
+                                  </small>
+                                </div>
+                              </div>
+
+                              <div class="col-md-6" *ngIf="esCategoriaRecomendacionLentesContacto(i, j)">
+                                <div class="form-group-moderno">
+                                  <label class="form-label-moderno">Tipo de lentes de contacto <span class="required">*</span></label>
+                                  <ng-select [items]="tiposLentesContacto" bindLabel="label" bindValue="value"
+                                    [formControl]="$any(grupo).get('tipoLentesContacto')" [searchable]="true" class="ng-select-moderno"
+                                    placeholder="Seleccione el tipo..." (change)="onTipoLenteContactoRecomendadoChange(i, j)">
+                                  </ng-select>
+                                </div>
+                              </div>
+
+                              <div class="col-12" *ngIf="esCategoriaRecomendacionLentesContacto(i, j)">
+                                <div class="recomendacion-contexto recomendacion-contexto--contacto">
+                                  <i class="bi bi-droplet-half"></i>
+                                  <div>
+                                    <strong>Recomendación para lente de contacto</strong>
+                                    <span>Esta categoría se maneja independiente. No obliga a agregar montura.</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div class="col-12 categoria-recomendada-card__actions"
+                                *ngIf="j === getCategoriasRecomendadas(i).length - 1 && puedeAgregarOtraCategoria(i)">
+                                <button type="button" class="btn-agregar-categoria-recomendada"
+                                  (click)="agregarCategoriaRecomendada(i)">
+                                  <i class="bi bi-plus-circle"></i>
+                                  Agregar categoría
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <button type="button" class="btn-agregar-categoria-recomendada btn-agregar-categoria-recomendada--empty"
+                            *ngIf="getCategoriasRecomendadas(i).length === 0"
+                            (click)="agregarCategoriaRecomendada(i)">
+                            <i class="bi bi-plus-circle"></i>
+                            Agregar categoría
+                          </button>
+
+                          <div class="resumen-categorias-recomendadas" *ngIf="getResumenCategoriasSeleccionadasFormulario(i).length > 0">
+                            <div class="resumen-categorias-recomendadas__header">
+                              <i class="bi bi-check2-circle"></i>
+                              <span>Selección actual</span>
+                            </div>
+
+                            <div class="resumen-categorias-recomendadas__grid">
+                              <div class="resumen-categoria-item" *ngFor="let item of getResumenCategoriasSeleccionadasFormulario(i)">
+                                <label>{{ item.categoria }} seleccionado:</label>
+                                <strong>{{ item.producto }}</strong>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Sección para medidas de progresivos -->
+                      <div class="col-12" *ngIf="mostrarMedidasProgresivo[i]">
+                        <div class="medidas-progresivo-section">
+                          <!-- Mensaje informativo -->
+                          <div class="medidas-info-alert">
+                            <div class="alert alert-info mb-3">
+                              <div class="d-flex align-items-center">
+                                <i class="bi bi-rulers me-2 fs-5"></i>
+                                <div>
+                                  <h6 class="mb-1">📏 Medidas para Cristales Progresivos</h6>
+                                  <p class="mb-0 small">
+                                    Es <strong>OBLIGATORIO</strong> tomar estas medidas para garantizar la correcta
+                                    adaptación
+                                    de los lentes progresivos. Mida en centímetros (cm) con precisión.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Campos de medidas -->
+                          <div class="row g-3 medidas-progresivo-campos">
+                            <div class="col-md-3">
+                              <div class="form-group-moderno">
+                                <label class="form-label-moderno">
+                                  <i class="bi bi-arrows-expand-h"></i> Horizontal
+                                  <span class="required">*</span>
+                                </label>
+                                <div class="input-with-unit">
+                                  <input type="number" step="0.1" min="0.1" max="10" class="form-control-moderno"
+                                    formControlName="medidaHorizontal" placeholder="Ej: 5.2" />
+                                  <span class="input-unit">cm</span>
+                                </div>
+                                <small class="form-text text-muted">Ancho del lente</small>
+                              </div>
+                            </div>
+
+                            <div class="col-md-3">
+                              <div class="form-group-moderno">
+                                <label class="form-label-moderno">
+                                  <i class="bi bi-arrows-expand-v"></i> Vertical
+                                  <span class="required">*</span>
+                                </label>
+                                <div class="input-with-unit">
+                                  <input type="number" step="0.1" min="0.1" max="10" class="form-control-moderno"
+                                    formControlName="medidaVertical" placeholder="Ej: 4.8" />
+                                  <span class="input-unit">cm</span>
+                                </div>
+                                <small class="form-text text-muted">Alto del lente</small>
+                              </div>
+                            </div>
+
+                            <div class="col-md-3">
+                              <div class="form-group-moderno">
+                                <label class="form-label-moderno">
+                                  <i class="bi bi-arrow-right-up"></i> Diagonal
+                                  <span class="required">*</span>
+                                </label>
+                                <div class="input-with-unit">
+                                  <input type="number" step="0.1" min="0.1" max="15" class="form-control-moderno"
+                                    formControlName="medidaDiagonal" placeholder="Ej: 7.1" />
+                                  <span class="input-unit">cm</span>
+                                </div>
+                                <small class="form-text text-muted">Diagonal del lente</small>
+                              </div>
+                            </div>
+
+                            <div class="col-md-3">
+                              <div class="form-group-moderno">
+                                <label class="form-label-moderno">
+                                  <i class="bi bi-bridge"></i> Puente
+                                  <span class="required">*</span>
+                                </label>
+                                <div class="input-with-unit">
+                                  <input type="number" step="0.1" min="0.1" max="5" class="form-control-moderno"
+                                    formControlName="medidaPuente" placeholder="Ej: 1.8" />
+                                  <span class="input-unit">cm</span>
+                                </div>
+                                <small class="form-text text-muted">Distancia entre lentes</small>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Observaciones -->
+                      <div class="col-12">
+                        <div class="form-group-moderno has-observaciones-subtitle">
+                          <label class="form-label-moderno">Observaciones</label>
+                          <span class="observaciones-subtitle">
+                            <i class="bi bi-info-circle"></i>
+                            Estas observaciones servirán de guía para la orden de trabajo
+                          </span>
+                          <textarea class="form-control-moderno" rows="2" formControlName="observaciones"
+                            placeholder="Notas específicas para este lente (ej: filtro blue light, tratamiento antireflejante, etc.)"></textarea>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Footer moderno -->
+      <div class="modal-footer-moderno">
+        <button type="button" class="btn btn-secondary-moderno" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-2"></i>
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary-moderno" (click)="guardarHistoria()"
+          [disabled]="cargando || !historiaModificada() || historiaForm.invalid">
+          <i class="bi" [ngClass]="modoEdicion ? 'bi-check-circle' : 'bi-save'"></i>
+          <span *ngIf="cargando" class="spinner-border spinner-border-sm ms-2"></span>
+          {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div *ngIf="mostrarBotonVolver && dataIsReady" class="boton-flotante" (click)="volverAlListado()">
+  🧭 ¿Volver al listado de pacientes?
+</div>

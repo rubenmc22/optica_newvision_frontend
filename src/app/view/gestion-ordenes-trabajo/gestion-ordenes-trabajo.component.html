@@ -1,0 +1,1511 @@
+<div class="gestion-ordenes-container">
+  <!-- Header -->
+  <div class="ordenes-header">
+    <div class="header-content">
+      <div class="header-copy">
+        <div class="header-title">
+          <span class="header-icon">
+            <i class="bi bi-clipboard-check"></i>
+          </span>
+          <div class="header-text">
+            <h1>Gestión de Órdenes de Trabajo</h1>
+            <p>Supervisa el flujo operativo de cada orden desde tienda hasta entrega.</p>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="search-container">
+          <input type="text" class="form-control search-input" placeholder="Buscar orden, cliente o producto..."
+            [(ngModel)]="filtroBusqueda" (input)="aplicarFiltros()">
+          <i class="bi bi-search search-icon"></i>
+        </div>
+
+        <div class="filtros-container">
+          <select class="form-select filtro-select" [(ngModel)]="filtroEstado" (change)="aplicarFiltros()">
+            <option value="">Todos los estados</option>
+            <option value="en_tienda">En Tienda</option>
+            <option value="proceso_laboratorio">En Laboratorio</option>
+            <option value="listo_laboratorio">Listo en Laboratorio</option>
+            <option value="pendiente_retiro">Pendiente por Retirar</option>
+            <option value="entregado">Entregado</option>
+          </select>
+
+          <button class="btn btn-refresh" [attr.data-tooltip]="'Recargar'" (click)="recargarOrdenes()">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #e3f2fd;">
+          <i class="bi bi-shop" style="color: #1976d2;"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-count">{{ estadisticas.enTienda }}</span>
+          <span class="stat-label">En Tienda</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #fff3e0;">
+          <i class="bi bi-gear" style="color: #f57c00;"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-count">{{ estadisticas.enProceso }}</span>
+          <span class="stat-label">En Proceso (Laboratorio)</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #e8f5e9;">
+          <i class="bi bi-check-circle" style="color: #388e3c;"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-count">{{ estadisticas.listoLaboratorio }}</span>
+          <span class="stat-label">Listo (Laboratorio)</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #fff8e1;">
+          <i class="bi bi-clock-history" style="color: #ffa000;"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-count">{{ estadisticas.pendienteRetiro }}</span>
+          <span class="stat-label">Pendiente Retiro (En Tienda)</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #f3e5f5;">
+          <i class="bi bi-box-seam" style="color: #7b1fa2;"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-count">{{ estadisticas.total }}</span>
+          <span class="stat-label">Total Órdenes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista Kanban -->
+  <div class="kanban-container" cdkDropListGroup>
+    <!-- Columna: En Tienda -->
+    <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnTienda"
+      (cdkDropListDropped)="drop($event, 'en_tienda')">
+      <div class="column-header" style="border-color: var(--degradado-color);">
+        <div class="column-title">
+          <span class="column-badge" style="background: var(--degradado-color);">{{ ordenesEnTienda.length }}</span>
+          <h3><i class="bi bi-shop"></i> En Tienda</h3>
+          <div class="column-actions" *ngIf="ordenesEnTienda.length > 0">
+            <button class="btn-move-all" (click)="moverTodos(ordenesEnTienda, 'en_tienda', 'proceso_laboratorio')"
+              [attr.data-tooltip]="'Mover todos a Laboratorio'">
+              <i class="bi bi-arrow-right-circle"></i>
+            </button>
+          </div>
+        </div>
+        <small>Órdenes recibidas</small>
+      </div>
+
+      <div class="ordenes-list" *ngIf="ordenesEnTienda.length > 0; else emptyTienda"
+        [class.limited-view]="ordenesEnTienda.length > maxOrdenesPorColumna">
+        <div class="orden-card" *ngFor="let orden of (ordenesEnTienda | slice:0:maxOrdenesPorColumna)" cdkDrag
+          [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+
+          <!-- Progreso y fecha de creación en la misma línea -->
+          <div class="orden-progreso">
+            <div class="progreso-bar">
+              <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
+            </div>
+            <div class="progreso-info">
+              <small class="progreso-porcentaje">{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+              <small class="progreso-fecha">
+                <i class="bi bi-calendar3"></i> {{ orden.fechaCreacion | date:'dd/MM' }}
+              </small>
+            </div>
+          </div>
+
+          <div class="orden-cliente">
+            <i class="bi bi-person"></i>
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18) }}</span>
+          </div>
+
+          <div class="orden-producto">
+            <i class="bi bi-eyeglasses"></i>
+            <span>{{ truncarTexto(getProductoNombre(orden), 22) }}</span>
+          </div>
+
+          <div class="orden-meta">
+            <!-- Fecha de entrega estimada - Solo label en estado En Tienda -->
+            <div class="meta-item">
+              <i class="bi bi-calendar"></i>
+              <small *ngIf="orden.fechaEntregaEstimada; else sinFechaTienda">
+                Entrega: {{ getFechaEntregaFormateada(orden) }}
+              </small>
+              <ng-template #sinFechaTienda>
+                <small class="text-warning">Sin fecha asignada</small>
+              </ng-template>
+            </div>
+
+            <div class="meta-item" *ngIf="orden.diasRestantes !== undefined">
+              <i class="bi bi-clock"></i>
+              <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                {{ orden.diasRestantes }}d
+              </small>
+            </div>
+          </div>
+
+          <!-- FOOTER CON NÚMERO DE ORDEN DE TRABAJO -->
+          <div class="orden-footer">
+            <div class="orden-id-container">
+              <span class="orden-id-badge">
+                <i class="bi bi-hash"></i>
+                <span class="orden-id-text">{{orden.codigo}}</span>
+              </span>
+            </div>
+
+            <div class="orden-actions">
+              <!-- Botón para configurar fecha de entrega - SOLO en estado En Tienda -->
+              <button class="btn-action btn-calendar" (click)="configurarFechaEntrega(orden); $event.stopPropagation()"
+                [attr.data-tooltip]="'Configurar fecha de entrega'">
+                <i class="bi bi-calendar-plus"></i>
+              </button>
+
+              <!-- En la columna "En Tienda", modificar el botón de mover a laboratorio -->
+              <button class="btn-action" (click)="cambiarEstado(orden, 'proceso_laboratorio'); $event.stopPropagation()"
+                [attr.data-tooltip]="orden.fechaEntregaEstimada ? 'Mover a Laboratorio' : 'Configurar fecha primero'"
+                [class.disabled]="!orden.fechaEntregaEstimada" [disabled]="!orden.fechaEntregaEstimada">
+                <i class="bi bi-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="more-orders-indicator" *ngIf="ordenesEnTienda.length > maxOrdenesPorColumna">
+          <span class="badge bg-secondary">
+            +{{ ordenesEnTienda.length - maxOrdenesPorColumna }}
+          </span>
+          <button class="btn-view-all" (click)="verTodasOrdenes('en_tienda')">
+            Ver todas
+          </button>
+        </div>
+      </div>
+
+      <ng-template #emptyTienda>
+        <div class="empty-column">
+          <i class="bi bi-inbox"></i>
+          <p>No hay órdenes</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Columna: En Laboratorio -->
+    <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnProceso"
+      (cdkDropListDropped)="drop($event, 'proceso_laboratorio')">
+      <div class="column-header" style="border-color: #f57c00;">
+        <div class="column-title">
+          <span class="column-badge" style="background: #f57c00;">{{ ordenesEnProceso.length }}</span>
+          <h3><i class="bi bi-gear"></i> En Laboratorio</h3>
+          <div class="column-actions" *ngIf="ordenesEnProceso.length > 0">
+            <button class="btn-move-all"
+              (click)="moverTodos(ordenesEnProceso, 'proceso_laboratorio', 'listo_laboratorio')"
+              [attr.data-tooltip]="'Marcar todos como listos'">
+              <i class="bi bi-check-circle"></i>
+            </button>
+          </div>
+        </div>
+        <small>En proceso</small>
+      </div>
+
+      <div class="ordenes-list" *ngIf="ordenesEnProceso.length > 0; else emptyProceso"
+        [class.limited-view]="ordenesEnProceso.length > maxOrdenesPorColumna">
+        <div class="orden-card" *ngFor="let orden of (ordenesEnProceso | slice:0:maxOrdenesPorColumna)" cdkDrag
+          [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+
+          <!-- Progreso y fecha de creación en la misma línea -->
+          <div class="orden-progreso">
+            <div class="progreso-bar">
+              <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
+            </div>
+            <div class="progreso-info">
+              <small class="progreso-porcentaje">{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+              <small class="progreso-fecha">
+                <i class="bi bi-calendar3"></i> {{ orden.fechaCreacion | date:'dd/MM' }}
+              </small>
+            </div>
+          </div>
+
+          <div class="orden-cliente">
+            <i class="bi bi-person"></i>
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18) }}</span>
+          </div>
+
+          <div class="orden-producto">
+            <i class="bi bi-eyeglasses"></i>
+            <span>{{ truncarTexto(getProductoNombre(orden), 22) }}</span>
+          </div>
+
+          <div class="orden-meta">
+            <!-- Fecha de entrega - Solo label, sin botón -->
+            <div class="meta-item">
+              <i class="bi bi-calendar"></i>
+              <small *ngIf="orden.fechaEntregaEstimada; else sinFechaProceso">
+                Entrega: {{ getFechaEntregaFormateada(orden) }}
+              </small>
+              <ng-template #sinFechaProceso>
+                <small class="text-warning">Sin fecha asignada</small>
+              </ng-template>
+            </div>
+
+            <div class="meta-item" *ngIf="orden.diasRestantes !== undefined">
+              <i class="bi bi-clock"></i>
+              <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                {{ orden.diasRestantes }}d
+              </small>
+            </div>
+          </div>
+
+          <!-- FOOTER CON NÚMERO DE ORDEN DE TRABAJO -->
+          <div class="orden-footer">
+            <div class="orden-id-container">
+              <span class="orden-id-badge">
+                <i class="bi bi-hash"></i>
+                <span class="orden-id-text">{{orden.codigo}}</span>
+              </span>
+            </div>
+
+            <div class="orden-actions">
+              <!-- En las tarjetas de En Laboratorio, cambia el botón: -->
+              <button class="btn-action" (click)="abrirModalProgreso(orden); $event.stopPropagation()"
+                [attr.data-tooltip]="'Actualizar progreso'">
+                <i class="bi bi-percent"></i>
+              </button>
+              <button class="btn-action" (click)="cambiarEstado(orden, 'listo_laboratorio'); $event.stopPropagation()"
+                [attr.data-tooltip]="'Marcar como listo'">
+                <i class="bi bi-check-circle"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="more-orders-indicator" *ngIf="ordenesEnProceso.length > maxOrdenesPorColumna">
+          <span class="badge bg-secondary">
+            +{{ ordenesEnProceso.length - maxOrdenesPorColumna }}
+          </span>
+          <button class="btn-view-all" (click)="verTodasOrdenes('proceso_laboratorio')">
+            Ver todas
+          </button>
+        </div>
+      </div>
+
+      <ng-template #emptyProceso>
+        <div class="empty-column">
+          <i class="bi bi-gear"></i>
+          <p>No hay órdenes</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Columna: Listo en Laboratorio -->
+    <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesListasLaboratorio"
+      (cdkDropListDropped)="drop($event, 'listo_laboratorio')">
+      <div class="column-header" style="border-color: #388e3c;">
+        <div class="column-title">
+          <span class="column-badge" style="background: #388e3c;">{{ ordenesListasLaboratorio.length }}</span>
+          <h3><i class="bi bi-check-circle"></i> Listo en Laboratorio</h3>
+          <div class="column-actions" *ngIf="ordenesListasLaboratorio.length > 0">
+            <button class="btn-move-all"
+              (click)="moverTodos(ordenesListasLaboratorio, 'listo_laboratorio', 'pendiente_retiro')"
+              [attr.data-tooltip]="'Enviar todos a tienda'">
+              <i class="bi bi-truck"></i>
+            </button>
+          </div>
+        </div>
+        <small>Proceso finalizado</small>
+      </div>
+
+      <div class="ordenes-list" *ngIf="ordenesListasLaboratorio.length > 0; else emptyListo"
+        [class.limited-view]="ordenesListasLaboratorio.length > maxOrdenesPorColumna">
+        <div class="orden-card" *ngFor="let orden of (ordenesListasLaboratorio | slice:0:maxOrdenesPorColumna)" cdkDrag
+          [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+
+          <!-- Progreso y fecha de creación en la misma línea -->
+          <div class="orden-progreso">
+            <div class="progreso-bar">
+              <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
+            </div>
+            <div class="progreso-info">
+              <small class="progreso-porcentaje">{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+              <small class="progreso-fecha">
+                <i class="bi bi-calendar3"></i> {{ orden.fechaCreacion | date:'dd/MM' }}
+              </small>
+            </div>
+          </div>
+
+          <!-- Estado de terminado (opcional) -->
+          <div class="orden-estado-terminado">
+            <span class="badge-success">
+              <i class="bi bi-check-lg"></i> Terminado: {{ orden.fechaTerminacion | date:'dd/MM' }}
+            </span>
+          </div>
+
+          <div class="orden-cliente">
+            <i class="bi bi-person"></i>
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18) }}</span>
+          </div>
+
+          <div class="orden-producto">
+            <i class="bi bi-eyeglasses"></i>
+            <span>{{ truncarTexto(getProductoNombre(orden), 22) }}</span>
+          </div>
+
+          <div class="orden-meta">
+            <!-- Fecha de entrega - Solo label, sin botón -->
+            <div class="meta-item">
+              <i class="bi bi-calendar"></i>
+              <small *ngIf="orden.fechaEntregaEstimada; else sinFechaListo">
+                Entrega: {{ getFechaEntregaFormateada(orden) }}
+              </small>
+              <ng-template #sinFechaListo>
+                <small class="text-warning">Sin fecha asignada</small>
+              </ng-template>
+            </div>
+
+            <div class="meta-item" *ngIf="orden.diasRestantes !== undefined">
+              <i class="bi bi-clock"></i>
+              <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                {{ orden.diasRestantes }}d
+              </small>
+            </div>
+          </div>
+
+          <!-- FOOTER CON NÚMERO DE ORDEN DE TRABAJO -->
+          <div class="orden-footer">
+            <div class="orden-id-container">
+              <span class="orden-id-badge">
+                <i class="bi bi-hash"></i>
+                <span class="orden-id-text">{{orden.codigo}}</span>
+              </span>
+            </div>
+
+            <div class="orden-actions">
+              <button class="btn-action" (click)="cambiarEstado(orden, 'pendiente_retiro'); $event.stopPropagation()"
+                [attr.data-tooltip]="'Enviar a tienda'">
+                <i class="bi bi-truck"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="more-orders-indicator" *ngIf="ordenesListasLaboratorio.length > maxOrdenesPorColumna">
+          <span class="badge bg-secondary">
+            +{{ ordenesListasLaboratorio.length - maxOrdenesPorColumna }}
+          </span>
+          <button class="btn-view-all" (click)="verTodasOrdenes('listo_laboratorio')">
+            Ver todas
+          </button>
+        </div>
+      </div>
+
+      <ng-template #emptyListo>
+        <div class="empty-column">
+          <i class="bi bi-check-circle"></i>
+          <p>No hay órdenes</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Columna: Pendiente por Retirar -->
+    <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesPendienteRetiro"
+      (cdkDropListDropped)="drop($event, 'pendiente_retiro')">
+      <div class="column-header" style="border-color: #ffa000;">
+        <div class="column-title">
+          <span class="column-badge" style="background: #ffa000;">{{ ordenesPendienteRetiro.length }}</span>
+          <h3><i class="bi bi-clock-history"></i> Pendiente</h3>
+          <div class="column-actions" *ngIf="ordenesPendienteRetiro.length > 0">
+            <button class="btn-move-all" (click)="moverTodos(ordenesPendienteRetiro, 'pendiente_retiro', 'entregado')"
+              [attr.data-tooltip]="'Marcar todos como entregados'">
+              <i class="bi bi-box-seam"></i>
+            </button>
+          </div>
+        </div>
+        <small>Listas para entregar (En tienda)</small>
+      </div>
+
+      <div class="ordenes-list" *ngIf="ordenesPendienteRetiro.length > 0; else emptyPendiente"
+        [class.limited-view]="ordenesPendienteRetiro.length > maxOrdenesPorColumna">
+        <div class="orden-card alert-card" *ngFor="let orden of (ordenesPendienteRetiro | slice:0:maxOrdenesPorColumna)"
+          cdkDrag [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+
+          <!-- Progreso y fecha de creación en la misma línea -->
+          <div class="orden-progreso">
+            <div class="progreso-bar">
+              <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
+            </div>
+            <div class="progreso-info">
+              <small class="progreso-porcentaje">{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+              <small class="progreso-fecha">
+                <i class="bi bi-calendar3"></i> {{ orden.fechaCreacion | date:'dd/MM' }}
+              </small>
+            </div>
+          </div>
+
+          <!-- Fecha de recepción en tienda -->
+          <div class="orden-estado-pendiente">
+            <span class="badge-warning">
+              <i class="bi bi-shop"></i> En tienda: {{ orden.fechaRecepcionTienda | date:'dd/MM' }}
+            </span>
+          </div>
+
+          <div class="orden-cliente">
+            <i class="bi bi-person"></i>
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18) }}</span>
+          </div>
+
+          <div class="orden-producto">
+            <i class="bi bi-eyeglasses"></i>
+            <span>{{ truncarTexto(getProductoNombre(orden), 22) }}</span>
+          </div>
+
+          <div class="orden-alerta" *ngIf="orden.diasEnEspera > 7">
+            <i class="bi bi-bell"></i>
+            <small class="text-danger">{{ orden.diasEnEspera }}d en espera</small>
+          </div>
+
+          <div class="orden-meta">
+            <!-- Fecha de entrega - Solo label, sin botón -->
+            <div class="meta-item">
+              <i class="bi bi-calendar"></i>
+              <small *ngIf="orden.fechaEntregaEstimada; else sinFechaPendiente">
+                Entrega: {{ getFechaEntregaFormateada(orden) }}
+              </small>
+              <ng-template #sinFechaPendiente>
+                <small class="text-warning">Sin fecha asignada</small>
+              </ng-template>
+            </div>
+
+            <div class="meta-item" *ngIf="orden.diasRestantes !== undefined">
+              <i class="bi bi-clock"></i>
+              <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                {{ orden.diasRestantes }}d
+              </small>
+            </div>
+          </div>
+
+          <!-- FOOTER CON NÚMERO DE ORDEN DE TRABAJO -->
+          <div class="orden-footer">
+            <div class="orden-id-container">
+              <span class="orden-id-badge">
+                <i class="bi bi-hash"></i>
+                <span class="orden-id-text">{{orden.codigo}}</span>
+              </span>
+            </div>
+
+            <div class="orden-actions">
+              <button class="btn-action btn-success"
+                (click)="cambiarEstado(orden, 'entregado'); $event.stopPropagation()"
+                [attr.data-tooltip]="'Marcar como entregado'">
+                <i class="bi bi-box-seam"></i>
+              </button>
+              <button class="btn-action" (click)="notificarCliente(orden); $event.stopPropagation()"
+                [attr.data-tooltip]="'Notificar al cliente'">
+                <i class="bi bi-chat-dots"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="more-orders-indicator" *ngIf="ordenesPendienteRetiro.length > maxOrdenesPorColumna">
+          <span class="badge bg-secondary">
+            +{{ ordenesPendienteRetiro.length - maxOrdenesPorColumna }}
+          </span>
+          <button class="btn-view-all" (click)="verTodasOrdenes('pendiente_retiro')">
+            Ver todas
+          </button>
+        </div>
+      </div>
+
+      <ng-template #emptyPendiente>
+        <div class="empty-column">
+          <i class="bi bi-clock-history"></i>
+          <p>No hay órdenes</p>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Historial de Entregas (Acordeón) -->
+  <div class="archivo-container">
+    <!-- Encabezado plegable -->
+    <div class="archivo-header" (click)="mostrarArchivo = !mostrarArchivo">
+      <h3>
+        <i class="bi bi-archive"></i>
+        Historial de Entregas
+        <span class="badge bg-purple">{{ordenesEntregadas.length + ordenesArchivadas.length}}</span>
+        <i class="bi bi-chevron-down toggle-icon" [class.rotated]="mostrarArchivo"></i>
+      </h3>
+      <div class="archivo-actions">
+        <button class="btn btn-sm btn-outline-purple" (click)="abrirModalArchivadas(); $event.stopPropagation()"
+          [attr.data-tooltip]="'Ver todas las órdenes archivadas'">
+          <i class="bi bi-box-archive"></i> Ver Archivadas ({{ordenesArchivadas.length}})
+        </button>
+        <!-- En el encabezado del archivo, cambia el botón: -->
+        <button class="btn btn-sm btn-outline-secondary" (click)="abrirModalConfigArchivo(); $event.stopPropagation()"
+          [attr.data-tooltip]="'Configurar días para auto-archivado'">
+          <i class="bi bi-gear"></i> Config. Auto-Archivo
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenido plegable -->
+    <div class="archivo-content" *ngIf="mostrarArchivo">
+      <!-- Pestañas para Entregados Recientes vs Archivados -->
+      <div class="archivo-tabs">
+        <div class="tab-buttons">
+          <button class="tab-button" [class.active]="tabActiva === 'entregados'" (click)="tabActiva = 'entregados'">
+            <i class="bi bi-box-seam"></i>
+            Entregados Recientes
+            <span class="badge">{{ordenesEntregadas.length}}</span>
+          </button>
+        </div>
+
+        <!-- Contenido de entregados recientes -->
+        <div class="tab-content" *ngIf="tabActiva === 'entregados'">
+          <div class="recent-deliveries">
+            <!-- Miniaturas de órdenes entregadas recientemente -->
+            <div class="delivery-minicard" *ngFor="let orden of ordenesEntregadas.slice(0, 4)"
+              (click)="verDetalleOrden(orden)">
+              <div class="minicard-header">
+                <small>{{orden.codigo}}</small>
+                <span class="days-ago">{{calcularDiasDesde(orden.fechaEntrega)}} días</span>
+              </div>
+              <div class="minicard-body">
+                <div class="minicard-cliente">
+                  {{truncarTexto(getClienteNombre(orden), 15)}}</div>
+                <div class="minicard-producto">
+                  {{truncarTexto(getProductoNombre(orden), 20)}}</div>
+              </div>
+              <div class="minicard-actions">
+                <button class="btn-icon" (click)="archivarOrden(orden, false); $event.stopPropagation()"
+                  [attr.data-tooltip]="'Archivar orden'">
+                  <i class="bi bi-archive"></i>
+                </button>
+                <button class="btn-icon" (click)="generarFactura(orden); $event.stopPropagation()"
+                  [attr.data-tooltip]="'Generar factura'">
+                  <i class="bi bi-receipt"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Ver todas -->
+            <div class="view-all-container" *ngIf="ordenesEntregadas.length > 4">
+              <button class="btn-view-all" (click)="verTodasOrdenes('entregado')">
+                Ver todas las {{ordenesEntregadas.length}} entregas
+                <i class="bi bi-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra inferior -->
+  <div class="ordenes-footer">
+    <div class="footer-info">
+      <span class="text-muted">
+        <i class="bi bi-info-circle"></i>
+        Arrastra las tarjetas para cambiar su estado • Haz clic para ver detalles • Haz clic en el ícono de calendario
+        para configurar fecha de entrega
+      </span>
+    </div>
+    <div class="footer-actions">
+      <button class="btn btn-secondary" (click)="exportarReporte()" [attr.data-tooltip]="'Exportar reporte a Excel'">
+        <i class="bi bi-file-earmark-excel"></i> Exportar
+      </button>
+      <button class="btn btn-primary" (click)="generarReporte()" [attr.data-tooltip]="'Generar e imprimir reporte PDF'">
+        <i class="bi bi-printer"></i> Imprimir Reporte
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalle Orden -->
+<div class="modal-detalle-layer" *ngIf="mostrarModalDetalle" (click)="cerrarModalDetalle()">
+  <div class="modal-detalle-orden" (click)="$event.stopPropagation()">
+  <div class="modal-header">
+    <div class="header-left">
+      <h2>
+        <i class="bi bi-clipboard-data"></i>
+        Orden #{{ ordenSeleccionada?.ordenId }}
+      </h2>
+      <div class="orden-status">
+        <span class="badge" [ngClass]="getEstadoClass(ordenSeleccionada?.estado)">
+          {{ getEstadoTexto(ordenSeleccionada?.estado) }}
+        </span>
+        <span class="text-muted" style="color: white !important;">
+          <i class="bi bi-calendar"></i>
+          {{ ordenSeleccionada?.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="venta-id" *ngIf="ordenSeleccionada?.numero_venta">
+        <i class="bi bi-receipt"></i>
+        <span>{{ ordenSeleccionada?.numero_venta }}</span>
+      </div>
+      <button class="btn-close-modal" (click)="cerrarModalDetalle()" aria-label="Cerrar">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="modal-body">
+    <!-- Estructura de 2 columnas -->
+    <div class="detalle-grid">
+      
+      <!-- COLUMNA IZQUIERDA: Información del Cliente -->
+      <div class="detalle-columna">
+        
+        <!-- FILA 1: Información del Cliente -->
+        <div class="info-card">
+          <div class="info-header">
+            <i class="bi bi-person-circle"></i>
+            <h4>Información del Cliente</h4>
+          </div>
+          <div class="info-content compact">
+            <div class="info-row">
+              <span class="info-label">Paciente:</span>
+              <div class="info-value">
+                <div class="cliente-principal">
+                  <strong>{{ ordenSeleccionada?.cliente?.informacion?.nombreCompleto }}</strong>
+                  <span *ngIf="ordenSeleccionada?.cliente?.informacion?.cedula" class="cliente-cedula">
+                    • C.I. {{ ordenSeleccionada?.cliente?.informacion?.cedula }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-row">
+              <span class="info-label">Contacto:</span>
+              <div class="info-value contacto-unificado">
+                <a *ngIf="ordenSeleccionada?.cliente?.informacion?.telefono"
+                  href="tel:{{ ordenSeleccionada?.cliente?.informacion?.telefono }}"
+                  class="contacto-link">
+                  <i class="bi bi-telephone"></i>
+                  {{ ordenSeleccionada?.cliente?.informacion?.telefono }}
+                </a>
+                <span *ngIf="!ordenSeleccionada?.cliente?.informacion?.telefono" class="text-muted">
+                  <i class="bi bi-telephone"></i> Sin teléfono
+                </span>
+                <span *ngIf="ordenSeleccionada?.cliente?.informacion?.telefono && 
+                     ordenSeleccionada?.cliente?.informacion?.email" class="separador-contacto">|</span>
+                <a *ngIf="ordenSeleccionada?.cliente?.informacion?.email"
+                  href="mailto:{{ ordenSeleccionada?.cliente?.informacion?.email }}" class="contacto-link">
+                  <i class="bi bi-envelope"></i>
+                  {{ ordenSeleccionada?.cliente?.informacion?.email }}
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILA 2: Personal Asignado -->
+        <div class="info-card">
+          <div class="info-header">
+            <i class="bi bi-person-badge"></i>
+            <h4>Personal Asignado</h4>
+          </div>
+          <div class="info-content compact">
+            <div class="info-row" *ngIf="tieneEspecialistaAsignado(ordenSeleccionada)">
+              <span class="info-label">Especialista:</span>
+              <div class="info-value">
+                <div>{{ getNombreEspecialistaOrden(ordenSeleccionada) }}</div>
+                <div class="info-meta" *ngIf="getEspecialistaDetalleItems(ordenSeleccionada).length">
+                  <span class="info-meta__item" *ngFor="let item of getEspecialistaDetalleItems(ordenSeleccionada)">
+                    {{ item }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="info-row" *ngIf="ordenSeleccionada?.asesor">
+              <span class="info-label">Asesor:</span>
+              <div class="info-value">
+                <div>{{ ordenSeleccionada?.asesor?.nombre || 'No especificado' }}</div>
+                <div class="info-meta" *ngIf="getAsesorDetalleItems(ordenSeleccionada).length">
+                  <span class="info-meta__item" *ngFor="let item of getAsesorDetalleItems(ordenSeleccionada)">
+                    {{ item }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="text-center" *ngIf="!tieneEspecialistaAsignado(ordenSeleccionada) && !ordenSeleccionada?.asesor">
+              <i class="bi bi-person-x"></i>
+              <span class="text-muted">Sin personal asignado</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- COLUMNA DERECHA: Formulación y Producto -->
+      <div class="detalle-columna">
+        <div class="info-card formulacion-moderna">
+          <div class="info-header">
+            <i class="bi bi-eyeglasses"></i>
+            <h4>Detalles de la Orden</h4>
+          </div>
+          <div class="info-content compact formulacion-compact">
+            
+            <!-- TABS para organizar la información -->
+            <div class="detalle-tabs">
+              <button class="tab-btn" [class.active]="tabActivaDetalle === 'formulacion'" (click)="tabActivaDetalle = 'formulacion'">
+                <i class="bi bi-prescription"></i> Formulación
+              </button>
+              <button class="tab-btn" [class.active]="tabActivaDetalle === 'producto'" (click)="tabActivaDetalle = 'producto'">
+                <i class="bi bi-box-seam"></i> Producto
+              </button>
+              <button class="tab-btn" [class.active]="tabActivaDetalle === 'indicaciones'" (click)="tabActivaDetalle = 'indicaciones'">
+                <i class="bi bi-lightbulb"></i> Indicaciones
+              </button>
+            </div>
+            
+            <!-- CONTENIDO DE FORMULACIÓN -->
+            <div class="tab-content" *ngIf="tabActivaDetalle === 'formulacion'">
+              <div class="formulacion-contexto" *ngIf="ordenSeleccionada && (tieneMedicoOrigenOrden(ordenSeleccionada) || tieneDescripcionHistoriaOrden(ordenSeleccionada))">
+                <div class="formulacion-contexto__meta" *ngIf="tieneMedicoOrigenOrden(ordenSeleccionada)">
+                  <div class="formulacion-contexto__chip formulacion-contexto__chip--origen">
+                    <span class="formulacion-contexto__label">Origen</span>
+                    <div class="formulacion-contexto__text">
+                      <strong>{{ getMedicoOrigenOrden(ordenSeleccionada)?.nombre }}</strong>
+                      <small *ngIf="getMedicoOrigenDetalle(ordenSeleccionada)">
+                        {{ getMedicoOrigenDetalle(ordenSeleccionada) }}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="formulacion-contexto__observaciones" *ngIf="tieneDescripcionHistoriaOrden(ordenSeleccionada)">
+                  <span class="formulacion-contexto__label">Observaciones</span>
+                  <p class="formulacion-descripcion">{{ getDescripcionHistoriaOrden(ordenSeleccionada) }}</p>
+                </div>
+              </div>
+
+              <div class="formulacion-card-moderna" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final">
+                <div class="formulacion-header-compact">
+                  <span class="formulacion-title">Refracción Final</span>
+                  <span class="formulacion-badge" [ngClass]="esFormulaExternaOrden(ordenSeleccionada) ? 'incompleta' : 'completa'">
+                    {{ esFormulaExternaOrden(ordenSeleccionada) ? 'Fórmula externa' : 'Fórmula interna' }}
+                  </span>
+                </div>
+                
+                <!-- Grid de valores ópticos -->
+                <div class="optometria-grid">
+                  <!-- Ojo Derecho -->
+                  <div class="ojo-box">
+                    <div class="ojo-titulo ojo-od">
+                      <span>OD</span>
+                      <small>Ojo Derecho</small>
+                    </div>
+                    <div class="ojo-valores">
+                      <div class="valor-item">
+                        <span class="valor-label">Esfera</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.esf_od || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Cilindro</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_od || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Eje</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_od || '--' }}°</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Add</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_od || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">ALT</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_od || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">DP</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_od || '--' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Ojo Izquierdo -->
+                  <div class="ojo-box">
+                    <div class="ojo-titulo ojo-oi">
+                      <span>OI</span>
+                      <small>Ojo Izquierdo</small>
+                    </div>
+                    <div class="ojo-valores">
+                      <div class="valor-item">
+                        <span class="valor-label">Esfera</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.esf_oi || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Cilindro</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_oi || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Eje</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_oi || '--' }}°</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Add</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_oi || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">ALT</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_oi || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">DP</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_oi || '--' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="no-data" *ngIf="!ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final">
+                <i class="bi bi-eyeglasses"></i>
+                <span>No hay datos de formulación</span>
+              </div>
+            </div>
+            
+            <!-- CONTENIDO DE PRODUCTO -->
+            <div class="tab-content" *ngIf="tabActivaDetalle === 'producto'">
+              <div class="producto-detalle-moderno" *ngIf="ordenSeleccionada?.productos?.length > 0">
+                <div *ngFor="let producto of ordenSeleccionada?.productos" class="producto-card">
+                  <div class="producto-header">
+                    <i class="bi bi-box"></i>
+                    <span class="producto-nombre">{{ producto.nombre }}</span>
+                  </div>
+                  <div class="producto-info-grid">
+                    <div class="producto-info-item" *ngIf="producto.codigo">
+                      <span class="info-label">Código:</span>
+                      <span class="info-value">{{ producto.codigo }}</span>
+                    </div>
+                    <div class="producto-info-item" *ngIf="producto.marca">
+                      <span class="info-label">Marca:</span>
+                      <span class="info-value">{{ producto.marca }}</span>
+                    </div>
+                    <div class="producto-info-item" *ngIf="producto.modelo">
+                      <span class="info-label">Modelo:</span>
+                      <span class="info-value">{{ producto.modelo }}</span>
+                    </div>
+                    <div class="producto-info-item" *ngIf="producto.cantidad">
+                      <span class="info-label">Cantidad:</span>
+                      <span class="info-value">{{ producto.cantidad }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="no-data" *ngIf="!ordenSeleccionada?.productos?.length">
+                <i class="bi bi-box"></i>
+                <span>No hay productos asociados</span>
+              </div>
+            </div>
+            
+            <!-- CONTENIDO DE INDICACIONES -->
+            <div class="tab-content" *ngIf="tabActivaDetalle === 'indicaciones'">
+              <div class="indicaciones-detalle" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length > 0">
+                <div *ngFor="let rec of ordenSeleccionada?.cliente?.historia_medica?.recomendaciones; let i = index" class="indicacion-card-detalle">
+                  <div class="indicacion-header">
+                    <span class="indicacion-numero">#{{ i + 1 }}</span>
+                    <span class="badge-tipo" [ngClass]="esLenteContactoRecomendacion(rec) ? 'tipo-contacto' : 'tipo-normal'">
+                      {{ esLenteContactoRecomendacion(rec) ? '👁️ Contacto' : '👓 Convencional' }}
+                    </span>
+                  </div>
+                  
+                  <div class="indicacion-grid">
+                    <div class="indicacion-item">
+                      <span class="item-label">Cristal</span>
+                      <span class="item-value">{{ getTipoCristalRecomendado(rec.cristal) }}</span>
+                    </div>
+                    <div class="indicacion-item">
+                      <span class="item-label">Material</span>
+                      <span class="item-value">{{ getMaterialesRecomendados(rec.material) }}</span>
+                    </div>
+                    <div class="indicacion-item" *ngIf="getMonturaRecomendadaTexto(rec)">
+                      <span class="item-label">Montura</span>
+                      <span class="item-value">{{ getMonturaRecomendadaTexto(rec) }}</span>
+                    </div>
+                    <div class="indicacion-item" *ngIf="getTipoLenteContactoRecomendacionDetalle(rec) as tipoLenteContacto">
+                      <span class="item-label">Modelo Contacto</span>
+                      <span class="item-value highlight">{{ getTipoLenteContactoLabel(tipoLenteContacto) }}</span>
+                    </div>
+                  </div>
+                  
+                  <div class="medidas-detalle" *ngIf="getMedidasRecomendacionDetalle(rec) as medidas">
+                    <div class="medidas-titulo">
+                      <i class="bi bi-rulers"></i>
+                      <span>Medidas:</span>
+                    </div>
+                    <div class="medidas-chips">
+                      <span *ngIf="medidas.horizontal" class="medida-chip">H: {{ medidas.horizontal }} cm</span>
+                      <span *ngIf="medidas.vertical" class="medida-chip">V: {{ medidas.vertical }} cm</span>
+                      <span *ngIf="medidas.diagonal" class="medida-chip">D: {{ medidas.diagonal }} cm</span>
+                      <span *ngIf="medidas.puente" class="medida-chip">P: {{ medidas.puente }} cm</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Observaciones -->
+                  <div class="observaciones-detalle" *ngIf="rec.observaciones">
+                    <i class="bi bi-chat-text"></i>
+                    <span class="observaciones-text">{{ rec.observaciones }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="no-data" *ngIf="!ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length">
+                <i class="bi bi-lightbulb"></i>
+                <span>No hay indicaciones registradas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer del Modal -->
+  <div class="modal-actions" *ngIf="ordenSeleccionada">
+    <div class="actions-left">
+      <div class="fecha-entrega-info">
+        <i class="bi bi-calendar"></i>
+        <span *ngIf="ordenSeleccionada.fechaEntregaEstimada; else sinFechaModal">
+          Entrega: {{ getFechaEntregaFormateada(ordenSeleccionada) }}
+        </span>
+        <ng-template #sinFechaModal>
+          <span class="text-warning">Sin fecha de entrega</span>
+        </ng-template>
+      </div>
+    </div>
+    
+    <div class="actions-right">
+      <button *ngIf="ordenSeleccionada.estado === 'en_tienda'" class="btn btn-primary"
+        (click)="cambiarEstado(ordenSeleccionada, 'proceso_laboratorio'); cerrarModalDetalle()">
+        <i class="bi bi-arrow-right"></i> Mover a Laboratorio
+      </button>
+      <button *ngIf="ordenSeleccionada.estado === 'proceso_laboratorio'" class="btn btn-success"
+        (click)="cambiarEstado(ordenSeleccionada, 'listo_laboratorio'); cerrarModalDetalle()">
+        <i class="bi bi-check-circle"></i> Marcar como Listo
+      </button>
+      <button *ngIf="ordenSeleccionada.estado === 'listo_laboratorio'" class="btn btn-warning"
+        (click)="cambiarEstado(ordenSeleccionada, 'pendiente_retiro'); cerrarModalDetalle()">
+        <i class="bi bi-truck"></i> Enviar a Tienda
+      </button>
+      <button *ngIf="ordenSeleccionada.estado === 'pendiente_retiro'" class="btn btn-success"
+        (click)="cambiarEstado(ordenSeleccionada, 'entregado'); cerrarModalDetalle()">
+        <i class="bi bi-box-seam"></i> Marcar como Entregado
+      </button>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- Modal de Archivadas -->
+<div class="modal-backdrop" *ngIf="mostrarModalArchivo" (click)="cerrarModalArchivo()"></div>
+<div class="modal-archivadas" *ngIf="mostrarModalArchivo">
+  <div class="modal-header">
+    <h2>
+      <i class="bi bi-archive"></i>
+      Órdenes Archivadas
+      <span class="badge bg-white text-purple ms-2">{{ordenesArchivadas.length}}</span>
+    </h2>
+    <button class="btn-close-modal" (click)="cerrarModalArchivo()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="search-archivo">
+      <input type="text" [(ngModel)]="filtroArchivo" (input)="filtrarArchivadas()" placeholder="Buscar en archivadas..."
+        class="form-control">
+    </div>
+
+    <div class="archivadas-grid" *ngIf="ordenesFiltradasArchivadas.length > 0; else emptyArchivo">
+      <div class="archivada-card" *ngFor="let orden of ordenesFiltradasArchivadas">
+        <div class="archivada-header">
+          <div class="archivada-codigo">
+            <strong>{{orden.codigo}}</strong>
+          </div>
+          <span class="archivada-fecha">
+            Archivada: {{orden.fechaArchivado | date:'dd/MM/yy'}}
+          </span>
+        </div>
+
+        <div class="archivada-info">
+          <div class="info-row">
+            <i class="bi bi-person"></i>
+            <span>{{orden.clienteNombre}}</span>
+          </div>
+          <div class="info-row">
+            <i class="bi bi-eyeglasses"></i>
+            <span>{{orden.productoNombre}}</span>
+          </div>
+          <div class="info-row">
+            <i class="bi bi-calendar-check"></i>
+            <span>Entregada: {{orden.fechaEntrega | date:'dd/MM/yy'}}</span>
+          </div>
+        </div>
+
+        <div class="archivada-meta">
+          <div class="meta-item">
+            <i class="bi bi-clock-history"></i>
+            <small>Tiempo total: {{calcularDiasDuracion(orden)}} días</small>
+          </div>
+          <div class="meta-item">
+            <i class="bi bi-info-circle"></i>
+            <small>{{orden.motivoArchivo || 'Sin motivo'}}</small>
+          </div>
+        </div>
+
+        <div class="archivada-actions">
+          <button class="btn btn-sm btn-outline-success" (click)="restaurarOrden(orden)">
+            <i class="bi bi-arrow-counterclockwise"></i> Restaurar
+          </button>
+          <button class="btn btn-sm btn-outline-primary" (click)="generarFactura(orden)">
+            <i class="bi bi-receipt"></i> Factura
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #emptyArchivo>
+      <div class="empty-state">
+        <i class="bi bi-archive" style="font-size: 48px; color: #e2e8f0;"></i>
+        <h4>No hay órdenes archivadas</h4>
+        <p class="text-muted">Las órdenes se archivan automáticamente después de {{diasParaAutoArchivo}} días de
+          entrega.</p>
+      </div>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Modal para ver todas las órdenes -->
+<div class="modal-backdrop" *ngIf="mostrarModalOrdenes" (click)="cerrarModalOrdenes()"></div>
+<div class="modal-ordenes" *ngIf="mostrarModalOrdenes">
+  <div class="modal-header">
+    <h2>
+      <i class="bi bi-list-ul"></i>
+      {{tituloModalOrdenes}}
+      <span class="badge bg-primary ms-2">{{ordenesModalFiltradas.length}}</span>
+    </h2>
+    <button class="btn-close-modal" (click)="cerrarModalOrdenes()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <!-- Barra de búsqueda y filtros -->
+    <div class="modal-search-container">
+      <div class="search-box">
+        <input type="text" class="form-control search-input" placeholder="Buscar orden, cliente, producto o venta..."
+          [(ngModel)]="filtroModal" (input)="filtrarOrdenesModal()">
+        <i class="bi bi-search search-icon"></i>
+        <button class="btn-clear-search" *ngIf="filtroModal" (click)="limpiarFiltroModal()">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+
+      <!-- Filtros adicionales -->
+      <div class="filtros-rapidos">
+        <!-- Ordenamiento -->
+        <select class="form-select sort-select" [(ngModel)]="ordenModal" (change)="ordenarOrdenesModal()">
+          <option value="fechaCreacion_desc">Más recientes primero</option>
+          <option value="fechaCreacion_asc">Más antiguos primero</option>
+          <option value="diasRestantes_asc">Próximas a vencer</option>
+          <option value="clienteNombre_asc">Cliente A-Z</option>
+          <option value="clienteNombre_desc">Cliente Z-A</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Contador de resultados -->
+    <div class="resultados-info" *ngIf="filtroModal || filtroPrioridadModal">
+      <small class="text-muted">
+        Mostrando {{ordenesModalFiltradas.length}} de {{ordenesModal.length}} órdenes
+        <span *ngIf="filtroModal">• Buscando: "{{filtroModal}}"</span>
+      </small>
+    </div>
+
+    <!-- Lista de órdenes filtradas -->
+    <div class="ordenes-modal-list" *ngIf="ordenesModalFiltradas.length > 0; else sinResultados">
+      <div class="orden-modal-card" *ngFor="let orden of ordenesModalPagina" (click)="verDetalleOrden(orden)">
+        <div class="orden-modal-header">
+          <div class="orden-info">
+            <strong>{{orden.codigo}}</strong>
+            <!-- Indicador de coincidencia en búsqueda -->
+            <span class="search-match-indicator" *ngIf="tieneCoincidencia(orden)">
+              <i class="bi bi-search"></i>
+            </span>
+          </div>
+          <span class="orden-estado">
+            {{getEstadoTexto(orden.estado)}}
+          </span>
+        </div>
+
+        <div class="orden-modal-body">
+          <div class="orden-cliente-modal">
+            <i class="bi bi-person"></i>
+            <span [innerHTML]="resaltarTexto(orden.clienteNombre, filtroModal)"></span>
+          </div>
+          <div class="orden-producto-modal">
+            <i class="bi bi-eyeglasses"></i>
+            <span [innerHTML]="resaltarTexto(orden.productoNombre, filtroModal)"></span>
+          </div>
+          <div class="orden-meta-modal">
+            <div class="meta-item">
+              <i class="bi bi-calendar"></i>
+              <small>Creación: {{orden.fechaCreacion | date:'dd/MM/yy'}}</small>
+            </div>
+            <div class="meta-item">
+              <i class="bi bi-clock"></i>
+              <small *ngIf="orden.fechaEntregaEstimada" [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                Entrega: {{ getFechaEntregaFormateada(orden) }}
+              </small>
+              <small *ngIf="!orden.fechaEntregaEstimada" class="text-warning">
+                Sin fecha asignada
+              </small>
+            </div>
+            <div class="meta-item">
+              <i class="bi bi-percent"></i>
+              <small>Progreso: {{getProgresoParaMostrar(orden)}}%</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="orden-modal-actions">
+          <button class="btn-action" (click)="verDetalleOrden(orden); $event.stopPropagation()" title="Ver detalles">
+            <i class="bi bi-eye"></i>
+          </button>
+          <button class="btn-action"
+            *ngIf="estadoModalActual !== 'entregado' && estadoModalActual !== 'pendiente_retiro'"
+            (click)="cambiarEstado(orden, getNextEstado(estadoModalActual)); $event.stopPropagation()"
+            title="Avanzar estado">
+            <i class="bi bi-arrow-right"></i>
+          </button>
+          <button class="btn-action btn-success" *ngIf="estadoModalActual === 'pendiente_retiro'"
+            (click)="cambiarEstado(orden, 'entregado'); $event.stopPropagation()" title="Marcar como entregado">
+            <i class="bi bi-check-lg"></i>
+          </button>
+          <button class="btn-action" (click)="configurarFechaEntrega(orden); $event.stopPropagation()"
+            title="Configurar fecha de entrega">
+            <i class="bi bi-calendar-plus"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje cuando no hay resultados -->
+    <ng-template #sinResultados>
+      <div class="no-results">
+        <i class="bi bi-search"></i>
+        <h4>No se encontraron órdenes</h4>
+        <p *ngIf="filtroModal || filtroPrioridadModal">
+          No hay órdenes que coincidan con tu búsqueda.
+          <a href="javascript:void(0)" (click)="limpiarFiltroModal()" class="text-primary">
+            Limpiar filtros
+          </a>
+        </p>
+        <p *ngIf="!filtroModal && !filtroPrioridadModal">No hay órdenes en este estado.</p>
+      </div>
+    </ng-template>
+
+    <!-- Paginación si hay muchas órdenes -->
+    <div class="modal-pagination" *ngIf="ordenesModalFiltradas.length > 20">
+      <div class="pagination-info">
+        Mostrando {{inicioPaginacion + 1}} - {{finPaginacion}} de {{ordenesModalFiltradas.length}}
+      </div>
+      <div class="pagination-controls">
+        <button class="btn-pagination" [disabled]="paginaActual === 0" (click)="paginaAnterior()">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <span class="pagina-info">Página {{paginaActual + 1}} de {{totalPaginas}}</span>
+        <button class="btn-pagination" [disabled]="paginaActual === totalPaginas - 1" (click)="paginaSiguiente()">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Modal para configurar fecha de entrega -->
+<div class="modal-backdrop" *ngIf="mostrarModalConfigurarFecha" (click)="cerrarModalFechaEntrega()"></div>
+
+<div class="modal-configurar-fecha" *ngIf="mostrarModalConfigurarFecha">
+  <div class="modal-header">
+    <h2>
+      <i class="bi bi-calendar-plus"></i>
+      Configurar Fecha de Entrega
+    </h2>
+    <button class="btn-close-modal" (click)="cerrarModalFechaEntrega()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="info-orden">
+      <p><strong>Orden:</strong> {{ ordenParaConfigurarFecha?.ordenId }}</p>
+      <p><strong>Cliente:</strong> {{ getClienteNombre(ordenParaConfigurarFecha!) }}</p>
+      <p><strong>Producto:</strong> {{ getProductoNombre(ordenParaConfigurarFecha!) }}</p>
+    </div>
+
+    <div class="configuracion-dias">
+      <label for="diasEntrega">
+        <i class="bi bi-calendar-range"></i>
+        Días para entrega:
+      </label>
+      <div class="input-group">
+        <input type="number" id="diasEntrega" class="form-control" [(ngModel)]="diasParaFechaEntrega"
+          (input)="actualizarFechaCalculada()" min="1" max="30">
+        <span class="input-group-text">días</span>
+      </div>
+      <small class="text-muted">Desde la fecha actual</small>
+    </div>
+
+    <div class="fecha-resultado">
+      <h5>Fecha estimada de entrega:</h5>
+      <div class="fecha-display">
+        <i class="bi bi-calendar-check"></i>
+        <span *ngIf="fechaCalculada; else sinCalculo">
+          {{ fechaCalculada | date:'fullDate':'UTC' }}
+          <br>
+          <small class="text-muted">
+            ({{ diasParaFechaEntrega }} días |
+            {{ fechaCalculada | date:'dd/MM/yyyy' }})
+          </small>
+        </span>
+        <ng-template #sinCalculo>
+          <span class="text-muted">Ingrese la cantidad de días</span>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="cerrarModalFechaEntrega()">
+      <i class="bi bi-x-circle"></i> Cancelar
+    </button>
+    <!-- Botón corregido: pasar ordenParaConfigurarFecha -->
+    <button class="btn btn-primary" (click)="confirmarFechaEntrega(ordenParaConfigurarFecha!)"
+      [disabled]="!diasParaFechaEntrega || diasParaFechaEntrega < 1 || !ordenParaConfigurarFecha">
+      <i class="bi bi-check-circle"></i> Confirmar Fecha
+    </button>
+  </div>
+</div>
+
+
+<!-- Modal para Actualizar Progreso -->
+<div class="modal-progreso-backdrop" *ngIf="mostrarModalProgreso" (click)="cerrarModalProgreso()"></div>
+
+<div class="modal-progreso" *ngIf="mostrarModalProgreso">
+  <div class="modal-header">
+    <h3>
+      <i class="bi bi-percent"></i>
+      Actualizar Progreso
+    </h3>
+    <button class="btn-close-modal" (click)="cerrarModalProgreso()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <!-- Información de la orden -->
+    <div class="orden-info-progreso">
+      <div class="info-row">
+        <span class="info-label">Orden:</span>
+        <span class="info-value">{{ordenSeleccionada?.codigo}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Cliente:</span>
+        <span class="info-value">{{getClienteNombre(ordenSeleccionada)}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Producto:</span>
+        <span class="info-value">{{getProductoNombre(ordenSeleccionada)}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Estado Actual:</span>
+        <span class="info-value estado-badge" [ngClass]="'estado-' + ordenSeleccionada?.estado">
+          {{ getEstadoTexto(ordenSeleccionada?.estado) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Rango de progreso permitido -->
+    <div class="rango-progreso" *ngIf="ordenSeleccionada?.estado === 'proceso_laboratorio'">
+      <div class="rango-info">
+        <i class="bi bi-info-circle"></i>
+        <small>Rango permitido para estado "En Laboratorio": 30% - 80%</small>
+      </div>
+    </div>
+
+    <!-- Selector de progreso -->
+    <div class="selector-progreso">
+      <label for="progresoInput">Progreso Actual: {{progresoActual}}%</label>
+
+      <!-- Slider de rango -->
+      <div class="progreso-slider">
+        <input type="range" id="progresoInput" [min]="minProgreso" [max]="maxProgreso" step="5"
+          [(ngModel)]="progresoActual" (input)="actualizarValorProgreso($event)">
+
+        <!-- Marcas del slider -->
+        <div class="slider-ticks">
+          <span *ngFor="let tick of getTicks()" [style.left.%]="tick" class="tick">
+            <span class="tick-value">{{tick}}</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Input numérico -->
+      <div class="input-progreso">
+        <div class="input-group">
+          <input type="number" class="form-control" [min]="minProgreso" [max]="maxProgreso" [(ngModel)]="progresoActual"
+            (change)="validarProgreso()">
+          <span class="input-group-text">%</span>
+        </div>
+        <small class="text-muted">Ingrese un valor entre {{minProgreso}} y {{maxProgreso}}%</small>
+      </div>
+
+      <!-- Barra de progreso visual -->
+      <div class="progreso-visual">
+        <div class="progreso-bar-modal">
+          <div class="progreso-fill-modal" [style.width.%]="progresoActual"></div>
+        </div>
+        <div class="progreso-labels">
+          <span>{{minProgreso}}%</span>
+          <span>{{progresoActual}}%</span>
+          <span>{{maxProgreso}}%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje de validación -->
+    <div class="alert alert-warning" *ngIf="mensajeError">
+      <i class="bi bi-exclamation-triangle"></i>
+      {{mensajeError}}
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="cerrarModalProgreso()">
+      <i class="bi bi-x-circle"></i> Cancelar
+    </button>
+    <button class="btn btn-primary" [disabled]="!progresoValido" (click)="guardarProgreso()"
+      [class.btn-success]="progresoActual === maxProgreso">
+      <i class="bi bi-check-circle"></i>
+      {{progresoActual === maxProgreso ? 'Marcar como listo (' + progresoActual + '%)' : 'Actualizar a ' +
+      progresoActual + '%'}}
+    </button>
+  </div>
+</div>
+
+
+<!-- Modal para Configurar Auto-Archivado -->
+<div class="modal-archivo-backdrop" *ngIf="mostrarModalAutoArchivado" (click)="cerrarModalArchivo()"></div>
+
+<div class="modal-archivo" *ngIf="mostrarModalAutoArchivado">
+  <div class="modal-header">
+    <h3 style="color: white;">
+      <i class="bi bi-gear"></i>
+      Configurar Auto-Archivado
+    </h3>
+    <button class="btn-close-modal" (click)="cerrarModalArchivo()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <!-- Mensaje explicativo -->
+    <div class="archivo-mensaje">
+      <div class="mensaje-icono">
+        <i class="bi bi-calendar2-week"></i>
+      </div>
+      <div class="mensaje-contenido">
+        <h4>Días para auto-archivar órdenes entregadas</h4>
+        <p>Las órdenes en estado "Entregado" se archivarán automáticamente después de este número de días.</p>
+      </div>
+    </div>
+
+    <!-- Contador de días -->
+    <div class="contador-dias">
+      <div class="contador-header">
+        <label>Días para auto-archivado</label>
+        <span class="dias-actual" *ngIf="diasArchivoActual > 0">
+          Actual: {{diasArchivoActual}} días
+        </span>
+      </div>
+
+      <div class="contador-input">
+        <button class="btn-contador btn-restar" (click)="decrementarDias()" [disabled]="diasArchivoSeleccionados <= 1">
+          <i class="bi bi-dash-lg"></i>
+        </button>
+
+        <div class="dias-display">
+          <input type="number" class="form-control" min="1" max="365" [(ngModel)]="diasArchivoSeleccionados"
+            (change)="validarDias()">
+          <span class="dias-label">días</span>
+        </div>
+
+        <button class="btn-contador btn-sumar" (click)="incrementarDias()" [disabled]="diasArchivoSeleccionados >= 365">
+          <i class="bi bi-plus-lg"></i>
+        </button>
+      </div>
+
+      <div class="contador-info">
+        <small class="text-muted">
+          <i class="bi bi-info-circle"></i>
+          Mínimo: 1 día • Máximo: 365 días
+        </small>
+      </div>
+    </div>
+
+    <!-- Previsualización -->
+    <div class="previsualizacion" *ngIf="diasArchivoSeleccionados !== diasArchivoActual">
+      <div class="preview-header">
+        <i class="bi bi-eye"></i>
+        <span>Efecto del cambio:</span>
+      </div>
+      <div class="preview-content">
+        <p>
+          Cambiar de <strong>{{diasArchivoActual}} días</strong> a <strong>{{diasArchivoSeleccionados}} días</strong>
+        </p>
+        <div class="preview-desc">
+          Las órdenes entregadas se mantendrán visibles durante {{diasArchivoSeleccionados}} días antes de archivarse
+          automáticamente.
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje de error -->
+    <div class="alert alert-warning" *ngIf="mensajeError">
+      <i class="bi bi-exclamation-triangle"></i>
+      {{mensajeError}}
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="cerrarModalArchivo()">
+      <i class="bi bi-x-circle"></i> Cancelar
+    </button>
+    <button class="btn btn-primary" [disabled]="!configValida || diasArchivoSeleccionados === diasArchivoActual"
+      (click)="guardarConfiguracion()">
+      <i class="bi bi-save"></i>
+      Guardar Configuración
+    </button>
+  </div>
+</div>

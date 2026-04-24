@@ -1,4 +1,11 @@
 //Modelos cambio de contrase;a
+import { SedeLogin } from '../../app/view/login/login-interface';
+
+export interface Cargo {
+  _id: string;
+  key: string;
+  name: string;
+}
 
 export interface User {
   id?: string;
@@ -8,9 +15,13 @@ export interface User {
   telefono?: string;
   email?: string;
   rol?: string;
+  cargo?: string;
   ruta_imagen?: string | null;
   tyc_aceptado?: boolean | number;
+  sede?: string;
+  sedeNombre?: string;
 }
+
 
 export interface Rol {
   _id: string;
@@ -18,11 +29,14 @@ export interface Rol {
   name: string;
 }
 
+
 export interface AuthData {
   token: string;
   user: User;
   rol: Rol;
-  message?: string; // Mensaje adicional, opcional
+  cargo: Cargo;
+  sede: SedeLogin; 
+  message?: string;
 }
 
 export interface AuthResponse {
@@ -40,33 +54,93 @@ export interface AuthResponse {
     key: string;
     name: string;
   };
+  cargo: {
+    _id: string;
+    key: string;
+    name: string;
+  };
+  sede: {
+    key: string;
+    nombre: string;
+  };
 }
 
-export interface Atleta {
-  _id: string;
-  user_id: string;
+export interface Empleado {
+  id: string;
+  cedula: string;
   nombre: string;
-  fecha_nacimiento: string;
-  genero: 'M' | 'F';
-  cedula?: string; // Opcional porque puede venir de representante
-  altura?: number | null;
-  peso?: number | null;
-  nacionalidad?: string | null;
-  deporte?: string | null; // Añadimos deporte como opcional
-  posicion?: string | null; // Añadimos posición como opcional
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
-  edad: number;
-  generoTexto: string;
+  email?: string;
+  telefono?: string;
+  rolId: string;
+  cargoId: string;
+  rolNombre: string;
+  cargoNombre: string;
+  estatus: boolean; // ✅ Ahora es un booleano
+  fechaNacimiento: string;
+  avatarUrl?: string; // 👈 Añadido para imagen de perfil
+  created_at: string;
+  updated_at: string;
+  editing: false;
+  modified: boolean;
+  hasErrors: false;
+  errors: {};
+  loading?: boolean;
+  originalValues: null;
 }
 
 export interface ApiResponse {
   message: string;
-  atletas: Atleta[];
+  empleados: Empleado[];
 }
 
 export interface TycCheck {
   hasAcceptedTyC: boolean | number;
 }
+
+export interface Tasa {
+  id: string;
+  valor: number;
+  updated_at: string;
+  simbolo?: string;
+  nombre?: string;
+  metodo?: string;
+  rastreo_bcv?: boolean;
+  ultimo_tipo_cambio?: string;
+}
+
+export interface HistorialTasa {
+  id: number;
+  valor_nuevo: number;
+  tipo_cambio: string;
+  updated_at: string;
+  usuario: {
+    cedula: string;
+    nombre: string;
+  };
+}
+
+export interface RedSocial {
+  platform: string;
+  username: string;
+}
+
+export interface Paciente {
+  id: string;
+  nombreCompleto: string;
+  cedula: string;
+  telefono: string;
+  email: string;
+  fechaNacimiento: string;
+  edad: number;
+  ocupacion: string;
+  genero: '' | 'Masculino' | 'Femenino' | 'Otro';
+  direccion: string;
+  fechaRegistro: string;
+  redesSociales: RedSocial[];
+  sede: 'guatire' | 'guarenas';
+}
+
+
+
+
 

@@ -1,0 +1,323 @@
+<app-loader></app-loader>
+
+<div class="dashboard-shell mb-5">
+  <div class="container-fluid dashboard-container px-4 py-4">
+    <section class="dashboard-topbar mb-4">
+      <div class="dashboard-topbar__copy">
+        <span class="hero-eyebrow">Dashboard</span>
+        <h1 class="dashboard-topbar__title">Resumen operativo</h1>
+        <p class="dashboard-topbar__subtitle">Lo más importante del día.</p>
+        <p class="dashboard-topbar__meta">
+          <i class="fas fa-clock"></i>
+          {{ textoUltimoUpdate }}
+        </p>
+      </div>
+
+      <div class="dashboard-topbar__actions">
+        <button class="hero-action hero-action--ghost" (click)="irAHistorialVentas()">
+          <i class="fas fa-chart-line"></i>
+          Historial de ventas
+        </button>
+        <button class="hero-action hero-action--primary" (click)="recargarDatos()" [disabled]="isLoading">
+          <i class="fas fa-sync-alt"></i>
+          Actualizar panel
+        </button>
+      </div>
+    </section>
+
+    <section class="kpi-grid mb-4">
+      <article class="kpi-card kpi-card--sales">
+        <div class="kpi-card__header">
+          <div>
+            <span class="kpi-label">Ventas del día</span>
+            <h2 class="kpi-value">{{ ventasHoy }}</h2>
+          </div>
+          <div class="kpi-icon">
+            <i class="fas fa-cash-register"></i>
+          </div>
+        </div>
+
+        <div class="kpi-meta-row">
+          <span class="kpi-chip">{{ ventasMes }} en el mes</span>
+          <span class="kpi-chip kpi-chip--warning">{{ ventasPendientesMes }} pendientes</span>
+        </div>
+
+        <button class="kpi-link" (click)="irAHistorialVentas()">
+          Abrir historial de ventas
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </article>
+
+      <article class="kpi-card kpi-card--patients">
+        <div class="kpi-card__header">
+          <div>
+            <span class="kpi-label">Pacientes registrados hoy</span>
+            <h2 class="kpi-value">{{ pacientesHoy }}</h2>
+          </div>
+          <div class="kpi-icon">
+            <i class="fas fa-user-plus"></i>
+          </div>
+        </div>
+
+        <div class="kpi-meta-row">
+          <span class="kpi-chip">{{ pacientesNuevosMes }} en el mes</span>
+          <span class="kpi-chip">{{ totalPacientes }} acumulados</span>
+        </div>
+
+        <button class="kpi-link" (click)="irAPacientes()">
+          Abrir pacientes
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </article>
+
+      <article class="kpi-card kpi-card--stories">
+        <div class="kpi-card__header">
+          <div>
+            <span class="kpi-label">Historias creadas hoy</span>
+            <h2 class="kpi-value">{{ historiasHoy }}</h2>
+          </div>
+          <div class="kpi-icon">
+            <i class="fas fa-file-medical"></i>
+          </div>
+        </div>
+
+        <div class="kpi-meta-row">
+          <span class="kpi-chip">{{ historiasMesActual }} en el mes</span>
+          <span class="kpi-chip">{{ totalHistorias }} acumuladas</span>
+        </div>
+
+        <button class="kpi-link" (click)="nuevaHistoria()">
+          Abrir historias
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </article>
+    </section>
+
+    <div *ngIf="hayDatos" class="row g-4 align-items-stretch">
+      <div class="col-xl-8">
+        <section class="surface-card surface-card--chart h-100">
+          <div class="surface-body surface-body--chart">
+            <app-grafico-pacientes-por-mes [data]="datosLocales?.porMes" [sedeActual]="nombreSedeVisible"></app-grafico-pacientes-por-mes>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-xl-4">
+        <div class="dashboard-stack h-100">
+          <section class="surface-card leaderboard-card" *ngIf="mostrarTarjetaRankingComercial">
+            <div class="surface-header surface-header--tight">
+              <div class="leaderboard-header-main">
+                <span class="surface-eyebrow">Ventas</span>
+                <h3 class="surface-title">Top comercial</h3>
+                <p class="surface-subtitle">Ranking mensual por facturación.</p>
+              </div>
+
+              <div class="leaderboard-header-actions">
+                <div class="leaderboard-scope">
+                  <i class="bi bi-geo-alt"></i>
+                  <span>Sede en vista: {{ nombreSedeRankingVisible }}</span>
+                </div>
+
+                <button
+                  type="button"
+                  class="leaderboard-switch"
+                  *ngIf="puedeIntercambiarSedeRanking"
+                  [class.is-loading]="rankingComercialCargando"
+                  [disabled]="rankingComercialCargando"
+                  (click)="intercambiarSedeRanking()"
+                  [title]="'Cambiar ranking a ' + nombreSedeSiguienteRankingVisible"
+                  [attr.aria-label]="'Cambiar ranking a ' + nombreSedeSiguienteRankingVisible">
+                  <i class="bi" [ngClass]="rankingComercialCargando ? 'bi-arrow-repeat' : 'bi-arrow-left-right'"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="surface-body leaderboard-body">
+              <ng-container *ngIf="tieneRankingComercial; else leaderboardEmptyState">
+                <article class="leader-highlight" *ngIf="mejorVendedorDashboard as lider">
+                  <div class="leader-highlight__meta">
+                    <span class="leader-chip">Vendedor del mes</span>
+                    <strong>{{ lider.asesorNombre }}</strong>
+                    <small>{{ lider.ventas }} ventas cerradas · {{ lider.participacion | number:'1.1-1' }}% de participación</small>
+                  </div>
+                  <div class="leader-highlight__amount">{{ formatearMontoDashboard(lider.facturado) }}</div>
+                </article>
+
+                <div class="leader-list">
+                  <div class="leader-row" *ngFor="let item of rankingComercialSecundario; let i = index">
+                    <div class="leader-row__main">
+                      <span class="leader-rank">{{ i + 2 }}</span>
+                      <div>
+                        <strong>{{ item.asesorNombre }}</strong>
+                        <small>{{ item.ventas }} ventas</small>
+                      </div>
+                    </div>
+                    <div class="leader-row__metric">
+                      <strong>{{ formatearMontoDashboard(item.facturado) }}</strong>
+                      <small>{{ item.participacion | number:'1.1-1' }}%</small>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-template #leaderboardEmptyState>
+                <div class="leaderboard-empty" [class.is-loading]="rankingComercialCargando">
+                  <div class="leaderboard-empty__icon">
+                    <i class="bi" [ngClass]="rankingComercialCargando ? 'bi-arrow-repeat' : 'bi-bar-chart-line'"></i>
+                  </div>
+                  <strong>{{ rankingComercialCargando ? 'Actualizando ranking...' : 'Sin datos para esta sede' }}</strong>
+                  <p>
+                    {{ rankingComercialCargando
+                    ? 'Consultando el rendimiento comercial de ' + nombreSedeRankingVisible + '.'
+                    : 'No hay ventas facturadas en ' + nombreSedeRankingVisible + ' dentro del rango mensual actual.' }}
+                  </p>
+                </div>
+              </ng-template>
+
+              <button class="hero-action hero-action--ghost leaderboard-cta" (click)="irARendimientoComercial()">
+                <i class="fas fa-medal"></i>
+                Ver rendimiento comercial
+              </button>
+            </div>
+          </section>
+
+          <section class="surface-card surface-card--chart workflow-card h-100">
+            <div class="surface-header">
+              <div>
+                <span class="surface-eyebrow">Órdenes de trabajo</span>
+                <h3 class="surface-title">Flujo actual</h3>
+                <p class="surface-subtitle">Qué está pendiente, en proceso y listo para entregar.</p>
+              </div>
+            </div>
+
+            <div class="surface-body surface-body--chart workflow-body">
+              <div class="workflow-step workflow-step--store">
+                <div class="workflow-step__count">{{ ordenesPorPasarLaboratorio }}</div>
+                <div class="workflow-step__content">
+                  <strong>En tienda</strong>
+                  <span>Pendientes por pasar a laboratorio</span>
+                </div>
+              </div>
+
+              <div class="workflow-step workflow-step--lab">
+                <div class="workflow-step__count">{{ ordenesEnLaboratorio }}</div>
+                <div class="workflow-step__content">
+                  <strong>En laboratorio</strong>
+                  <span>Órdenes actualmente en proceso</span>
+                </div>
+              </div>
+
+              <div class="workflow-step workflow-step--ready">
+                <div class="workflow-step__count">{{ ordenesListasLaboratorio }}</div>
+                <div class="workflow-step__content">
+                  <strong>Listas en laboratorio</strong>
+                  <span>Disponibles para recepción en tienda</span>
+                </div>
+              </div>
+
+              <div class="workflow-step workflow-step--pickup">
+                <div class="workflow-step__count">{{ ordenesPendienteRetiro }}</div>
+                <div class="workflow-step__content">
+                  <strong>Pendiente por retirar</strong>
+                  <span>Órdenes listas para entrega al cliente</span>
+                </div>
+              </div>
+
+              <button class="hero-action hero-action--primary workflow-cta" (click)="irAOrdenes()">
+                <i class="fas fa-clipboard-check"></i>
+                Ir al tablero de órdenes
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mt-4" *ngIf="puedeVerComparativa">
+      <div class="col-12">
+        <section class="surface-card surface-card--chart">
+          <div class="surface-header">
+            <div>
+              <span class="surface-eyebrow">Comparativa</span>
+              <h3 class="surface-title">Comparación entre sedes</h3>
+              <p class="surface-subtitle">Vista lado a lado de Guarenas y Guatire.</p>
+            </div>
+          </div>
+
+          <div class="surface-body surface-body--chart surface-body--compact">
+            <app-grafico-comparativa-sedes [data]="datosComparativa"></app-grafico-comparativa-sedes>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="row mt-4" *ngIf="hayDatos">
+      <div class="col-12">
+        <section class="surface-card quick-surface">
+          <div class="surface-header surface-header--tight">
+            <div>
+              <span class="surface-eyebrow">Atajos</span>
+              <h3 class="surface-title">Flujo diario</h3>
+            </div>
+          </div>
+
+          <div class="surface-body">
+            <div class="quick-actions-grid">
+              <button class="quick-action-btn" (click)="nuevoPaciente()">
+                <div class="action-icon"><i class="fas fa-user-plus"></i></div>
+                <span>Nuevo paciente</span>
+                <small>Registro inicial</small>
+              </button>
+
+              <button class="quick-action-btn" (click)="nuevaHistoria()">
+                <div class="action-icon"><i class="fas fa-file-medical"></i></div>
+                <span>Historias médicas</span>
+                <small>Consulta y seguimiento</small>
+              </button>
+
+              <button class="quick-action-btn" (click)="irAVentas()">
+                <div class="action-icon"><i class="fas fa-cash-register"></i></div>
+                <span>Nueva venta</span>
+                <small>Registro comercial</small>
+              </button>
+
+              <button class="quick-action-btn" (click)="irAOrdenes()">
+                <div class="action-icon"><i class="fas fa-clipboard-list"></i></div>
+                <span>Órdenes de trabajo</span>
+                <small>Laboratorio y entrega</small>
+              </button>
+
+              <button class="quick-action-btn" (click)="irAInventario()">
+                <div class="action-icon"><i class="fas fa-box-open"></i></div>
+                <span>Inventario</span>
+                <small>Productos y stock</small>
+              </button>
+
+              <button class="quick-action-btn quick-action-btn--secondary" (click)="irATasa()">
+                <div class="action-icon"><i class="fas fa-coins"></i></div>
+                <span>Tipo de cambio</span>
+                <small>Referencia operativa</small>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div *ngIf="!hayDatos" class="row mt-4">
+      <div class="col-12">
+        <section class="surface-card empty-state-card">
+          <div class="empty-state-icon">
+            <i class="fas fa-wave-square"></i>
+          </div>
+          <h4>Aún no hay movimiento suficiente para el tablero</h4>
+          <p>El panel tomará forma automáticamente cuando la sede acumule pacientes, historias, ventas u órdenes de trabajo.</p>
+          <button class="hero-action hero-action--primary" (click)="nuevoPaciente()">
+            <i class="fas fa-plus"></i>
+            Registrar primer paciente
+          </button>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>

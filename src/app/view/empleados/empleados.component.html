@@ -1,0 +1,610 @@
+<!-- Loader Component -->
+<app-loader></app-loader>
+
+<div class="container-fluid mt-4">
+    <div class="card empleados-moderno">
+        <!-- Header modernizado -->
+        <div class="card-header-moderno">
+            <div class="header-content">
+                <div class="header-icon">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="header-text">
+                    <h4 class="header-title">Gestión de Empleados</h4>
+                    <div class="header-subtitle">Administra y consulta la información del personal</div>
+                </div>
+            </div>
+            <button class="btn btn-agregar-empleado" (click)="openDynamicModal()">
+                <i class="bi bi-person-plus"></i>
+                Agregar Empleado
+            </button>
+        </div>
+
+        <!-- Cuerpo modernizado -->
+        <div class="card-body-moderno">
+            <!-- Filtros modernos -->
+            <div class="filtros-modernos">
+                <div class="filtro-item">
+                    <label class="form-label-moderno">
+                        <i class="bi bi-search"></i>
+                        Buscar empleado
+                    </label>
+                    <div class="search-container">
+                        <input type="text" class="form-control modern-input" placeholder="Buscar por cédula o nombre..."
+                            [(ngModel)]="searchQuery" (input)="filterEmployees()" (keyup.enter)="filterEmployees()">
+                        <i class="bi bi-search search-icon"></i>
+                    </div>
+                </div>
+
+                <div class="filtro-item">
+                    <label class="form-label-moderno">
+                        <i class="bi bi-briefcase"></i>
+                        Filtrar por Cargo
+                    </label>
+                    <select class="form-select modern-select" [(ngModel)]="selectedPosition"
+                        (change)="filterEmployees()">
+                        <option [ngValue]="null">Todos los cargos</option>
+                        <option *ngFor="let pos of positions" [value]="pos.id">{{ pos.nombre }}</option>
+                    </select>
+                </div>
+
+                <div class="filtro-item">
+                    <label class="form-label-moderno">
+                        <i class="bi bi-person-gear"></i>
+                        Filtrar por Rol
+                    </label>
+                    <select class="form-select modern-select" [(ngModel)]="selectedRole" (change)="filterEmployees()">
+                        <option [ngValue]="null">Todos los roles</option>
+                        <option *ngFor="let rol of roles" [value]="rol.id">{{ rol.nombre }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="isLoading" class="loading-state">
+                <div class="spinner-moderno">
+                    <div class="spinner"></div>
+                </div>
+                <p>Cargando empleados...</p>
+            </div>
+
+            <!-- Tabla moderna -->
+            <div class="table-container-moderno" *ngIf="!isLoading">
+                <div class="table-scroll-container">
+                    <table class="table-moderna empleados">
+                        <thead>
+                            <tr>
+                                <th class="sortable" (click)="ordenarPor('cedula')">
+                                    <span class="th-content">Cédula</span>
+                                    <i class="bi" [ngClass]="{
+                                        'bi-caret-up-fill': ordenActual === 'cedula' && ordenAscendente,
+                                        'bi-caret-down-fill': ordenActual === 'cedula' && !ordenAscendente
+                                    }"></i>
+                                </th>
+                                <th class="sortable" (click)="ordenarPor('nombre')">
+                                    <span class="th-content">Empleado</span>
+                                    <i class="bi" [ngClass]="{
+                                        'bi-caret-up-fill': ordenActual === 'nombre' && ordenAscendente,
+                                        'bi-caret-down-fill': ordenActual === 'nombre' && !ordenAscendente
+                                    }"></i>
+                                </th>
+                                <th class="sortable" (click)="ordenarPor('created_at')">
+                                    <span class="th-content">Registro</span>
+                                    <i class="bi" [ngClass]="{
+                                        'bi-caret-up-fill': ordenActual === 'created_at' && ordenAscendente,
+                                        'bi-caret-down-fill': ordenActual === 'created_at' && !ordenAscendente
+                                    }"></i>
+                                </th>
+                                <th class="sortable" (click)="ordenarPor('cargoNombre')">
+                                    <span class="th-content">Cargo</span>
+                                    <i class="bi" [ngClass]="{
+                                        'bi-caret-up-fill': ordenActual === 'cargoNombre' && ordenAscendente,
+                                        'bi-caret-down-fill': ordenActual === 'cargoNombre' && !ordenAscendente
+                                    }"></i>
+                                </th>
+                                <th class="sortable" (click)="ordenarPor('rolNombre')">
+                                    <span class="th-content">Rol Sistema</span>
+                                    <i class="bi" [ngClass]="{
+                                        'bi-caret-up-fill': ordenActual === 'rolNombre' && ordenAscendente,
+                                        'bi-caret-down-fill': ordenActual === 'rolNombre' && !ordenAscendente
+                                    }"></i>
+                                </th>
+                                <th class="text-center">
+                                    <span class="th-content">Estatus</span>
+                                </th>
+                                <th class="text-center">
+                                    <span class="th-content">Acciones</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let employee of filteredEmployees; let i = index; trackBy: trackByEmployeeId"
+                                class="empleado-row" [ngClass]="{'inactive-row': !employee.estatus}">
+
+                                <!-- Cédula -->
+                                <td class="text-center">
+                                    <div *ngIf="!employee.editing" class="cedula-empleado">
+                                        {{ employee.cedula }}
+                                    </div>
+                                    <div *ngIf="employee.editing" class="editing-field">
+                                        <input type="text" class="form-control-moderno editing-input"
+                                            [(ngModel)]="employee.cedula"
+                                            (ngModelChange)="validateField(employee, 'cedula')">
+                                        <small *ngIf="employee.errors?.cedula" class="error-message">
+                                            {{ employee.errors.cedula }}
+                                        </small>
+                                    </div>
+                                </td>
+
+                                <!-- Nombre - MEJORADO -->
+                                <td class="empleado-info">
+                                    <div *ngIf="!employee.editing" class="empleado-details">
+                                        <div class="empleado-avatar">
+                                            <i class="bi bi-person-circle"></i>
+                                        </div>
+                                        <div class="empleado-texto">
+                                            <span class="empleado-nombre">{{ employee.nombre }}</span>
+                                            <small class="empleado-email">{{ employee.email || 'Sin email' }}</small>
+                                        </div>
+                                    </div>
+                                    <div *ngIf="employee.editing" class="editing-field">
+                                        <input type="text" class="form-control-moderno editing-input"
+                                            [(ngModel)]="employee.nombre"
+                                            (ngModelChange)="validateField(employee, 'nombre')">
+                                        <small *ngIf="employee.errors?.nombre" class="error-message">
+                                            {{ employee.errors.nombre }}
+                                        </small>
+                                    </div>
+                                </td>
+
+                                <!-- Fecha Registro -->
+                                <td class="text-center fecha-registro">
+                                    {{ employee.created_at || '-' }}
+                                </td>
+
+                                <!-- Cargo -->
+                                <td class="text-center">
+                                    <div *ngIf="!employee.editing" class="cargo-badge">
+                                        {{ employee.cargoNombre }}
+                                    </div>
+                                    <select *ngIf="employee.editing" class="form-select-moderno editing-select"
+                                        [ngModel]="employee.cargoId" (ngModelChange)="onCargoChange(employee, $event)">
+                                        <option *ngFor="let pos of positions" [value]="pos.id">{{ pos.nombre }}</option>
+                                    </select>
+                                </td>
+
+                                <!-- Rol -->
+                                <td class="text-center">
+                                    <div *ngIf="!employee.editing">
+                                        <span class="rol-badge" [ngClass]="badgeClass(employee.rolNombre)">
+                                            {{ employee.rolNombre }}
+                                        </span>
+                                    </div>
+                                    <select *ngIf="employee.editing" class="form-select-moderno editing-select"
+                                        [ngModel]="employee.rolId" (ngModelChange)="onRolChange(employee, $event)">
+                                        <option *ngFor="let rol of roles" [value]="rol.id">{{ rol.nombre }}</option>
+                                    </select>
+                                </td>
+
+                                <!-- Estatus -->
+                                <td class="text-center">
+                                    <div class="estatus-container">
+                                        <label class="modern-switch small" [class.loading]="employee.loading">
+                                            <input type="checkbox" [(ngModel)]="employee.estatus"
+                                                (ngModelChange)="toggleStatus(employee)" [disabled]="employee.loading">
+                                            <span class="switch-slider"></span>
+                                        </label>
+                                        <span class="estatus-label" [ngClass]="{'inactive': !employee.estatus}">
+                                            {{ employee.estatus ? 'Activo' : 'Inactivo' }}
+                                            <span *ngIf="employee.loading" class="loading-spinner-small"></span>
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <!-- Acciones -->
+                                <td class="text-center acciones">
+                                    <div class="btn-group-acciones">
+                                        <button class="btn btn-accion btn-ver" (click)="openViewModal(employee)"
+                                            title="Ver detalles">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+
+                                        <button *ngIf="!employee.editing" class="btn btn-accion btn-editar"
+                                            (click)="toggleEdit(i)" title="Editar" [disabled]="!employee.estatus">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+
+                                        <button *ngIf="employee.editing" class="btn btn-accion btn-guardar"
+                                            (click)="updateEmployee(i)" title="Guardar"
+                                            [disabled]="!employee.modified || employee.hasErrors">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+
+                                        <button *ngIf="employee.editing" class="btn btn-accion btn-cancelar"
+                                            (click)="cancelEdit(i)" title="Cancelar">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+
+                                        <button *ngIf="!employee.editing" class="btn btn-accion btn-eliminar"
+                                            (click)="deleteEmployee(i)" title="Eliminar" [disabled]="employee.estatus">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Estado vacío -->
+                            <tr *ngIf="filteredEmployees.length === 0 && !isLoading">
+                                <td colspan="7" class="estado-vacio">
+                                    <div class="empty-state">
+                                        <i class="bi bi-person-x"></i>
+                                        <h4>No se encontraron empleados</h4>
+                                        <p>No hay empleados que coincidan con los filtros aplicados.</p>
+                                        <button class="btn btn-agregar-vacio" (click)="openDynamicModal()">
+                                            <i class="bi bi-person-plus"></i>
+                                            Agregar primer empleado
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para detalles del empleado -->
+<div class="modal fade" id="userDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-moderna">
+            <!-- Header moderno -->
+            <div class="modal-header-moderno">
+                <div class="modal-header-content">
+                    <div class="modal-icon">
+                        <i class="bi bi-person-lines-fill"></i>
+                    </div>
+                    <div class="modal-title-content">
+                        <h5 class="modal-title">Detalles del Empleado</h5>
+                        <p class="modal-subtitle">Información completa del empleado</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-moderno" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Body moderno -->
+            <div class="modal-body-moderno">
+                <div class="empleado-profile">
+                    <!-- Header del perfil -->
+                    <div class="profile-header">
+                        <div class="profile-avatar">
+                            <img [src]="getProfileImage()" alt="Avatar del Empleado" class="avatar-img"
+                                (error)="handleImageError($event)">
+                        </div>
+                        <div class="profile-info">
+                            <h3 class="profile-name">{{ selectedEmployee?.nombre ?? '---' }}</h3>
+                            <div class="profile-meta">
+                                <span class="cargo-badge-modal">{{ selectedEmployee?.cargoNombre ?? '---' }}</span>
+                                <span class="cedula-badge-modal">{{ selectedEmployee?.cedula ?? '---' }}</span>
+                                <span class="estatus-badge-modal"
+                                    [ngClass]="{'active': selectedEmployee?.estatus, 'inactive': !selectedEmployee?.estatus}">
+                                    <i class="bi"
+                                        [ngClass]="selectedEmployee?.estatus ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
+                                    {{ selectedEmployee?.estatus ? 'Activo' : 'Inactivo' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección: Información Personal -->
+                    <div class="info-section">
+                        <div class="section-header">
+                            <div class="section-icon">
+                                <i class="bi bi-person-vcard"></i>
+                            </div>
+                            <h6 class="section-title">Información Personal</h6>
+                        </div>
+
+                        <div class="section-content">
+                            <div class="info-grid">
+                                <div class="info-column">
+                                    <div class="info-item">
+                                        <div class="info-label">
+                                            <i class="bi bi-card-text"></i>
+                                            Cédula
+                                        </div>
+                                        <div class="info-value">{{ selectedEmployee?.cedula ?? '---' }}</div>
+                                    </div>
+                                    <div class="info-item">
+                                        <div class="info-label">
+                                            <i class="bi bi-person-badge"></i>
+                                            Nombre Completo
+                                        </div>
+                                        <div class="info-value">{{ selectedEmployee?.nombre ?? '---' }}</div>
+                                    </div>
+                                </div>
+                                <div class="info-column">
+                                    <div class="info-item">
+                                        <div class="info-label">
+                                            <i class="bi bi-envelope"></i>
+                                            Email
+                                        </div>
+                                        <div class="info-value">{{ selectedEmployee?.email ?? '---' }}</div>
+                                    </div>
+                                    <div class="info-item">
+                                        <div class="info-label">
+                                            <i class="bi bi-telephone"></i>
+                                            Teléfono
+                                        </div>
+                                        <div class="info-value">{{ selectedEmployee?.telefono ?? '---' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección: Información Laboral -->
+                    <div class="info-section">
+                        <div class="section-header">
+                            <div class="section-icon">
+                                <i class="bi bi-briefcase"></i>
+                            </div>
+                            <h6 class="section-title">Información Laboral</h6>
+                        </div>
+
+                        <div class="section-content">
+                            <div class="info-grid">
+                                <div class="info-column">
+                                    <div class="info-item">
+                                        <div class="info-label">
+                                            <i class="bi bi-building"></i>
+                                            Cargo
+                                        </div>
+                                        <div class="info-value">{{ selectedEmployee?.cargoNombre ?? '---' }}</div>
+                                    </div>
+                                    <div class="info-item">
+                                        <div class="info-label">
+                                            <i class="bi bi-person-gear"></i>
+                                            Rol en Sistema
+                                        </div>
+                                        <div class="info-value">{{ selectedEmployee?.rolNombre ?? '---' }}</div>
+                                    </div>
+                                </div>
+                                <div class="info-column">
+                                    <div class="info-item">
+                                        <div class="info-label">
+                                            <i class="bi bi-calendar-check"></i>
+                                            Fecha de Registro
+                                        </div>
+                                        <div class="info-value">{{ selectedEmployee?.created_at ?? '---' }}</div>
+                                    </div>
+                                    <div class="info-item">
+                                        <div class="info-label">
+                                            <i class="bi bi-circle-fill"></i>
+                                            Estatus
+                                        </div>
+                                        <div class="info-value">
+                                            <span class="estatus-badge"
+                                                [ngClass]="{'active': selectedEmployee?.estatus, 'inactive': !selectedEmployee?.estatus}">
+                                                {{ selectedEmployee?.estatus ? 'Activo' : 'Inactivo' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer moderno -->
+            <div class="modal-footer-moderno">
+                <button type="button" class="btn btn-secondary-moderno" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal para agregar empleado -->
+<div class="modal fade" id="agregarEmpleadoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content modal-moderna">
+      <!-- Header moderno -->
+      <div class="modal-header-moderno">
+        <div class="modal-header-content">
+          <div class="modal-icon">
+            <i class="bi bi-person-plus"></i>
+          </div>
+          <div class="modal-title-content">
+            <h5 class="modal-title">Agregar Nuevo Empleado</h5>
+            <p class="modal-subtitle">Complete la información del empleado</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-moderno" data-bs-dismiss="modal" aria-label="Close" (click)="cerrarModalAgregar()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <!-- Body moderno -->
+      <div class="modal-body-moderno">
+        <form [formGroup]="empleadoForm" class="form-moderno" (ngSubmit)="onSubmitEmpleado()">
+
+          <!-- Sección: Información Personal -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-person-vcard"></i>
+              </div>
+              <h6 class="section-title">Información Personal</h6>
+            </div>
+
+            <div class="section-content">
+              <div class="row g-3">
+                <!-- Fila 1: Información básica -->
+                <div class="col-md-8">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-person me-2"></i>
+                      Nombre Completo <span class="required">*</span>
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="nombre"
+                      placeholder="Ej: María Fernanda López" maxlength="100">
+                    <div class="form-error" *ngIf="showError('nombre')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('nombre') }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-card-text me-2"></i>
+                      Cédula <span class="required">*</span>
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="cedula" 
+                      placeholder="Ej: 12345678" maxlength="9">
+                    <div class="form-error" *ngIf="showError('cedula')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('cedula') }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Fila 2: Contacto -->
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-envelope me-2"></i>
+                      Correo Electrónico <span class="required">*</span>
+                    </label>
+                    <input type="email" class="form-control-moderno" formControlName="email"
+                      placeholder="Ej: empleado&#64;empresa.com" maxlength="100">
+                    <div class="form-error" *ngIf="showError('email')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('email') }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-telephone me-2"></i>
+                      Teléfono
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="telefono"
+                      placeholder="Ej: 04121234567" maxlength="13">
+                    <div class="form-error" *ngIf="showError('telefono')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('telefono') }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección: Información Laboral -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-briefcase"></i>
+              </div>
+              <h6 class="section-title">Información Laboral</h6>
+            </div>
+
+            <div class="section-content">
+              <div class="row g-3">
+                <!-- Fila 1: Cargo y Rol -->
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-person-badge me-2"></i>
+                      Cargo <span class="required">*</span>
+                    </label>
+                    <select class="form-control-moderno" formControlName="cargoId">
+                      <option value="">Seleccionar cargo</option>
+                      <option *ngFor="let pos of positions" [value]="pos.id">{{ pos.nombre }}</option>
+                    </select>
+                    <div class="form-error" *ngIf="showError('cargoId')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('cargoId') }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-person-gear me-2"></i>
+                      Rol en Sistema <span class="required">*</span>
+                    </label>
+                    <select class="form-control-moderno" formControlName="rolId">
+                      <option value="">Seleccionar rol</option>
+                      <option *ngFor="let rol of roles" [value]="rol.id">{{ rol.nombre }}</option>
+                    </select>
+                    <div class="form-error" *ngIf="showError('rolId')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('rolId') }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Indicador de progreso -->
+          <div class="form-progress" *ngIf="getFormProgress() > 0">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="getFormProgress()"></div>
+            </div>
+            <div class="progress-text">
+              <span>{{ getFormProgress() }}% completado</span>
+              <span>{{ getCompletedFields() }}/{{ getTotalFields() }} campos</span>
+            </div>
+          </div>
+
+          <!-- Alertas de estado -->
+          <div class="alert-moderno alert-warning" *ngIf="empleadoForm.invalid && empleadoForm.touched">
+            <i class="bi bi-exclamation-triangle"></i>
+            <div class="alert-content">
+              <strong>Formulario incompleto</strong>
+              <span>Complete todos los campos obligatorios marcados con <span class="required">*</span></span>
+            </div>
+          </div>
+
+          <div class="alert-moderno alert-info" *ngIf="isLoadingForm">
+            <i class="bi bi-arrow-repeat spinner-icon"></i>
+            <div class="alert-content">
+              <strong>Guardando empleado</strong>
+              <span>Estamos procesando la información...</span>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Footer moderno -->
+      <div class="modal-footer-moderno">
+        <button type="button" class="btn btn-secondary-moderno" data-bs-dismiss="modal" (click)="cerrarModalAgregar()">
+          <i class="bi bi-x-circle me-2"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary-moderno"
+          [disabled]="isLoadingForm || empleadoForm.invalid" 
+          (click)="onSubmitEmpleado()">
+          <i class="bi bi-check-circle me-2"></i>
+          {{ isLoadingForm ? 'Guardando...' : 'Guardar Empleado' }}
+          <span *ngIf="isLoadingForm" class="spinner-border spinner-border-sm ms-2"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

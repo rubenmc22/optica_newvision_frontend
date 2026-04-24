@@ -1,0 +1,27 @@
+<!-- detalle-orden.component.html -->
+<div class="detalle-orden-container">
+    <div class="detalle-header">
+        <h3>Detalles de la Orden</h3>
+        <span class="badge" [ngClass]="'badge-' + orden.estado">
+            {{ getEstadoTexto(orden.estado) }}
+        </span>
+    </div>
+
+    <div class="detalle-content">
+        <div class="info-section">
+            <h4><i class="bi bi-person"></i> Información del Cliente</h4>
+            <p><strong>Nombre:</strong> {{ orden.clienteNombre }}</p>
+            <p><strong>Teléfono:</strong> {{ orden.clienteTelefono }}</p>
+            <p><strong>Venta relacionada:</strong> {{ orden.ventaId }}</p>
+        </div>
+
+        <div class="info-section">
+            <h4><i class="bi bi-eyeglasses"></i> Producto</h4>
+            <p><strong>Producto:</strong> {{ orden.productoNombre }}</p>
+            <p><strong>Prioridad:</strong> {{ orden.prioridad }}</p>
+            <p><strong>Fecha estimada:</strong> {{ orden.fechaEntregaEstimada | date:'fullDate' }}</p>
+        </div>
+
+        <!-- Más detalles según sea necesario -->
+    </div>
+</div>

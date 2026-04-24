@@ -1,0 +1,3261 @@
+// [version nueva con metodos de pago]
+//crear venta - solo productos 
+
+{
+    "tipoVenta": "solo_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 55.67,
+    "descuento": 10,
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 55.67,
+            "moneda": "dolar"
+        }
+    ],
+    "cliente": {
+
+        "tipoCliente": "cliente_general",
+        "tipoPersona": "natural",
+        "nombre": "Ruben dario Martinez castro",
+
+        "cedula": "24367965",
+        "telefono": "04123920817",
+        "email": "rubemm@gmail.com"
+    },
+    "especialista": null,
+    "ordenTrabajo": false,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T17:11:32.398Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 55.67184,
+        "totalPagado": 55.67
+    },
+    "productos": [
+        {
+            "id": "17",
+            "nombre": "Lentes de prueba",
+            "codigo": "PR-000017",
+            "precio": 31.86,
+            "precioConIva": 31.86,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": false,
+            "stock": 26,
+            "tipo": "PRODUCTO",
+            "descripcion": "Test"
+        },
+        {
+            "id": "28",
+            "nombre": "Montura",
+            "codigo": "PR-000028",
+            "precio": 25.86,
+            "precioConIva": 30,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 10,
+            "tipo": "PRODUCTO",
+            "descripcion": "Montura premium de marca Palazzo"
+        }
+    ]
+}
+// [version nueva con metodos de pago]
+//crear venta - solo consulta 
+{
+    "tipoCliente": "cliente_paciente",
+    "moneda": "dolar",
+    "formaPago": "contado",
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 60,
+            "moneda": "dolar"
+        }
+    ],
+    "descuento": 0,
+    "sede": "guatire",
+    "total": 60,
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 60,
+        "totalPagado": 60
+    },
+    "tipoVenta": "solo_consulta",
+    "ordenTrabajo": false,
+    "cliente": {
+        "id": 31,
+        "tipoPersona": "natural",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T15:46:49.239Z"
+    },
+    "productos": [],
+    "consulta": {
+        "historiaId": 67,
+        "montoTotal": 60,
+        "pagoMedico": 40,
+        "pagoOptica": 20,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "solo_consulta",
+        "montoOriginal": 60
+    }
+}
+// [version nueva con metodos de pago]
+//crear venta - consulta + productos
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 71.86,
+    "descuento": 0,
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 10,
+            "moneda": "dolar"
+        },
+        {
+            "tipo": "punto",
+            "monto": 15000,
+            "cuentaReceptora": {
+                "bancoCodigo": "0108",
+                "bancoNombre": "Banco Provincial",
+                "descripcionCuenta": "Cuenta jurídica tienda"
+            },
+            "moneda": "bolivar"
+        },
+        {
+            "tipo": "pagomovil",
+            "monto": 10000,
+            "referencia": "12121212",
+            "cuentaEmisora": {
+                "bancoCodigo": "0102",
+                "bancoNombre": "Banco de Venezuela"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0108",
+                "bancoNombre": "Banco Provincial",
+                "titular": "Ender Rojas",
+                "cedulaRif": "V-19876543",
+                "telefono": "04125554444",
+                "descripcionCuenta": "Cuenta personal Ender"
+            },
+            "moneda": "bolivar"
+        },
+        {
+            "tipo": "transferencia",
+            "monto": 2639.34,
+            "referencia": "12121212",
+            "cuentaEmisora": {
+                "bancoCodigo": "0102",
+                "bancoNombre": "Banco de Venezuela"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0134",
+                "bancoNombre": "Banesco",
+                "titular": "Optica New Vision C.A.",
+                "cedulaRif": "J-12345678-9",
+                "telefono": "04126667777",
+                "descripcionCuenta": "Cuenta jurídica tienda"
+            },
+            "moneda": "bolivar"
+        }
+    ],
+    "cliente": {
+        "id": 31,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "ordenTrabajo": true,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T18:12:29.645Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 71.86,
+        "totalPagado": 71.86
+    },
+    "productos": [
+        {
+            "id": "17",
+            "nombre": "Lentes de prueba",
+            "codigo": "PR-000017",
+            "precio": 31.86,
+            "precioConIva": 31.86,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": false,
+            "stock": 26,
+            "tipo": "PRODUCTO",
+            "descripcion": "Test"
+        }
+    ],
+    "consulta": {
+        "historiaId": 67,
+        "montoTotal": 40,
+        "pagoMedico": 40,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 60
+    }
+}
+// [version nueva con metodos de pago]
+//Crear venta - de contado
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 1155.18,
+    "descuento": 0,
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 1155.18,
+            "moneda": "dolar"
+        }
+    ],
+    "cliente": {
+        "id": 31,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "ordenTrabajo": true,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T17:03:00.564Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 1155.1776,
+        "totalPagado": 1155.18
+    },
+    "productos": [
+        {
+            "id": "27",
+            "nombre": "Iphone",
+            "codigo": "PR-000027",
+            "precio": 961.36,
+            "precioConIva": 1115.18,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 29,
+            "tipo": "PRODUCTO",
+            "descripcion": ""
+        }
+    ],
+    "consulta": {
+        "historiaId": 67,
+        "montoTotal": 40,
+        "pagoMedico": 40,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 60
+    }
+}
+// [version nueva con metodos de pago]
+//Crear venta - cashea
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 1043.66,
+    "descuento": 10,
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 626.19,
+            "moneda": "dolar"
+        }
+    ],
+    "cliente": {
+        "id": 31,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "ordenTrabajo": true,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T17:05:14.931Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "cashea",
+        "nivel": "nivel3",
+        "montoTotal": 1043.65984,
+        "montoInicial": 417.46,
+        "cantidadCuotas": "3",
+        "montoPorCuota": 208.73,
+        "cuotasAdelantadas": 1,
+        "montoAdelantado": 208.73,
+        "totalPagadoAhora": 626.19,
+        "deudaPendiente": 528.99,
+        "cuotas": [
+            {
+                "numero": 1,
+                "fecha": "dom, 29 de marzo de 2026",
+                "monto": 208.73,
+                "pagada": true,
+                "seleccionada": true
+            },
+            {
+                "numero": 2,
+                "fecha": "dom, 12 de abril de 2026",
+                "monto": 208.73,
+                "pagada": false,
+                "seleccionada": false
+            },
+            {
+                "numero": 3,
+                "fecha": "dom, 26 de abril de 2026",
+                "monto": 208.73,
+                "pagada": false,
+                "seleccionada": false
+            }
+        ]
+    },
+    "productos": [
+        {
+            "id": "27",
+            "nombre": "Iphone",
+            "codigo": "PR-000027",
+            "precio": 961.36,
+            "precioConIva": 1115.18,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 29,
+            "tipo": "PRODUCTO",
+            "descripcion": ""
+        }
+    ],
+    "consulta": {
+        "historiaId": 67,
+        "montoTotal": 40,
+        "pagoMedico": 40,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 60
+    }
+}
+// [version nueva con metodos de pago]
+//Crear venta - abono
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 1043.66,
+    "descuento": 10,
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 500,
+            "moneda": "dolar"
+        }
+    ],
+    "cliente": {
+        "id": 31,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "ordenTrabajo": false,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T17:07:12.870Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "abono",
+        "montoAbonado": 500,
+        "deudaPendiente": 543.66,
+        "porcentajePagado": 47.91
+    },
+    "productos": [
+        {
+            "id": "27",
+            "nombre": "Iphone",
+            "codigo": "PR-000027",
+            "precio": 961.36,
+            "precioConIva": 1115.18,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 29,
+            "tipo": "PRODUCTO",
+            "descripcion": ""
+        }
+    ],
+    "consulta": {
+        "historiaId": 67,
+        "montoTotal": 40,
+        "pagoMedico": 40,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 60
+    }
+}
+// [version nueva con metodos de pago]
+//Crear venta - de contado pendiente por pago
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 1043.66,
+    "descuento": 10,
+    "impuesto": 16,
+    "metodosDePago": [],
+    "cliente": {
+        "id": 31,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "ordenTrabajo": false,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T17:08:13.809Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "de_contado-pendiente",
+        "montoTotal": 1043.65984,
+        "deudaPendiente": 1043.65984
+    },
+    "productos": [
+        {
+            "id": "27",
+            "nombre": "Iphone",
+            "codigo": "PR-000027",
+            "precio": 961.36,
+            "precioConIva": 1115.18,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 29,
+            "tipo": "PRODUCTO",
+            "descripcion": ""
+        }
+    ],
+    "consulta": {
+        "historiaId": 67,
+        "montoTotal": 40,
+        "pagoMedico": 40,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 60
+    }
+}
+
+
+//PENDIENTES
+- Ajustar el api de "crear venta" de acuerdo al tipo de venta
+- Los montos que se envian sobre las consultas, deben guardarse/actualizarse al generar la venta
+- El historial de venta debe retornar lo mismo que al crear la venta, es decir, el monto de la consulta y con la tasa del moment para poder calcular el monto pagado en bs
+- Quitar de las apis de "pacientes" patologiaOcular, solo dejar patologias
+- Historias medicas: documentar CRUD nuevo con recomendaciones.seleccionProductos.categorias y revisar que update persista tambien formulaExterna/pagoPendiente si se requiere simetria completa con add
+// #region HISTORIAS_MEDICAS_CRUD_NUEVO
+{
+    "modulo": "historias_medicas",
+    "baseObservaciones": [
+        "Todos los endpoints requieren autenticacion.",
+        "El backend ya persiste recomendaciones como JSON completo, por lo que acepta la nueva estructura seleccionProductos.categorias sin migracion adicional de columnas.",
+        "Las rutas usan nHistoria en update/delete/get por id. Ejemplo: H-20260422-001.",
+        "GET historial-medico-all y GET historial-medico-paciente retornan recomendaciones tal como se guardaron.",
+        "La forma canonica nueva mantiene solo seleccionProductos.categorias como fuente persistida de detalle para las recomendaciones.",
+        "El producto clinico recomendado debe incluir dentro de su propio objeto el tipo clinico (por ejemplo tipoCristal o tipoLenteContacto) y, cuando aplique, las medidas requeridas.",
+        "En frontend las medidas siguen siendo obligatorias para tipos PROGRESIVO_* y MONOFOCAL_DIGITAL, pero ahora deben viajar dentro del producto de cristal que las necesita.",
+        "Los campos recomendacion.cristal, recomendacion.montura, recomendacion.tipoLentesContacto y medida* quedan solo como compatibilidad legacy de lectura mientras existan historias antiguas.",
+        "Los campos seleccionProductos.cristal y seleccionProductos.montura tambien quedan como fallback legacy de lectura; los nuevos guardados no deberian persistirlos.",
+        "Detalle a vigilar en backend: el update actual no reasigna formulaExterna ni pagoPendiente antes de guardar."
+    ],
+    "endpoints": [
+        {
+            "nombre": "Obtener todas las historias medicas o una historia por numero",
+            "method": "GET",
+            "url": "/historial-medico-all/:id?",
+            "params": {
+                "id": "H-20260422-001"
+            },
+            "request": null,
+            "response200": {
+                "message": "ok",
+                "historiales_medicos": [
+                    {
+                        "id": 91,
+                        "nHistoria": "H-20260422-001",
+                        "pacienteId": "28acbaf873ad2772e216895c44281940",
+                        "ventaKey": null,
+                        "pagoPendiente": false,
+                        "sedeId": "guatire",
+                        "datosConsulta": {
+                            "motivo": [
+                                "Fatiga visual"
+                            ],
+                            "otroMotivo": "",
+                            "tipoCristalActual": "MONOFOCAL_DIGITAL",
+                            "tipoLentesContacto": "",
+                            "fechaUltimaGraduacion": null,
+                            "especialista": {
+                                "tipo": "OPTOMETRISTA",
+                                "cedula": "10092901",
+                                "nombre": "Nombre especialista",
+                                "cargo": "Optometrista",
+                                "externo": {
+                                    "nombre": null,
+                                    "lugarConsultorio": null
+                                }
+                            },
+                            "formulaOriginal": {
+                                "medicoOrigen": {
+                                    "tipo": null,
+                                    "nombre": null,
+                                    "lugarConsultorio": null
+                                }
+                            },
+                            "formulaExterna": false
+                        },
+                        "examenOcular": {
+                            "lensometria": {},
+                            "refraccion": {},
+                            "refraccionFinal": {},
+                            "avsc_avae_otros": {}
+                        },
+                        "diagnosticoTratamiento": {
+                            "diagnostico": "Presbicia",
+                            "tratamiento": "Uso de lente formulado"
+                        },
+                        "recomendaciones": [
+                            {
+                                "observaciones": "Entrega segun disponibilidad",
+                                "seleccionProductos": {
+                                    "categorias": [
+                                        {
+                                            "categoria": "cristales",
+                                            "producto": {
+                                                "id": "28",
+                                                "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+                                                "codigo": "PR-000028",
+                                                "categoria": "Cristales",
+                                                "tipoCristal": "MONOFOCAL_DIGITAL",
+                                                "material": "Policarbonato",
+                                                "medidas": {
+                                                    "horizontal": "5.2",
+                                                    "vertical": "4.8",
+                                                    "diagonal": "7.1",
+                                                    "puente": "1.8"
+                                                },
+                                                "stock": 10,
+                                                "precio": 25.86,
+                                                "precioConIva": 30,
+                                                "descripcion": "Cristal monofocal vision sencilla en material policarbonato, con blue block."
+                                            }
+                                        },
+                                        {
+                                            "categoria": "monturas",
+                                            "producto": {
+                                                "id": "31",
+                                                "nombre": "Montura TR90 Negra",
+                                                "codigo": "PR-000031",
+                                                "categoria": "Monturas",
+                                                "stock": 4,
+                                                "precio": 18,
+                                                "precioConIva": 20.88,
+                                                "descripcion": "Montura TR90 ligera color negro."
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ],
+                        "conformidad": {
+                            "notaConformidad": "Paciente conforme con la informacion suministrada."
+                        },
+                        "auditoria": {
+                            "fechaCreacion": "2026-04-22T14:10:00.000Z",
+                            "fechaActualizacion": "2026-04-22T14:10:00.000Z",
+                            "creadoPor": {
+                                "cedula": "10092901",
+                                "nombre": "Usuario creador",
+                                "cargo": "Optometrista"
+                            },
+                            "actualizadoPor": {
+                                "cedula": "10092901",
+                                "nombre": "Usuario creador",
+                                "cargo": "Optometrista"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "nombre": "Obtener historias medicas de un paciente",
+            "method": "GET",
+            "url": "/historial-medico-paciente/:paciente_id",
+            "params": {
+                "paciente_id": "28acbaf873ad2772e216895c44281940"
+            },
+            "request": null,
+            "response200": {
+                "message": "ok",
+                "historiales_medicos": [
+                    {
+                        "id": 91,
+                        "nHistoria": "H-20260422-001",
+                        "pacienteId": "28acbaf873ad2772e216895c44281940",
+                        "ventaKey": null,
+                        "datosConsulta": {
+                            "pagoPendiente": false,
+                            "motivo": [
+                                "Fatiga visual"
+                            ],
+                            "tipoCristalActual": "MONOFOCAL_DIGITAL",
+                            "tipoLentesContacto": "",
+                            "formulaExterna": false
+                        },
+                        "recomendaciones": [
+                            {
+                                "observaciones": "Entrega segun disponibilidad",
+                                "seleccionProductos": {
+                                    "categorias": [
+                                        {
+                                            "categoria": "cristales",
+                                            "producto": {
+                                                "id": "28",
+                                                "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+                                                "codigo": "PR-000028",
+                                                "categoria": "Cristales",
+                                                "tipoCristal": "MONOFOCAL_DIGITAL",
+                                                "medidas": {
+                                                    "horizontal": "5.2",
+                                                    "vertical": "4.8",
+                                                    "diagonal": "7.1",
+                                                    "puente": "1.8"
+                                                },
+                                                "stock": 10
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "nombre": "Crear historia medica con productos recomendados por categoria",
+            "method": "POST",
+            "url": "/historial-medico-add/",
+            "params": null,
+            "request": {
+                "pacienteId": "28acbaf873ad2772e216895c44281940",
+                "datosConsulta": {
+                    "motivo": [
+                        "Fatiga visual"
+                    ],
+                    "otroMotivo": "",
+                    "tipoCristalActual": "MONOFOCAL_DIGITAL",
+                    "tipoLentesContacto": "",
+                    "fechaUltimaGraduacion": null,
+                    "especialista": {
+                        "tipo": "OPTOMETRISTA",
+                        "cedula": "10092901"
+                    },
+                    "formulaOriginal": null,
+                    "formulaExterna": false,
+                    "pagoPendiente": false
+                },
+                "examenOcular": {
+                    "lensometria": {},
+                    "refraccion": {},
+                    "refraccionFinal": {
+                        "esf_od": "+0.50",
+                        "cil_od": "-0.50",
+                        "eje_od": 3,
+                        "add_od": "+1.25",
+                        "alt_od": "2",
+                        "dp_od": "2",
+                        "esf_oi": "+0.50",
+                        "cil_oi": "-0.50",
+                        "eje_oi": 3,
+                        "add_oi": "+1.25",
+                        "alt_oi": "2",
+                        "dp_oi": "2"
+                    },
+                    "avsc_avae_otros": {}
+                },
+                "diagnosticoTratamiento": {
+                    "diagnostico": "Presbicia",
+                    "tratamiento": "Uso de lente formulado"
+                },
+                "recomendaciones": [
+                    {
+                        "observaciones": "Entrega segun disponibilidad",
+                        "seleccionProductos": {
+                            "categorias": [
+                                {
+                                    "categoria": "cristales",
+                                    "producto": {
+                                        "id": "28",
+                                        "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+                                        "codigo": "PR-000028",
+                                        "categoria": "Cristales",
+                                        "tipoCristal": "MONOFOCAL_DIGITAL",
+                                        "material": "Policarbonato",
+                                        "medidas": {
+                                            "horizontal": "5.2",
+                                            "vertical": "4.8",
+                                            "diagonal": "7.1",
+                                            "puente": "1.8"
+                                        },
+                                        "stock": 10,
+                                        "precio": 25.86,
+                                        "precioConIva": 30,
+                                        "descripcion": "Cristal monofocal vision sencilla en material policarbonato, con blue block."
+                                    }
+                                },
+                                {
+                                    "categoria": "monturas",
+                                    "producto": {
+                                        "id": "31",
+                                        "nombre": "Montura TR90 Negra",
+                                        "codigo": "PR-000031",
+                                        "categoria": "Monturas",
+                                        "stock": 4,
+                                        "precio": 18,
+                                        "precioConIva": 20.88,
+                                        "descripcion": "Montura TR90 ligera color negro."
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "conformidad": {
+                    "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION REALIZADA POR EL ASESOR."
+                }
+            },
+            "response200": {
+                "message": "ok",
+                "historial_medico": {
+                    "id": 91,
+                    "nHistoria": "H-20260422-001",
+                    "pacienteId": "28acbaf873ad2772e216895c44281940",
+                    "ventaKey": null,
+                    "datosConsulta": {
+                        "pagoPendiente": false,
+                        "motivo": [
+                            "Fatiga visual"
+                        ],
+                        "otroMotivo": "",
+                        "tipoCristalActual": "MONOFOCAL_DIGITAL",
+                        "tipoLentesContacto": "",
+                        "fechaUltimaGraduacion": null,
+                        "formulaExterna": false
+                    },
+                    "recomendaciones": [
+                        {
+                            "seleccionProductos": {
+                                "categorias": [
+                                    {
+                                        "categoria": "cristales",
+                                        "producto": {
+                                            "id": "28",
+                                            "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+                                            "codigo": "PR-000028",
+                                            "categoria": "Cristales",
+                                            "tipoCristal": "MONOFOCAL_DIGITAL",
+                                            "medidas": {
+                                                "horizontal": "5.2",
+                                                "vertical": "4.8",
+                                                "diagonal": "7.1",
+                                                "puente": "1.8"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "nombre": "Actualizar historia medica por numero",
+            "method": "PUT",
+            "url": "/historial-medico-update/:id?",
+            "params": {
+                "id": "H-20260422-001"
+            },
+            "request": "Misma estructura que POST /historial-medico-add/",
+            "response200": {
+                "message": "ok",
+                "historial_medico": {
+                    "id": 91,
+                    "nHistoria": "H-20260422-001",
+                    "recomendaciones": [
+                        {
+                            "observaciones": "Entrega urgente",
+                            "seleccionProductos": {
+                                "categorias": [
+                                    {
+                                        "categoria": "cristales",
+                                        "producto": {
+                                            "id": "28",
+                                            "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+                                            "codigo": "PR-000028",
+                                            "categoria": "Cristales",
+                                            "tipoCristal": "MONOFOCAL_DIGITAL",
+                                            "medidas": {
+                                                "horizontal": "5.4",
+                                                "vertical": "4.9",
+                                                "diagonal": "7.2",
+                                                "puente": "1.8"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            "observacion": "La ruta ya actualiza recomendaciones completas, pero hoy no reasigna formulaExterna ni pagoPendiente en el controlador antes del save."
+        },
+        {
+            "nombre": "Eliminar historia medica por numero",
+            "method": "DELETE",
+            "url": "/historial-medico-delete/:id?",
+            "params": {
+                "id": "H-20260422-001"
+            },
+            "request": null,
+            "response200": {
+                "message": "ok"
+            }
+        }
+    ]
+}
+// #endregion
+
+
+
+
+//tipo especialista - optometrista
+{
+    "pacienteId": "28acbaf873ad2772e216895c44281940",
+    "datosConsulta": {
+        "motivo": [
+            "Fatiga visual"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "MONOFOCAL_DIGITAL",
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": null,
+        "especialista": {
+            "tipo": "OPTOMETRISTA",
+            "cedula": "10092901"
+        },
+        "formulaOriginal": null,
+        "formulaExterna": false,
+        "pagoPendiente": false
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "2",
+            "dp_od": "2",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "test",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "tesr",
+            "observaciones": "test",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+
+//tipo especialista - oftalmologo
+{
+    "pacienteId": "28acbaf873ad2772e216895c44281940",
+    "datosConsulta": {
+        "motivo": [
+            "Molestia ocular"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "MONOFOCAL",
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": "2026-03-01",
+        "especialista": {
+            "tipo": "OFTALMOLOGO",
+            "cedula": "8759927",
+        },
+        "formulaOriginal": null,
+        "formulaExterna": false,
+        "pagoPendiente": true
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "2",
+            "dp_od": "1",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "tesr",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "test",
+            "observaciones": "test",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+
+//Tipo especialista - Medico externo
+{
+    "pacienteId": "28acbaf873ad2772e216895c44281940",
+    "datosConsulta": {
+        "motivo": [
+            "Fatiga visual"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "MONOFOCAL_DIGITAL",
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": null,
+        "especialista": {
+            "tipo": "EXTERNO",
+            "externo": {
+                "nombre": "carlos raul",
+                "lugarConsultorio": "caracas"
+            }
+        },
+        "formulaOriginal": null,
+        "formulaExterna": true,
+        "pagoPendiente": false
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "2",
+            "dp_od": "2",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "test",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "tesr",
+            "observaciones": "test",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+
+//Tipo especialista - oftalmologo | rectificacion formula externa
+{
+    "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
+    "datosConsulta": {
+        "motivo": [
+            "Consulta rutinaria"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "BIFOCAL",
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": null,
+        "especialista": {
+            "tipo": "OFTALMOLOGO",
+            "cedula": "8759927"
+        },
+        "formulaOriginal": {
+            "medicoOrigen": {
+                "tipo": "EXTERNO",
+                "nombre": "carlos raul",
+                "lugarConsultorio": "caracas"
+            }
+        },
+        "formulaExterna": true,
+        "pagoPendiente": true
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.25",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "2",
+            "dp_od": "2",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "test",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "testr",
+            "observaciones": "tsetas",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+
+//Tipo especialista - optometrista | rectificacion formula externa
+{
+    "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
+    "datosConsulta": {
+        "motivo": [
+            "Consulta rutinaria"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "BIFOCAL",
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": null,
+        "especialista": {
+            "tipo": "OPTOMETRISTA",
+            "cedula": "10092901"
+        },
+        "formulaOriginal": {
+            "medicoOrigen": {
+                "tipo": "EXTERNO",
+                "nombre": "carlos raul",
+                "lugarConsultorio": "caracas"
+            }
+        },
+        "formulaExterna": true,
+        "pagoPendiente": false
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.25",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "2",
+            "dp_od": "2",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "test",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "testr",
+            "observaciones": "tsetas",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+
+
+
+
+{
+    "message": "ok",
+    "ventas": [
+        {
+            "venta": {
+                "key": "1cc93777-f1a4-4084-9a04-309c2dbefdda",
+                "numero_venta": "V-000099",
+                "numero_recibo": "R-000099",
+                "fecha": "2026-02-20T19:27:28.000Z",
+                "estatus_venta": "completada",
+                "estatus_pago": "pendiente",
+                "formaPago": "de_contado-pendiente",
+                "moneda": "dolar",
+                "observaciones": null,
+                "impuesto": 16,
+                "motivo_cancelacion": null
+            },
+            "totales": {
+                "descuento": 68.13,
+                "subtotal": 681.26,
+                "iva": 93.51,
+                "total": 706.64,
+                "totalPagado": 0
+            },
+            "cliente": {
+                "historiaMedica": "H-20260216-005",
+                "tipo": "paciente",
+                "informacion": {
+                    "tipoPersona": "natural",
+                    "nombreCompleto": "Dario Castro",
+                    "cedula": "8759927",
+                    "telefono": "04123920817",
+                    "email": "rubemm18@gmail.com"
+                },
+                "especialista": {
+                    "id": 47,
+                    "cedula": "8759927",
+                    "nombre": "Gerardo Martinez"
+                },
+                "informacionEmpresa": {
+                    "referidoEmpresa": true,
+                    "empresaNombre": "Hebe  Shop CA",
+                    "empresaRif": "J-12345678",
+                    "empresaTelefono": "02123440533",
+                    "empresaDireccion": "Caracas, los ruices",
+                    "empresaCorreo": null
+                }
+            },
+            "asesor": {
+                "id": 5,
+                "cedula": "24367965",
+                "nombre": "Ruben Dario Martinez Castro"
+            },
+            "productos": [
+                {
+                    "cantidad": 1,
+                    "precio_unitario_sin_iva": 31.86,
+                    "tiene_iva": 0,
+                    "precio_unitario": 31.86,
+                    "total": 31.86,
+                    "datos": {
+                        "id": 17,
+                        "nombre": "Lentes de prueba",
+                        "marca": "Palazzo",
+                        "color": "Gris",
+                        "codigo": "PR-000017",
+                        "material": "Metal",
+                        "categoria": "Monturas",
+                        "modelo": "Premium"
+                    }
+                },
+                {
+                    "cantidad": 1,
+                    "precio_unitario_sin_iva": 649.4,
+                    "tiene_iva": 1,
+                    "precio_unitario": 753.3,
+                    "total": 753.3,
+                    "datos": {
+                        "id": 26,
+                        "nombre": "Laptop ",
+                        "marca": "HP",
+                        "color": null,
+                        "codigo": "PR-000026",
+                        "material": "Metal",
+                        "categoria": "Misceláneos",
+                        "modelo": "Intel"
+                    }
+                }
+            ],
+            "metodosPago": [
+                {
+                    "numero_pago": 1,
+                    "montoAbonado": 0,
+                    "metodosPago": [],
+                    "observaciones": null
+                }
+            ],
+            "formaPago": {
+                "tipo": "de_contado-pendiente",
+                "montoTotal": 706.64,
+                "cuotasAdelantadas": 0,
+                "montoAdelantado": 0,
+                "deudaPendiente": 0,
+                "nivel": null,
+                "montoInicial": 0,
+                "cantidadCuotas": 0,
+                "montoPorCuota": 0,
+                "totalPagadoAhora": 0,
+                "cuotas": []
+            },
+            "auditoria": {
+                "usuarioCreacion": {
+                    "id": 5,
+                    "cedula": "24367965",
+                    "nombre": "Ruben Dario Martinez Castro"
+                },
+                "fechaCreacion": "2026-02-20T15:27:28.000Z",
+                "fechaModificacion": "2026-02-20T15:27:28.000Z"
+            }
+        },
+    ]
+}
+
+
+
+
+// [version nueva con metodos de pago]
+// cuentaEmisora solo se envia cuando el metodo requiere banco emisor
+// cuentaReceptora solo envia campos utiles y no vacios segun la configuracion del metodo
+nuevo crear venta
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 70,
+    "descuento": 0,
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 10,
+            "moneda": "dolar"
+        },
+        {
+            "tipo": "efectivo",
+            "monto": 10,
+            "moneda": "euro"
+        },
+        {
+            "tipo": "pagomovil",
+            "monto": 10000,
+            "referencia": "1212121",
+            "cuentaEmisora": {
+                "bancoCodigo": "0102",
+                "bancoNombre": "Banco de Venezuela"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0134",
+                "bancoNombre": "Banesco",
+                "titular": "Ender Rojas",
+                "cedulaRif": "V-19876543",
+                "telefono": "04125554444",
+                "descripcionCuenta": "Cuenta personal Ender"
+            },
+            "moneda": "bolivar",
+            "notaPago": "pago a cuenta de ender"
+        },
+        {
+            "tipo": "zelle",
+            "monto": 10,
+            "referencia": "1212112",
+            "cuentaEmisora": {
+                "bancoCodigo": "BOFA",
+                "bancoNombre": "Bank of America"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "BOFAUS3N",
+                "bancoNombre": "Bank of America (BOFA)",
+                "titular": "Ruben Perez",
+                "cedulaRif": "V-12345678",
+                "telefono": "+15875551234",
+                "correo": "ruben.perez@email.com",
+                "descripcionCuenta": "Cuenta personal de Ruben (Zelle)"
+            },
+            "moneda": "dolar"
+        },
+        {
+            "tipo": "transferencia",
+            "monto": 8241.46,
+            "referencia": "45545454",
+            "cuentaEmisora": {
+                "bancoCodigo": "0102",
+                "bancoNombre": "Banco de Venezuela"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0114",
+                "bancoNombre": "Bancaribe",
+                "titular": "Rommy Perez",
+                "cedulaRif": "V-17654321",
+                "telefono": "04123332211",
+                "descripcionCuenta": "Cuenta jurídica tienda"
+            },
+            "moneda": "bolivar",
+            "notaPago": "cuenta de rommy"
+        }
+    ],
+    "cliente": {
+        "id": 25,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Dario Castro",
+        "cedula": "8759927",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Hebe  Shop CA",
+            "empresaRif": "J-12345678",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "tipo": "OFTALMOLOGO",
+        "cedula": "8759927",
+        "nombre": "Gerardo Martinez",
+        "cargo": "Oftalmólogo"
+    },
+    "ordenTrabajo": true,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-04-08T20:02:04.428Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 70,
+        "totalPagado": 70
+    },
+    "productos": [
+        {
+            "id": "17",
+            "nombre": "Lentes de prueba",
+            "codigo": "PR-000017",
+            "precio": 40,
+            "precioConIva": 40,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": false,
+            "stock": 20,
+            "tipo": "PRODUCTO",
+            "descripcion": "Test"
+        }
+    ],
+    "consulta": {
+        "historiaId": 28,
+        "montoTotal": 30,
+        "pagoMedico": 30,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 30
+    }
+}
+
+// [version nueva con metodos de pago]
+// cuentaEmisora solo se envia cuando el metodo requiere banco emisor
+// cuentaReceptora solo envia campos utiles y no vacios segun la configuracion del metodo
+nuevo realice abono
+{
+    "montoAbonado": 100,
+    "ordenTrabajo": true,
+    "metodosPago": [
+        {
+            "tipo": "pagomovil",
+            "monto": 19995.97,
+            "moneda": "bolivar",
+            "referencia": "1212121",
+            "cuentaEmisora": {
+                "bancoCodigo": "0134",
+                "bancoNombre": "Banesco"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0104",
+                "bancoNombre": "Venezolano de Crédito",
+                "titular": "Jeffe Ortega",
+                "cedulaRif": "V-14567890",
+                "telefono": "04124443322",
+                "descripcionCuenta": "Cuenta jurídica tienda"
+            },
+            "notaPago": "pago cuenta de jeffe",
+            "montoEnMonedaVenta": 42.01
+        },
+        {
+            "tipo": "efectivo",
+            "monto": 50.1,
+            "moneda": "euro",
+            "referencia": null,
+            "cuentaEmisora": null,
+            "cuentaReceptora": null,
+            "notaPago": null,
+            "montoEnMonedaVenta": 57.99
+        }
+    ],
+    "observaciones": ""
+}
+
+
+CONFIGURACION GENERAL - CORREOS DE NOTIFICACIONES
+
+//get correos de notificaciones
+//GET /configuracion/correos_notificaciones-get
+{
+    "message": "ok",
+    "correos": {
+        "habilitado": true,
+        "correoPrincipal": "notificaciones@opticanewvision.com",
+        "correoSecundario": "respaldo.notificaciones@opticanewvision.com",
+        "correoSeleccionado": "principal",
+        "ultimaActualizacion": "2026-04-11T16:20:00.000Z"
+    }
+}
+
+//guardar correos de notificaciones
+//POST /configuracion/correos_notificaciones-save
+{
+    "habilitado": true,
+    "correoPrincipal": "notificaciones@opticanewvision.com",
+    "correoSecundario": "respaldo.notificaciones@opticanewvision.com",
+    "correoSeleccionado": "principal"
+}
+
+{
+    "message": "Correos de notificación guardados correctamente",
+    "correos": {
+        "habilitado": true,
+        "correoPrincipal": "notificaciones@opticanewvision.com",
+        "correoSecundario": "respaldo.notificaciones@opticanewvision.com",
+        "correoSeleccionado": "principal",
+        "ultimaActualizacion": "2026-04-11T16:20:00.000Z"
+    }
+}
+
+//actualizar correos de notificaciones
+//PUT /configuracion/correos_notificaciones-update
+{
+    "habilitado": false,
+    "correoPrincipal": "alertas@opticanewvision.com",
+    "correoSecundario": "supervision@opticanewvision.com",
+    "correoSeleccionado": "secundario"
+}
+
+{
+    "message": "Correos de notificación actualizados correctamente",
+    "correos": {
+        "habilitado": false,
+        "correoPrincipal": "alertas@opticanewvision.com",
+        "correoSecundario": "supervision@opticanewvision.com",
+        "correoSeleccionado": "secundario",
+        "ultimaActualizacion": "2026-04-11T16:45:00.000Z"
+    }
+}
+
+
+CONFIGURACION GENERAL - METODOS DE PAGO
+//catalogo de bancos receptores
+//cada banco se administra individualmente
+//GET /configuracion/bancos_receptores-get
+{
+    "message": "Catálogo de bancos disponible",
+    "bancos": [
+        {
+            "codigo": "0102",
+            "nombre": "Banco de Venezuela",
+            "scope": "national",
+            "activo": true
+        },
+        {
+            "codigo": "0104",
+            "nombre": "Venezolano de Crédito",
+            "scope": "national",
+            "activo": true
+        },
+        {
+            "codigo": "0108",
+            "nombre": "Banco Provincial",
+            "scope": "national",
+            "activo": true
+        },
+        {
+            "codigo": "0134",
+            "nombre": "Banesco",
+            "scope": "national",
+            "activo": true
+        },
+        {
+            "codigo": "0172",
+            "nombre": "Bancamiga",
+            "scope": "national",
+            "activo": true
+        },
+        {
+            "codigo": "0191",
+            "nombre": "Banco Nacional de Crédito",
+            "scope": "national",
+            "activo": true
+        },
+        {
+            "codigo": "BOFAUS3N",
+            "nombre": "Bank of America (BOFA)",
+            "scope": "international",
+            "activo": true
+        },
+        {
+            "codigo": "CHASUS33",
+            "nombre": "JPMorgan Chase Bank",
+            "scope": "international",
+            "activo": true
+        }
+    ]
+}
+
+//guardar banco receptor
+//POST /configuracion/bancos_receptores-save
+{
+    "codigo": "CITIUS33",
+    "nombre": "Citibank N.A.",
+    "scope": "international",
+    "activo": true
+}
+
+{
+    "message": "Banco receptor guardado correctamente",
+    "banco": {
+        "codigo": "CITIUS33",
+        "nombre": "Citibank N.A.",
+        "scope": "international",
+        "activo": true
+    }
+}
+
+//actualizar banco receptor
+//PUT /configuracion/bancos_receptores-update/BOFAUS3N
+{
+    "nombre": "Bank of America (BOFA)",
+    "scope": "international",
+    "activo": false
+}
+
+{
+    "message": "Banco receptor actualizado correctamente",
+    "banco": {
+        "codigo": "BOFAUS3N",
+        "nombre": "Bank of America (BOFA)",
+        "scope": "international",
+        "activo": false
+    }
+}
+
+//get metodos de pago configurables
+//cada metodo se administra individualmente
+//las cuentas receptoras se envian anidadas dentro del metodo
+//GET /configuracion/metodos_pago_config-get
+{
+    "message": "Métodos de pago configurables obtenidos correctamente",
+    "metodos": [
+        {
+            "key": "efectivo",
+            "label": "Efectivo",
+            "description": "Pago inmediato en caja para operaciones presenciales.",
+            "enabled": true,
+            "currency": "MULTI",
+            "requiresReceiverAccount": false,
+            "isCustom": false,
+            "accounts": []
+        },
+        {
+            "key": "punto_de_venta",
+            "label": "Punto de Venta",
+            "description": "Cobro con tarjetas procesadas a través de puntos de venta físicos internos.",
+            "enabled": true,
+            "currency": "VES",
+            "requiresReceiverAccount": true,
+            "isCustom": false,
+            "accounts": [
+                {
+                    "id": "punto-1",
+                    "bank": "Bancamiga",
+                    "bankCode": "0172",
+                    "ownerName": "",
+                    "ownerId": "",
+                    "phone": "",
+                    "email": "",
+                    "walletAddress": "",
+                    "accountDescription": "Punto de venta interno - Óptica Principal"
+                }
+            ]
+        },
+        {
+            "key": "pago_movil",
+            "label": "Pago Móvil",
+            "description": "Pago móvil interbancario con selección de banco receptor.",
+            "enabled": true,
+            "currency": "VES",
+            "requiresReceiverAccount": true,
+            "isCustom": false,
+            "accounts": [
+                {
+                    "id": "pm-1",
+                    "bank": "Banco Provincial",
+                    "bankCode": "0108",
+                    "ownerName": "Ruben Martinez",
+                    "ownerId": "24367965",
+                    "phone": "04123920817",
+                    "email": "",
+                    "walletAddress": "",
+                    "accountDescription": "Cuenta personal de Ruben"
+                }
+            ]
+        },
+        {
+            "key": "zelle",
+            "label": "Zelle",
+            "description": "Transferencia electrónica en USD con destino operativo definido.",
+            "enabled": true,
+            "currency": "USD",
+            "requiresReceiverAccount": true,
+            "isCustom": false,
+            "accounts": [
+                {
+                    "id": "zelle-1",
+                    "bank": "Bank of America (BOFA)",
+                    "bankCode": "BOFAUS3N",
+                    "ownerName": "Ruben Perez",
+                    "ownerId": "V-12345678",
+                    "phone": "+15875551234",
+                    "email": "ruben.perez@email.com",
+                    "walletAddress": "",
+                    "accountDescription": "Cuenta personal de Ruben (Zelle)"
+                }
+            ]
+        }
+    ],
+    "ultimaActualizacion": "2026-04-11T18:30:00.000Z"
+}
+
+//guardar metodo de pago
+//POST /configuracion/metodos_pago_config-save
+{
+    "key": "binance",
+    "label": "Binance",
+    "description": "Recepción de pagos digitales con wallet operativa y titular configurado.",
+    "enabled": true,
+    "currency": "USDT",
+    "requiresReceiverAccount": true,
+    "isCustom": false,
+    "accounts": [
+        {
+            "id": "binance-1",
+            "bank": "",
+            "bankCode": "",
+            "ownerName": "Ruben Martinez",
+            "ownerId": "",
+            "phone": "",
+            "email": "",
+            "walletAddress": "TRX-TN8J8A2EXAMPLEWALLET001",
+            "accountDescription": "Wallet principal para cobros por Binance Pay"
+        }
+    ]
+}
+
+{
+    "message": "Método de pago guardado correctamente",
+    "metodo": {
+        "key": "binance",
+        "label": "Binance",
+        "description": "Recepción de pagos digitales con wallet operativa y titular configurado.",
+        "enabled": true,
+        "currency": "USDT",
+        "requiresReceiverAccount": true,
+        "isCustom": false,
+        "accounts": [
+            {
+                "id": "binance-1",
+                "bank": "",
+                "bankCode": "",
+                "ownerName": "Ruben Martinez",
+                "ownerId": "",
+                "phone": "",
+                "email": "",
+                "walletAddress": "TRX-TN8J8A2EXAMPLEWALLET001",
+                "accountDescription": "Wallet principal para cobros por Binance Pay"
+            }
+        ]
+    },
+    "ultimaActualizacion": "2026-04-11T18:40:00.000Z"
+}
+
+//actualizar metodo de pago
+//PUT /configuracion/metodos_pago_config-update/pago_movil
+{
+    "label": "Pago Móvil",
+    "description": "Pago móvil interbancario con selección de banco receptor.",
+    "enabled": false,
+    "currency": "VES",
+    "requiresReceiverAccount": true,
+    "isCustom": false,
+    "accounts": [
+        {
+            "id": "pm-1",
+            "bank": "Banco Provincial",
+            "bankCode": "0108",
+            "ownerName": "Ruben Martinez",
+            "ownerId": "24367965",
+            "phone": "04123920817",
+            "email": "",
+            "walletAddress": "",
+            "accountDescription": "Cuenta personal de Ruben"
+        }
+    ]
+}
+
+{
+    "message": "Método de pago actualizado correctamente",
+    "metodo": {
+        "key": "pago_movil",
+        "label": "Pago Móvil",
+        "description": "Pago móvil interbancario con selección de banco receptor.",
+        "enabled": false,
+        "currency": "VES",
+        "requiresReceiverAccount": true,
+        "isCustom": false,
+        "accounts": [
+            {
+                "id": "pm-1",
+                "bank": "Banco Provincial",
+                "bankCode": "0108",
+                "ownerName": "Ruben Martinez",
+                "ownerId": "24367965",
+                "phone": "04123920817",
+                "email": "",
+                "walletAddress": "",
+                "accountDescription": "Cuenta personal de Ruben"
+            }
+        ]
+    },
+    "ultimaActualizacion": "2026-04-11T19:05:00.000Z"
+}
+
+
+CONFIGURACION GENERAL - CIERRE DE CAJA
+
+// [version nueva cierre de caja]
+// nota funcional para backend:
+// - el frontend hoy consolida mucha informacion en memoria para operar la pantalla
+// - para backend se recomienda persistir por funcionalidad y no guardar todo el cierre como un bloque gigante
+// - las ventas del dia deben consultarse desde ventas y solo agregarse en el resumen del cierre
+// - las transacciones manuales deben tener su propia persistencia
+// - el cierre final debe guardar solo la conciliacion, el estado y los totales cerrados
+
+// resumen diario de cierre de caja
+// GET /cierre-caja/resumen?fecha=2026-04-14&sede=guatire
+{
+    "message": "ok",
+    "fecha": "2026-04-14",
+    "sede": "guatire",
+    "monedaPrincipal": "USD",
+    "tasasCambio": {
+        "dolar": 1,
+        "euro": 1.1447,
+        "bolivar": 0.00211
+    },
+    "ventas": [
+        {
+            "key": "venta-001",
+            "numero_venta": "V-000145",
+            "fecha": "2026-04-14T14:10:00.000Z",
+            "moneda": "USD",
+            "total": 140,
+            "total_pagado": 140,
+            "formaPago": "contado",
+            "tipoVenta": "solo_productos",
+            "cliente": {
+                "informacion": {
+                    "nombreCompleto": "Maria Perez",
+                    "cedula": "12345678"
+                }
+            },
+            "asesor": {
+                "nombre": "Ruben Martinez"
+            },
+            "metodosDePago": [
+                {
+                    "tipo": "punto",
+                    "monto": 66580,
+                    "moneda": "bolivar",
+                    "cuentaReceptora": {
+                        "bancoCodigo": "0172",
+                        "bancoNombre": "Bancamiga",
+                        "descripcionCuenta": "Punto principal tienda"
+                    }
+                }
+            ],
+            "formaPagoDetalle": {
+                "tipo": "contado",
+                "montoTotal": 140,
+                "totalPagado": 140,
+                "tasasActuales": [
+                    {
+                        "moneda": "dolar",
+                        "tasa": 474.06,
+                        "valor": 474.06
+                    },
+                    {
+                        "moneda": "euro",
+                        "tasa": 542.64,
+                        "valor": 542.64
+                    },
+                    {
+                        "moneda": "bolivar",
+                        "tasa": 1,
+                        "valor": 1
+                    }
+                ]
+            }
+        }
+    ],
+    "cierreExistente": {
+        "id": "CIERRE-2026-04-14-guatire",
+        "fecha": "2026-04-14T00:00:00.000Z",
+        "estado": "abierto",
+        "sede": "guatire",
+        "usuarioApertura": "Ruben Martinez",
+        "fechaApertura": "2026-04-14T08:01:00.000Z",
+        "monedaPrincipal": "USD",
+        "efectivoInicial": 365,
+        "efectivoInicialDetalle": {
+            "Bs": 1500,
+            "USD": 300,
+            "EUR": 50
+        },
+        "observaciones": "Caja abierta normalmente",
+        "totales": {
+            "ingresos": 840.52,
+            "egresos": 25,
+            "neto": 815.52,
+            "ventasContado": 620.12,
+            "ventasCredito": 120.4,
+            "ventasPendientes": 100
+        }
+    },
+    "estadisticas": {
+        "totalVentas": 840.52,
+        "cantidadVentas": 7
+    }
+}
+
+// apertura de caja
+// POST /cierre-caja/apertura
+{
+    "fecha": "2026-04-14",
+    "sede": "guatire",
+    "usuarioApertura": {
+        "id": 5,
+        "nombre": "Ruben Martinez"
+    },
+    "monedaPrincipal": "USD",
+    "tasasCambio": {
+        "dolar": 1,
+        "euro": 1.1447,
+        "bolivar": 0.00211
+    },
+    "efectivoInicial": {
+        "totalSistema": 365,
+        "detalle": {
+            "Bs": 1500,
+            "USD": 300,
+            "EUR": 50
+        }
+    },
+    "observaciones": "Caja abierta normalmente"
+}
+
+{
+    "message": "ok",
+    "cierre": {
+        "id": "CIERRE-2026-04-14-guatire",
+        "estado": "abierto",
+        "fecha": "2026-04-14T00:00:00.000Z",
+        "fechaApertura": "2026-04-14T08:01:00.000Z",
+        "sede": "guatire",
+        "usuarioApertura": "Ruben Martinez",
+        "monedaPrincipal": "USD"
+    }
+}
+
+// crear transaccion manual de caja
+// POST /cierre-caja/transacciones-manuales
+{
+    "cierreId": "CIERRE-2026-04-14-guatire",
+    "fecha": "2026-04-14T11:42:00.000Z",
+    "tipo": "egreso",
+    "descripcion": "Compra de agua para oficina",
+    "monto": 12.5,
+    "moneda": "USD",
+    "montoSistema": 12.5,
+    "metodoPago": "efectivo",
+    "categoria": "gasto_operativo",
+    "observaciones": "Compra menor de caja",
+    "comprobante": "FACT-00045",
+    "usuario": {
+        "id": 5,
+        "nombre": "Ruben Martinez"
+    },
+    "origen": "manual"
+}
+
+{
+    "message": "ok",
+    "transaccion": {
+        "id": "TRX-1713094920000",
+        "cierreId": "CIERRE-2026-04-14-guatire",
+        "fecha": "2026-04-14T11:42:00.000Z",
+        "tipo": "egreso",
+        "descripcion": "Compra de agua para oficina",
+        "monto": 12.5,
+        "moneda": "USD",
+        "montoSistema": 12.5,
+        "metodoPago": "efectivo",
+        "categoria": "gasto_operativo",
+        "estado": "confirmado"
+    }
+}
+
+// actualizar transaccion manual de caja
+// PUT /cierre-caja/transacciones-manuales/TRX-1713094920000
+{
+    "descripcion": "Compra de agua y cafe para oficina",
+    "monto": 18.75,
+    "moneda": "USD",
+    "montoSistema": 18.75,
+    "metodoPago": "efectivo",
+    "categoria": "gasto_operativo",
+    "observaciones": "Se agrego cafe para recepcion",
+    "comprobante": "FACT-00045-A"
+}
+
+{
+    "message": "ok",
+    "transaccion": {
+        "id": "TRX-1713094920000",
+        "descripcion": "Compra de agua y cafe para oficina",
+        "monto": 18.75,
+        "moneda": "USD",
+        "montoSistema": 18.75,
+        "metodoPago": "efectivo",
+        "categoria": "gasto_operativo",
+        "estado": "confirmado"
+    }
+}
+
+// cierre final de caja
+// POST /cierre-caja/cerrar
+{
+    "cierreId": "CIERRE-2026-04-14-guatire",
+    "fecha": "2026-04-14",
+    "sede": "guatire",
+    "usuarioCierre": {
+        "id": 5,
+        "nombre": "Ruben Martinez"
+    },
+    "monedaPrincipal": "USD",
+    "notasCierre": "Se detecta diferencia por voucher pendiente de conciliacion.",
+    "opciones": {
+        "imprimirResumen": true,
+        "enviarEmail": false,
+        "adjuntarComprobantes": true
+    },
+    "resumen": {
+        "ingresos": 840.52,
+        "egresos": 25,
+        "neto": 815.52,
+        "ventasContado": 620.12,
+        "ventasCredito": 120.4,
+        "ventasPendientes": 100
+    },
+    "efectivo": {
+        "inicial": {
+            "totalSistema": 365,
+            "detalle": {
+                "Bs": 1500,
+                "USD": 300,
+                "EUR": 50
+            }
+        },
+        "teoricoFinal": 905.35,
+        "realFinal": 900.35,
+        "detalleReal": {
+            "usd": 850,
+            "eur": 20,
+            "ves": 1200
+        },
+        "diferencia": -5
+    },
+    "conciliacion": {
+        "punto": [
+            {
+                "banco": "Bancamiga",
+                "bancoCodigo": "0172",
+                "destinoKey": "0172_punto_ves",
+                "destinoLabel": "Bancamiga · Punto principal tienda",
+                "montoSistema": 320,
+                "montoReal": 320,
+                "diferencia": 0,
+                "cantidadSistema": 4,
+                "cantidadReal": 0
+            }
+        ],
+        "transferencia": [
+            {
+                "banco": "Banesco",
+                "bancoCodigo": "0134",
+                "destinoKey": "0134_juridica_ves",
+                "destinoLabel": "Banesco · Cuenta juridica tienda",
+                "montoSistema": 145.12,
+                "montoReal": 145.12,
+                "diferencia": 0,
+                "cantidadSistema": 2,
+                "cantidadReal": 0
+            }
+        ],
+        "pagomovil": [
+            {
+                "banco": "Banco Provincial",
+                "bancoCodigo": "0108",
+                "destinoKey": "0108_ruben_ves",
+                "destinoLabel": "Banco Provincial · Cuenta personal de Ruben",
+                "montoSistema": 90.4,
+                "montoReal": 86.68,
+                "diferencia": -3.72,
+                "cantidadSistema": 3,
+                "cantidadReal": 0
+            }
+        ],
+        "zelle": [
+            {
+                "banco": "Bank of America (BOFA)",
+                "bancoCodigo": "BOFAUS3N",
+                "destinoKey": "bofaus3n_zelle_usd",
+                "destinoLabel": "Bank of America (BOFA) · Cuenta personal de Ruben",
+                "montoSistema": 60,
+                "montoReal": 60,
+                "diferencia": 0,
+                "cantidadSistema": 1,
+                "cantidadReal": 0
+            }
+        ]
+    },
+    "diferenciaTotal": -8.72,
+    "estadoConciliacion": "diferencia"
+}
+
+{
+    "message": "ok",
+    "cierre": {
+        "id": "CIERRE-2026-04-14-guatire",
+        "estado": "cerrado",
+        "fechaCierre": "2026-04-14T18:30:00.000Z",
+        "usuarioCierre": "Ruben Martinez",
+        "diferencia": -8.72,
+        "notasCierre": "Se detecta diferencia por voucher pendiente de conciliacion."
+    }
+}
+
+// historial de cierres
+// GET /cierre-caja/historial?fechaInicio=2026-04-01&fechaFin=2026-04-14&sede=guatire
+{
+    "message": "ok",
+    "cierres": [
+        {
+            "id": "CIERRE-2026-04-13-guatire",
+            "fecha": "2026-04-13T00:00:00.000Z",
+            "sede": "guatire",
+            "estado": "cerrado",
+            "usuarioApertura": "Ruben Martinez",
+            "usuarioCierre": "Ruben Martinez",
+            "fechaApertura": "2026-04-13T08:00:00.000Z",
+            "fechaCierre": "2026-04-13T18:15:00.000Z",
+            "monedaPrincipal": "USD",
+            "efectivoInicial": 350,
+            "ventasEfectivo": 440.5,
+            "efectivoFinalReal": 789.9,
+            "diferencia": -0.6,
+            "totales": {
+                "ingresos": 910.3,
+                "egresos": 20,
+                "neto": 890.3,
+                "ventasContado": 700.3,
+                "ventasCredito": 110,
+                "ventasPendientes": 100
+            },
+            "observaciones": "Caja abierta normalmente",
+            "notasCierre": "Pequena diferencia por redondeo bancario"
+        }
+    ]
+}
+
+// anular cierre de caja
+// POST /cierre-caja/anular/CIERRE-2026-04-13-guatire
+{
+    "motivo": "Se requiere recalcular la conciliacion de punto por voucher duplicado."
+}
+
+{
+    "message": "ok",
+    "cierre": {
+        "id": "CIERRE-2026-04-13-guatire",
+        "estado": "revisado",
+        "motivoAnulacion": "Se requiere recalcular la conciliacion de punto por voucher duplicado.",
+        "fechaRevision": "2026-04-14T09:15:00.000Z"
+    }
+}
+
+//REALICE ABONOS (nueva estructura)
+
+{
+    "montoAbonado": 50,
+    "ordenTrabajo": true,
+    "metodosPago": [
+        {
+            "tipo": "punto",
+            "monto": 11881.3,
+            "moneda": "bolivar",
+            "referencia": null,
+            "cuentaEmisora": null,
+            "cuentaReceptora": {
+                "bancoCodigo": "0172",
+                "bancoNombre": "Bancamiga",
+                "descripcionCuenta": "Punto de venta interno - Óptica Principal"
+            },
+            "notaPago": null,
+            "montoEnMonedaVenta": 24.88
+        },
+        {
+            "tipo": "pagomovil",
+            "monto": 12000,
+            "moneda": "bolivar",
+            "referencia": "212121212",
+            "cuentaEmisora": {
+                "bancoCodigo": "0108",
+                "bancoNombre": "Banco Provincial"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0108",
+                "bancoNombre": "Banco Provincial",
+                "titular": "Ruben Martinez",
+                "cedulaRif": "24367965",
+                "telefono": "04123920817",
+                "descripcionCuenta": "Cuenta personal de Ruben"
+            },
+            "notaPago": "test",
+            "montoEnMonedaVenta": 25.12
+        }
+    ],
+    "observaciones": ""
+}
+
+
+//REALICE PAGOS  (nueva estructura)
+{
+    "montoAbonado": 1055.15,
+    "ordenTrabajo": true,
+    "metodosPago": [
+        {
+            "tipo": "efectivo",
+            "monto": 291.02,
+            "moneda": "euro",
+            "referencia": null,
+            "cuentaEmisora": null,
+            "cuentaReceptora": null,
+            "notaPago": null,
+            "montoEnMonedaVenta": 340.73
+        },
+        {
+            "tipo": "punto",
+            "monto": 149999.36,
+            "moneda": "bolivar",
+            "referencia": null,
+            "cuentaEmisora": null,
+            "cuentaReceptora": {
+                "bancoCodigo": "0172",
+                "bancoNombre": "Bancamiga",
+                "descripcionCuenta": "Punto de venta interno - Óptica Principal"
+            },
+            "notaPago": null,
+            "montoEnMonedaVenta": 314.05
+        },
+        {
+            "tipo": "pagomovil",
+            "monto": 100000,
+            "moneda": "bolivar",
+            "referencia": "1212121",
+            "cuentaEmisora": {
+                "bancoCodigo": "0102",
+                "bancoNombre": "Banco de Venezuela"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0172",
+                "bancoNombre": "Bancamiga",
+                "titular": "Ender",
+                "cedulaRif": "12345678",
+                "telefono": "041245789658",
+                "descripcionCuenta": "Cuenta de ender"
+            },
+            "notaPago": "aadasdas",
+            "montoEnMonedaVenta": 209.37
+        },
+        {
+            "tipo": "zelle",
+            "monto": 191,
+            "moneda": "dolar",
+            "referencia": "43534534534",
+            "cuentaEmisora": {
+                "bancoCodigo": "CHASUS33",
+                "bancoNombre": "JPMorgan Chase Bank"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "BOFAUS3N",
+                "bancoNombre": "Bank of America (BOFA)",
+                "titular": "Ruben Perez",
+                "cedulaRif": "V-12345678",
+                "telefono": "+15875551234",
+                "correo": "ruben.perez@email.com",
+                "descripcionCuenta": "Cuenta personal de Ruben (Zelle)"
+            },
+            "notaPago": null,
+            "montoEnMonedaVenta": 191
+        }
+    ],
+    "observaciones": "sdadsadsa"
+}
+
+
+INVENTARIO - CONTRATO PROPUESTO CON MEJORAS
+
+// nota funcional para backend:
+// - el frontend envia multipart/form-data en crear y actualizar cuando existe imagen
+// - aqui se documenta el contrato objetivo para revision funcional
+// - requiere_item_padre sale del contrato
+// - precioPor sale del contrato
+// - Filtro/Aditivos sale del flujo comercial de productos
+// - los campos comunes del producto quedan al nivel raiz
+// - las caracteristicas especificas de cada categoria viven dentro de su bloque config
+// - cada producto solo envia el bloque config que corresponde a su categoria
+// - moneda no se envia en create/update; backend la toma desde la moneda base configurada para la sede
+// - crear y actualizar productos usan la misma api, variando solo el bloque config segun la categoria
+// - cristalConfig debe incluir: tipoCristal, presentacion, material, proveedor, tratamientos, rangoFormula, costoLaboratorio y materialOtro
+// - monturaConfig debe incluir: marca, modelo, color, material y proveedor
+// - lenteContactoConfig debe incluir: marca, tipoLenteContacto, color y proveedor
+// - liquidoConfig debe incluir: marca, modelo y proveedor
+// - estucheConfig debe incluir: marca, modelo, material y proveedor
+// - accesorioConfig debe incluir: marca, modelo, color, material y proveedor
+
+// contrato base create/update
+// campos comunes del producto enviados en request
+{
+    "nombre": "string",
+    "categoria": "Cristales | Monturas | Lentes de contacto | Líquidos | Estuches | Accesorios",
+    "stock": 0,
+    "activo": true,
+    "descripcion": "string",
+    "fechaIngreso": "YYYY-MM-DD",
+    "aplicaIva": true,
+    "precio": 0,
+    "requiere_formula": false,
+    "imagen": "<archivo-opcional>",
+
+    "cristalConfig": null,
+    "monturaConfig": null,
+    "lenteContactoConfig": null,
+    "liquidoConfig": null,
+    "estucheConfig": null,
+    "accesorioConfig": null
+}
+
+// regla de contrato
+// - solo se envia un bloque config, el que corresponda a la categoria
+// - los demas bloques no se envian
+// - nombre, categoria, stock, activo, descripcion, fechaIngreso, aplicaIva, precio y requiere_formula son comunes
+// - moneda no se envia en request
+
+// definicion exacta por categoria
+
+// categoria: Cristales
+{
+    "cristalConfig": {
+        "tipoCristal": "string",
+        "presentacion": "string",
+        "material": "string",
+        "proveedor": "string",
+        "tratamientos": [
+            "string"
+        ],
+        "rangoFormula": "string",
+        "costoLaboratorio": 0,
+        "materialOtro": "string"
+    }
+}
+
+// categoria: Monturas
+{
+    "monturaConfig": {
+        "marca": "string",
+        "modelo": "string",
+        "color": "string",
+        "material": "string",
+        "proveedor": "string"
+    }
+}
+
+// categoria: Lentes de contacto
+{
+    "lenteContactoConfig": {
+        "marca": "string",
+        "tipoLenteContacto": "string",
+        "color": "string",
+        "proveedor": "string"
+    }
+}
+
+// categoria: Líquidos
+{
+    "liquidoConfig": {
+        "marca": "string",
+        "modelo": "string",
+        "proveedor": "string"
+    }
+}
+
+// categoria: Estuches
+{
+    "estucheConfig": {
+        "marca": "string",
+        "modelo": "string",
+        "material": "string",
+        "proveedor": "string"
+    }
+}
+
+// categoria: Accesorios
+{
+    "accesorioConfig": {
+        "marca": "string",
+        "modelo": "string",
+        "color": "string",
+        "material": "string",
+        "proveedor": "string"
+    }
+}
+
+// obtener inventario
+// GET /producto-get
+{
+    "message": "ok",
+    "iva": 16,
+    "productos": [
+        {
+            "id": 28,
+            "sede_id": "1",
+            "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+            "codigo": "PR-000028",
+            "categoria": "Cristales",
+            "stock": 10,
+            "precio": 25.86,
+            "aplicaIva": true,
+            "precioConIva": 30,
+            "moneda": "dolar",
+            "activo": true,
+            "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con blue block.",
+            "cristalConfig": {
+                "tipoCristal": "Monofocal visión sencilla",
+                "presentacion": "V/S",
+                "material": "Policarbonato",
+                "proveedor": "Laboratorio Principal",
+                "tratamientos": [
+                    "Blue Block"
+                ],
+                "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
+                "costoLaboratorio": 12,
+                "materialOtro": ""
+            },
+            "imagen_url": "/public/images/product-28.jpg?t=1770000000000",
+            "created_at": "2026-04-20T14:20:00.000Z",
+            "updated_at": "2026-04-20T14:20:00.000Z",
+            "requiere_formula": true
+        },
+        {
+            "id": 43,
+            "sede_id": "1",
+            "nombre": "Carrera 8847",
+            "codigo": "PR-000043",
+            "categoria": "Monturas",
+            "stock": 12,
+            "precio": 85,
+            "aplicaIva": true,
+            "precioConIva": 98.6,
+            "moneda": "dolar",
+            "activo": true,
+            "descripcion": "Montura completa disponible para venta directa.",
+            "monturaConfig": {
+                "marca": "Carrera",
+                "modelo": "Carrera 8847",
+                "color": "Negro mate",
+                "material": "Acetato",
+                "proveedor": "Distribuidor oficial"
+            },
+            "imagen_url": "/public/images/product-43.jpg?t=1770000000001",
+            "created_at": "2026-04-20T14:40:00.000Z",
+            "updated_at": "2026-04-20T14:40:00.000Z",
+            "requiere_formula": false
+        },
+        {
+            "id": 45,
+            "sede_id": "1",
+            "nombre": "Biomedics Toric Azul",
+            "codigo": "PR-000045",
+            "categoria": "Lentes de contacto",
+            "stock": 24,
+            "precio": 18,
+            "aplicaIva": true,
+            "precioConIva": 20.88,
+            "moneda": "dolar",
+            "activo": true,
+            "descripcion": "Caja de lentes de contacto tóricos color azul.",
+            "lenteContactoConfig": {
+                "marca": "Biomedics",
+                "tipoLenteContacto": "Tóricos",
+                "color": "Azul",
+                "proveedor": "CooperVision"
+            },
+            "imagen_url": "/public/images/product-45.jpg?t=1770000000002",
+            "created_at": "2026-04-20T15:10:00.000Z",
+            "updated_at": "2026-04-20T15:10:00.000Z",
+            "requiere_formula": true
+        },
+        {
+            "id": 46,
+            "sede_id": "1",
+            "nombre": "Renu solución multiuso 120 ml",
+            "codigo": "PR-000046",
+            "categoria": "Líquidos",
+            "stock": 18,
+            "precio": 9.5,
+            "aplicaIva": true,
+            "precioConIva": 11.02,
+            "moneda": "dolar",
+            "activo": true,
+            "descripcion": "Solución multiuso para limpieza y conservación.",
+            "liquidoConfig": {
+                "marca": "Renu",
+                "modelo": "Solución multiuso 120 ml",
+                "proveedor": "Bausch + Lomb"
+            },
+            "imagen_url": null,
+            "created_at": "2026-04-20T15:20:00.000Z",
+            "updated_at": "2026-04-20T15:20:00.000Z",
+            "requiere_formula": false
+        },
+        {
+            "id": 47,
+            "sede_id": "1",
+            "nombre": "Estuche rígido negro",
+            "codigo": "PR-000047",
+            "categoria": "Estuches",
+            "stock": 30,
+            "precio": 4,
+            "aplicaIva": true,
+            "precioConIva": 4.64,
+            "moneda": "dolar",
+            "activo": true,
+            "descripcion": "Estuche rígido para resguardo de lentes.",
+            "estucheConfig": {
+                "marca": "Genérico",
+                "modelo": "Estuche rígido negro",
+                "material": "Plástico rígido",
+                "proveedor": "Proveedor local"
+            },
+            "imagen_url": null,
+            "created_at": "2026-04-20T15:30:00.000Z",
+            "updated_at": "2026-04-20T15:30:00.000Z",
+            "requiere_formula": false
+        },
+        {
+            "id": 48,
+            "sede_id": "1",
+            "nombre": "Cordón deportivo ajustable",
+            "codigo": "PR-000048",
+            "categoria": "Accesorios",
+            "stock": 16,
+            "precio": 3.5,
+            "aplicaIva": true,
+            "precioConIva": 4.06,
+            "moneda": "dolar",
+            "activo": true,
+            "descripcion": "Cordón ajustable para monturas de uso diario.",
+            "accesorioConfig": {
+                "marca": "Vision Case",
+                "modelo": "Cordón deportivo",
+                "color": "Negro",
+                "material": "Silicona",
+                "proveedor": "Proveedor local"
+            },
+            "imagen_url": null,
+            "created_at": "2026-04-20T15:40:00.000Z",
+            "updated_at": "2026-04-20T15:40:00.000Z",
+            "requiere_formula": false
+        }
+    ]
+}
+
+// obtener producto por id
+// GET /producto-get/28
+{
+    "message": "ok",
+    "iva": 16,
+    "productos": [
+        {
+            "id": 28,
+            "sede_id": "1",
+            "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+            "codigo": "PR-000028",
+            "categoria": "Cristales",
+            "stock": 10,
+            "precio": 25.86,
+            "aplicaIva": true,
+            "precioConIva": 30,
+            "moneda": "dolar",
+            "activo": true,
+            "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con blue block.",
+            "cristalConfig": {
+                "tipoCristal": "Monofocal visión sencilla",
+                "presentacion": "V/S",
+                "material": "Policarbonato",
+                "proveedor": "Laboratorio Principal",
+                "tratamientos": [
+                    "Blue Block"
+                ],
+                "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
+                "costoLaboratorio": 12,
+                "materialOtro": ""
+            },
+            "imagen_url": "/public/images/product-28.jpg?t=1770000000000",
+            "created_at": "2026-04-20T14:20:00.000Z",
+            "updated_at": "2026-04-20T14:20:00.000Z",
+            "requiere_formula": true
+        }
+    ]
+}
+
+// obtener categorias de productos
+// GET /categorias-get
+{
+    "message": "ok",
+    "categorias": [
+        {
+            "id": 1,
+            "nombre": "Monturas"
+        },
+        {
+            "id": 2,
+            "nombre": "Cristales"
+        },
+        {
+            "id": 3,
+            "nombre": "Lentes de contacto"
+        },
+        {
+            "id": 4,
+            "nombre": "Líquidos"
+        },
+        {
+            "id": 5,
+            "nombre": "Estuches"
+        },
+        {
+            "id": 6,
+            "nombre": "Accesorios"
+        }
+    ]
+}
+
+// crear producto inventario - caso cristales
+// POST /producto-add
+{
+    "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+    "categoria": "Cristales",
+    "stock": 10,
+    "activo": true,
+    "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con blue block.",
+    "cristalConfig": {
+        "tipoCristal": "Monofocal visión sencilla",
+        "presentacion": "V/S",
+        "material": "Policarbonato",
+        "proveedor": "Laboratorio Principal",
+        "tratamientos": [
+            "Blue Block"
+        ],
+        "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
+        "costoLaboratorio": 12,
+        "materialOtro": ""
+    },
+    "fechaIngreso": "2026-04-15",
+    "aplicaIva": true,
+    "precio": 30,
+    "requiere_formula": true,
+    "imagen": "<archivo-opcional>"
+}
+
+// crear producto inventario - caso monturas
+{
+    "nombre": "Carrera 8847",
+    "categoria": "Monturas",
+    "stock": 12,
+    "activo": true,
+    "descripcion": "Montura completa disponible para venta directa.",
+    "monturaConfig": {
+        "marca": "Carrera",
+        "modelo": "Carrera 8847",
+        "color": "Negro mate",
+        "material": "Acetato",
+        "proveedor": "Distribuidor oficial"
+    },
+    "fechaIngreso": "2026-04-15",
+    "aplicaIva": true,
+    "precio": 98.6,
+    "requiere_formula": false,
+    "imagen": "<archivo-opcional>"
+}
+
+// crear producto inventario - caso lentes de contacto
+{
+    "nombre": "Biomedics Toric Azul",
+    "categoria": "Lentes de contacto",
+    "stock": 24,
+    "activo": true,
+    "descripcion": "Caja de lentes de contacto tóricos color azul.",
+    "lenteContactoConfig": {
+        "marca": "Biomedics",
+        "tipoLenteContacto": "Tóricos",
+        "color": "Azul",
+        "proveedor": "CooperVision"
+    },
+    "fechaIngreso": "2026-04-15",
+    "aplicaIva": true,
+    "precio": 20.88,
+    "requiere_formula": true,
+    "imagen": "<archivo-opcional>"
+}
+
+// crear producto inventario - caso líquidos
+{
+    "nombre": "Renu solución multiuso 120 ml",
+    "categoria": "Líquidos",
+    "stock": 18,
+    "activo": true,
+    "descripcion": "Solución multiuso para limpieza y conservación.",
+    "liquidoConfig": {
+        "marca": "Renu",
+        "modelo": "Solución multiuso 120 ml",
+        "proveedor": "Bausch + Lomb"
+    },
+    "fechaIngreso": "2026-04-15",
+    "aplicaIva": true,
+    "precio": 11.02,
+    "requiere_formula": false,
+    "imagen": "<archivo-opcional>"
+}
+
+// crear producto inventario - caso estuches
+{
+    "nombre": "Estuche rígido negro",
+    "categoria": "Estuches",
+    "stock": 30,
+    "activo": true,
+    "descripcion": "Estuche rígido para resguardo de lentes.",
+    "estucheConfig": {
+        "marca": "Genérico",
+        "modelo": "Estuche rígido negro",
+        "material": "Plástico rígido",
+        "proveedor": "Proveedor local"
+    },
+    "fechaIngreso": "2026-04-15",
+    "aplicaIva": true,
+    "precio": 4.64,
+    "requiere_formula": false,
+    "imagen": "<archivo-opcional>"
+}
+
+// crear producto inventario - caso accesorios
+{
+    "nombre": "Cordón deportivo ajustable",
+    "categoria": "Accesorios",
+    "stock": 16,
+    "activo": true,
+    "descripcion": "Cordón ajustable para monturas de uso diario.",
+    "accesorioConfig": {
+        "marca": "Vision Case",
+        "modelo": "Cordón deportivo",
+        "color": "Negro",
+        "material": "Silicona",
+        "proveedor": "Proveedor local"
+    },
+    "fechaIngreso": "2026-04-15",
+    "aplicaIva": true,
+    "precio": 4.06,
+    "requiere_formula": false,
+    "imagen": "<archivo-opcional>"
+}
+
+// respuesta crear producto - caso cristales
+{
+    "message": "ok",
+    "iva": 16,
+    "producto": {
+        "id": 28,
+        "sede_id": "1",
+        "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+        "codigo": "PR-000028",
+        "categoria": "Cristales",
+        "stock": 10,
+        "precio": 25.86,
+        "aplicaIva": true,
+        "precioConIva": 30,
+        "moneda": "dolar",
+        "activo": true,
+        "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con blue block.",
+        "cristalConfig": {
+            "tipoCristal": "Monofocal visión sencilla",
+            "presentacion": "V/S",
+            "material": "Policarbonato",
+            "proveedor": "Laboratorio Principal",
+            "tratamientos": [
+                "Blue Block"
+            ],
+            "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
+            "costoLaboratorio": 12,
+            "materialOtro": ""
+        },
+        "imagen_url": "/public/images/product-28.jpg?t=1770000000000",
+        "created_at": "2026-04-20T14:20:00.000Z",
+        "updated_at": "2026-04-20T14:20:00.000Z",
+        "requiere_formula": true
+    }
+}
+
+// actualizar producto inventario - caso cristales
+// PUT /producto-update/28
+{
+    "nombre": "VISION SENCILLA POLI FOTO BLUE BLOCK",
+    "categoria": "Cristales",
+    "stock": 8,
+    "activo": true,
+    "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con fotocromático y blue block.",
+    "cristalConfig": {
+        "tipoCristal": "Monofocal visión sencilla",
+        "presentacion": "V/S",
+        "material": "Policarbonato",
+        "proveedor": "Laboratorio principal",
+        "tratamientos": [
+            "Fotocromático",
+            "Blue Block"
+        ],
+        "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
+        "costoLaboratorio": 15,
+        "materialOtro": ""
+    },
+    "fechaIngreso": "2026-04-15",
+    "aplicaIva": true,
+    "precio": 35,
+    "requiere_formula": true,
+    "imagen": "<archivo-opcional>"
+}
+
+{
+    "message": "ok",
+    "iva": 16,
+    "producto": {
+        "id": 28,
+        "sede_id": "1",
+        "nombre": "VISION SENCILLA POLI FOTO BLUE BLOCK",
+        "codigo": "PR-000028",
+        "categoria": "Cristales",
+        "stock": 8,
+        "precio": 30.17,
+        "aplicaIva": true,
+        "precioConIva": 35,
+        "moneda": "dolar",
+        "activo": true,
+        "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con fotocromático y blue block.",
+        "cristalConfig": {
+            "tipoCristal": "Monofocal visión sencilla",
+            "presentacion": "V/S",
+            "material": "Policarbonato",
+            "proveedor": "Laboratorio principal",
+            "tratamientos": [
+                "Fotocromático",
+                "Blue Block"
+            ],
+            "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
+            "costoLaboratorio": 15,
+            "materialOtro": ""
+        },
+        "imagen_url": "/public/images/product-28.jpg?t=1770000000000",
+        "created_at": "2026-04-20T14:20:00.000Z",
+        "updated_at": "2026-04-20T14:45:00.000Z",
+        "requiere_formula": true
+    }
+}
+
+// errores frecuentes crear o actualizar producto
+{
+    "message": "El nombre no puede quedar vacio."
+}
+
+{
+    "message": "La categoria no puede quedar vacio."
+}
+
+{
+    "message": "El stock debe ser numerico"
+}
+
+{
+    "message": "El precio debe ser numerico"
+}
+
+{
+    "message": "Ya existe un producto con el mismo nombre, marca, color y categoria en la sede actual."
+}
+
+{
+    "message": "El producto enviado no existe."
+}
+
+{
+    "message": "No se puede modificar productos de otras sedes."
+}
+
+// eliminar producto
+// DELETE /producto-delete/28
+{
+    "message": "ok"
+}
+
+// remover imagen de producto
+// PUT /producto-remove-image/28
+{
+    "message": "ok"
+}
