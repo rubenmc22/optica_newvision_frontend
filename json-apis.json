@@ -592,6 +592,7 @@
         "El backend ya persiste recomendaciones como JSON completo, por lo que acepta la nueva estructura seleccionProductos.categorias sin migracion adicional de columnas.",
         "Las rutas usan nHistoria en update/delete/get por id. Ejemplo: H-20260422-001.",
         "GET historial-medico-all y GET historial-medico-paciente retornan recomendaciones tal como se guardaron.",
+        "Las historias nuevas guardadas con la estructura canonica deben salir en GET con esa misma estructura, sin reinterpretar cristal o montura a otro formato.",
         "La forma canonica nueva mantiene solo seleccionProductos.categorias como fuente persistida de detalle para las recomendaciones.",
         "El producto clinico recomendado debe incluir dentro de su propio objeto el tipo clinico (por ejemplo tipoCristal o tipoLenteContacto) y, cuando aplique, las medidas requeridas.",
         "En frontend las medidas siguen siendo obligatorias para tipos PROGRESIVO_* y MONOFOCAL_DIGITAL, pero ahora deben viajar dentro del producto de cristal que las necesita.",

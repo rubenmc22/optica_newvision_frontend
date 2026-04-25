@@ -181,6 +181,44 @@
                   </div>
                 </div>
 
+                <div class="traceability-panel no-print" *ngIf="historiaSeleccionada">
+                  <div class="traceability-panel__header">
+                    <div>
+                      <span class="traceability-panel__eyebrow">Trazabilidad comercial</span>
+                    </div>
+                    <span *ngIf="ventaActivaHistoriaSeleccionada as ventaActiva"
+                      [class]="getClaseEstadoVentaTrazabilidad(ventaActiva.estadoVenta)">
+                      {{ getEtiquetaEstadoVentaTrazabilidad(ventaActiva.estadoVenta) }}
+                    </span>
+                  </div>
+
+                  <div class="traceability-panel__empty" *ngIf="!historiaTieneTrazabilidadVenta">
+                    <i class="bi bi-link-45deg"></i>
+                    <div>
+                      <strong>Sin ventas relacionadas</strong>
+                      <p>Esta historia no tiene ventas vinculadas hasta el momento.</p>
+                    </div>
+                  </div>
+
+                  <div *ngIf="historiaTieneTrazabilidadVenta">
+                    <div class="traceability-panel__summary traceability-panel__summary--compact">
+                      <div class="traceability-summary-card traceability-summary-card--compact">
+                        <span class="traceability-summary-card__label">Resumen</span>
+                        <strong *ngIf="ventaActivaHistoriaSeleccionada as ventaActiva" class="traceability-summary-card__code">
+                          {{ getNumeroVentaTrazabilidad(ventaActiva) }}
+                        </strong>
+                        <strong *ngIf="!ventaActivaHistoriaSeleccionada">Sin venta activa</strong>
+                        <small *ngIf="ventaActivaHistoriaSeleccionada as ventaActiva">
+                          {{ ventaActiva.numeroControl ? ('Control N° ' + ventaActiva.numeroControl + ' · ') : '' }}{{ getEtiquetaEstadoPagoTrazabilidad(ventaActiva.estadoPago) }} · {{ ventasRelacionadasHistoriaSeleccionada.length }} venta{{ ventasRelacionadasHistoriaSeleccionada.length === 1 ? '' : 's' }} registrada{{ ventasRelacionadasHistoriaSeleccionada.length === 1 ? '' : 's' }}
+                        </small>
+                        <small *ngIf="!ventaActivaHistoriaSeleccionada">
+                          {{ historiaTieneVentasAnuladas ? 'Hay ventas anuladas registradas.' : 'Sin relación comercial vigente.' }}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Datos del paciente -->
                 <div class="seccion-datos">
                   <div class="seccion-header">
@@ -597,67 +635,79 @@
                   </div>
                 </div>
 
-                <!-- Recomendaciones -->
+                <!-- Recomendaciones / Indicaciones -->
                 <div class="seccion-datos">
                   <div class="seccion-header">
                     <i class="bi bi-chat-square-text"></i>
-                    <h6>Recomendaciones</h6>
+                    <h6>Recomendaciones / Indicaciones</h6>
                   </div>
 
                   <ng-container
                     *ngIf="historiaSeleccionada?.recomendaciones as recomendaciones; else sinRecomendaciones">
-                    <!-- En la sección de recomendaciones de la vista -->
                     <div class="recomendaciones-grid">
                       <div *ngFor="let rec of recomendaciones; let i = index" class="recomendacion-card">
-                        <div class="recomendacion-header">
-                          <i class="bi bi-eyeglasses"></i>
-                          <span>Lente #{{ i + 1 }}</span>
+                        <div class="recomendacion-card__hero">
+                          <div class="recomendacion-header">
+                            <div class="recomendacion-header__badge">
+                              <i class="bi bi-eyeglasses"></i>
+                              <span>Lente #{{ i + 1 }}</span>
+                            </div>
+
+                            <div class="recomendacion-header__title-group">
+                              <strong>
+                                {{ getTipoCristalRecomendadoLabel(rec) }}
+                              </strong>
+                              <small *ngIf="getTipoLenteContactoRecomendado(rec) as tipoLenteContacto">
+                                {{ getTipoLenteContactoLabel(tipoLenteContacto) }}
+                              </small>
+                            </div>
+                          </div>
                         </div>
-                        <div class="recomendacion-body">
-                          <div class="recomendacion-item">
-                            <label>Categorías recomendadas</label>
-                            <div class="dato-valor">{{ getCategoriasRecomendadasLabel(rec) }}</div>
-                          </div>
+                        <div class="recomendacion-body recomendacion-body--patient">
+                          <section class="recomendacion-panel recomendacion-panel--highlight" *ngIf="getCristalRecomendadoLabel(rec) !== 'No aplica'">
+                            <span class="recomendacion-panel__label">Cristal</span>
+                            <div class="recomendacion-panel__value">{{ getCristalRecomendadoLabel(rec) }}</div>
+                          </section>
 
-                          <div class="recomendacion-item" *ngIf="getCristalRecomendadoLabel(rec) !== 'No aplica'">
-                            <label>Tipo de cristal</label>
-                            <div class="dato-valor">{{ getCristalRecomendadoLabel(rec) }}</div>
-                          </div>
+                          <section class="recomendacion-panel recomendacion-panel--soft" *ngIf="getMonturaRecomendadaLabel(rec) !== 'No especificada'">
+                            <span class="recomendacion-panel__label">Monturas</span>
+                            <div class="recomendacion-panel__value">{{ getMonturaRecomendadaLabel(rec) }}</div>
+                          </section>
 
-                          <div class="recomendacion-item" *ngIf="getTipoLenteContactoRecomendado(rec) as tipoLenteContacto">
-                            <label>Tipo de lentes de contacto</label>
-                            <div class="dato-valor">{{ getTipoLenteContactoLabel(tipoLenteContacto) }}</div>
-                          </div>
-
-                          <div class="medidas-section" *ngIf="getMedidasRecomendacion(rec) as medidas">
+                          <section class="recomendacion-panel" *ngIf="getMedidasRecomendacion(rec) as medidas">
                             <div class="medidas-header">
                               <i class="bi bi-rulers"></i>
                               <label>Medidas del lente</label>
                             </div>
-                            <div class="medidas-grid">
+                            <div class="medidas-grid medidas-grid--compact">
                               <div class="medida-item" *ngIf="medidas.horizontal">
-                                <label>Horizontal:</label>
+                                <label>Horizontal</label>
                                 <span>{{ medidas.horizontal }} cm</span>
                               </div>
                               <div class="medida-item" *ngIf="medidas.vertical">
-                                <label>Vertical:</label>
+                                <label>Vertical</label>
                                 <span>{{ medidas.vertical }} cm</span>
                               </div>
                               <div class="medida-item" *ngIf="medidas.diagonal">
-                                <label>Diagonal:</label>
+                                <label>Diagonal</label>
                                 <span>{{ medidas.diagonal }} cm</span>
                               </div>
                               <div class="medida-item" *ngIf="medidas.puente">
-                                <label>Puente:</label>
+                                <label>Puente</label>
                                 <span>{{ medidas.puente }} cm</span>
                               </div>
                             </div>
-                          </div>
+                          </section>
 
-                          <div class="recomendacion-item full-width">
-                            <label>Observaciones</label>
-                            <div class="dato-valor">{{ rec.observaciones || 'Sin observaciones' }}</div>
-                          </div>
+                          <section class="recomendacion-panel recomendacion-panel--notes full-width">
+                            <span class="recomendacion-panel__label">Observaciones</span>
+                            <div class="recomendacion-panel__value recomendacion-panel__value--notes">{{ rec.observaciones || 'Sin observaciones' }}</div>
+                          </section>
+
+                          <section class="recomendacion-panel full-width" *ngIf="getTipoLenteContactoRecomendado(rec) as tipoLenteContacto">
+                            <span class="recomendacion-panel__label">Lentes de contacto</span>
+                            <div class="recomendacion-panel__value">{{ getTipoLenteContactoLabel(tipoLenteContacto) }}</div>
+                          </section>
                         </div>
                       </div>
                     </div>
@@ -665,7 +715,7 @@
                   <ng-template #sinRecomendaciones>
                     <div class="empty-state">
                       <i class="bi bi-info-circle"></i>
-                      <span>No se registraron recomendaciones de lentes</span>
+                      <span>No se registraron recomendaciones ni indicaciones</span>
                     </div>
                   </ng-template>
                 </div>

@@ -75,6 +75,23 @@ export interface Auditoria {
   };
 }
 
+export interface VentaRelacionadaHistoria {
+  ventaKey: string;
+  numeroControl?: string | number;
+  numeroVenta?: string | null;
+  numero_venta?: string | null;
+  estadoVenta: string;
+  estadoPago?: string;
+  pagoCompleto?: boolean;
+  fecha?: string | Date;
+  anulada?: boolean;
+}
+
+export interface TrazabilidadVentaHistoria {
+  ventaActiva: VentaRelacionadaHistoria | null;
+  ventasRelacionadas: VentaRelacionadaHistoria[];
+}
+
 export interface RespuestaCreacionHistoria {
   message: string;
   historial_medico: HistoriaMedica;
@@ -193,6 +210,7 @@ export interface ProductoRecomendadoHistoria {
   stock?: number;
   modelo?: string;
   marca?: string;
+  presentacion?: string;
   material?: string;
   color?: string;
   moneda?: string;
@@ -200,9 +218,20 @@ export interface ProductoRecomendadoHistoria {
   precioConIva?: number;
   aplicaIva?: boolean;
   sede?: string;
+  proveedor?: string;
   descripcion?: string;
   tipoCristal?: string;
   tipoLenteContacto?: string;
+  cristalConfig?: {
+    tipoCristal?: string;
+    presentacion?: string;
+    material?: string;
+    proveedor?: string;
+    tratamientos?: string[];
+    rangoFormula?: string;
+    costoLaboratorio?: number | null;
+    materialOtro?: string;
+  };
   medidas?: {
     horizontal?: string;
     vertical?: string;
@@ -257,6 +286,8 @@ export interface HistoriaMedica {
   fecha: string;
   horaEvaluacion: string;
   pacienteId: string;
+  ventaKey?: string | null;
+  trazabilidadVenta?: TrazabilidadVentaHistoria | null;
 
   datosConsulta: DatosConsulta;
   antecedentes: Antecedentes;

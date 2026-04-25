@@ -1968,15 +1968,34 @@ export class HistoriasMedicasComponent implements OnInit {
     }
 
     const productoExtendido = producto as any;
+    const categoriaNormalizada = String(producto.categoria || '').trim().toLowerCase();
+    const cristalConfig = productoExtendido.cristalConfig && typeof productoExtendido.cristalConfig === 'object'
+      ? {
+        tipoCristal: this.normalizarTextoOpcional(productoExtendido.cristalConfig.tipoCristal),
+        presentacion: this.normalizarTextoOpcional(productoExtendido.cristalConfig.presentacion),
+        material: this.normalizarTextoOpcional(productoExtendido.cristalConfig.material),
+        proveedor: this.normalizarTextoOpcional(productoExtendido.cristalConfig.proveedor),
+        tratamientos: Array.isArray(productoExtendido.cristalConfig.tratamientos)
+          ? productoExtendido.cristalConfig.tratamientos.map((tratamiento: any) => String(tratamiento || '').trim()).filter(Boolean)
+          : undefined,
+        rangoFormula: this.normalizarTextoOpcional(productoExtendido.cristalConfig.rangoFormula),
+        costoLaboratorio: typeof productoExtendido.cristalConfig.costoLaboratorio === 'number'
+          ? productoExtendido.cristalConfig.costoLaboratorio
+          : undefined,
+        materialOtro: this.normalizarTextoOpcional(productoExtendido.cristalConfig.materialOtro)
+      }
+      : undefined;
+    const esCristal = this.esCategoriaCristal(categoriaNormalizada);
 
     return {
       id: String(producto.id),
       nombre: String(producto.nombre || '').trim(),
       codigo: String(producto.codigo || '').trim(),
       categoria: String(producto.categoria || '').trim(),
-      modelo: String(producto.modelo || '').trim() || undefined,
-      marca: String(producto.marca || '').trim() || undefined,
-      material: String(producto.material || '').trim() || undefined,
+      modelo: esCristal ? undefined : String(producto.modelo || '').trim() || undefined,
+      marca: esCristal ? undefined : String(producto.marca || '').trim() || undefined,
+      presentacion: this.normalizarTextoOpcional(cristalConfig?.presentacion),
+      material: this.normalizarTextoOpcional(cristalConfig?.material || producto.material),
       color: String(producto.color || '').trim() || undefined,
       moneda: String(producto.moneda || '').trim() || undefined,
       precio: Number(producto.precio ?? 0),
@@ -1984,9 +2003,11 @@ export class HistoriasMedicasComponent implements OnInit {
       aplicaIva: Boolean(producto.aplicaIva),
       sede: String(producto.sede || '').trim() || undefined,
       stock: Number(producto.stock ?? 0),
+      proveedor: this.normalizarTextoOpcional(cristalConfig?.proveedor || producto.proveedor),
       descripcion: String(producto.descripcion || '').trim() || undefined,
-      tipoCristal: this.normalizarTextoOpcional(productoExtendido.tipoCristal || productoExtendido.cristalConfig?.tipoCristal),
+      tipoCristal: this.normalizarTextoOpcional(productoExtendido.tipoCristal || cristalConfig?.tipoCristal),
       tipoLenteContacto: this.normalizarTextoOpcional(productoExtendido.tipoLenteContacto || productoExtendido.lenteContactoConfig?.tipoLenteContacto),
+      cristalConfig,
       medidas: this.normalizarMedidasRecomendacion(productoExtendido.medidas)
     };
   }
@@ -2805,6 +2826,108 @@ export class HistoriasMedicasComponent implements OnInit {
       : motivo || 'No especificado';
   }
 
+  get ventasRelacionadasHistoriaSeleccionada() {
+    return this.historiaSeleccionada?.trazabilidadVenta?.ventasRelacionadas || [];
+  }
+
+  get ventaActivaHistoriaSeleccionada() {
+    return this.historiaSeleccionada?.trazabilidadVenta?.ventaActiva || null;
+  }
+
+  get historiaTieneTrazabilidadVenta(): boolean {
+    return this.ventasRelacionadasHistoriaSeleccionada.length > 0;
+  }
+
+  get historiaTieneVentasAnuladas(): boolean {
+    return this.ventasRelacionadasHistoriaSeleccionada.some((venta) => venta.anulada === true || venta.estadoVenta === 'anulada');
+  }
+
+  getEtiquetaEstadoVentaTrazabilidad(estadoVenta: string | null | undefined): string {
+    const estado = `${estadoVenta || ''}`.trim().toLowerCase();
+
+    switch (estado) {
+      case 'anulada':
+      case 'cancelada':
+      case 'cancelado':
+        return 'Venta anulada';
+      case 'pendiente':
+        return 'Venta pendiente';
+      case 'completada':
+        return 'Venta completada';
+      default:
+        return estado ? `Venta ${estado}` : 'Venta relacionada';
+    }
+  }
+
+  getClaseEstadoVentaTrazabilidad(estadoVenta: string | null | undefined): string {
+    const estado = `${estadoVenta || ''}`.trim().toLowerCase();
+
+    if (estado === 'anulada' || estado === 'cancelada' || estado === 'cancelado') {
+      return 'trace-badge trace-badge--cancelled';
+    }
+
+    if (estado === 'pendiente') {
+      return 'trace-badge trace-badge--pending';
+    }
+
+    return 'trace-badge trace-badge--success';
+  }
+
+  getEtiquetaEstadoPagoTrazabilidad(estadoPago: string | null | undefined): string {
+    const estado = `${estadoPago || ''}`.trim().toLowerCase();
+
+    switch (estado) {
+      case 'pagado_por_cashea':
+        return 'Pagado por Cashea';
+      case 'completada':
+      case 'completado':
+        return 'Pago completado';
+      case 'pendiente':
+        return 'Pago pendiente';
+      default:
+        return estado ? `Pago ${estado}` : 'Pago no disponible';
+    }
+  }
+
+  getNumeroVentaTrazabilidad(venta: { numeroVenta?: string | null; numero_venta?: string | null; numeroControl?: string | number; ventaKey?: string | null } | null | undefined): string {
+    const numeroVenta = `${venta?.numeroVenta || venta?.numero_venta || ''}`.trim();
+
+    if (numeroVenta) {
+      return numeroVenta;
+    }
+
+    const numeroControl = Number(venta?.numeroControl || 0);
+    if (Number.isFinite(numeroControl) && numeroControl > 0) {
+      return `V-${String(numeroControl).padStart(6, '0')}`;
+    }
+
+    return `${venta?.ventaKey || ''}`.trim() || 'Venta sin identificador';
+  }
+
+  esVentaActivaEnTrazabilidad(ventaKey: string | null | undefined): boolean {
+    const ventaActivaKey = this.ventaActivaHistoriaSeleccionada?.ventaKey;
+    return !!ventaKey && !!ventaActivaKey && `${ventaKey}` === `${ventaActivaKey}`;
+  }
+
+  formatearFechaTrazabilidad(fecha: string | Date | null | undefined): string {
+    if (!fecha) {
+      return 'Fecha no disponible';
+    }
+
+    const fechaDate = new Date(fecha);
+    if (Number.isNaN(fechaDate.getTime())) {
+      return 'Fecha no disponible';
+    }
+
+    return fechaDate.toLocaleString('es-VE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
   verDetalle(historia: HistoriaMedica): void {
     this.historiaSeleccionada = { ...historia };
     setTimeout(() => {
@@ -3053,11 +3176,14 @@ export class HistoriasMedicasComponent implements OnInit {
         const ventana = window.open('', '_blank', 'width=1000,height=700');
 
         if (ventana) {
+          const numeroHistoria = this.historiaSeleccionada?.nHistoria || 'Sin numero';
+          const nombrePaciente = this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'Paciente';
+
           ventana.document.write(`
           <!DOCTYPE html>
           <html>
             <head>
-              <title>Historia Médica - ${this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'Paciente'}</title>
+              <title>${numeroHistoria} - ${nombrePaciente}</title>
               <meta charset="utf-8">
               <style>
                 ${this.obtenerEstilosImpresion()}
@@ -3534,49 +3660,68 @@ export class HistoriasMedicasComponent implements OnInit {
 
     const recomendacionesHTML = this.historiaSeleccionada.recomendaciones.map((rec, index) => {
       const medidas = this.obtenerMedidasRecomendacionPersistidas(rec);
+      const tipoLenteContacto = this.getTipoLenteContactoRecomendadoValor(rec);
+      const cristalLabel = this.getCristalRecomendadoLabel(rec);
+      const tipoCristalLabel = this.getTipoCristalRecomendadoLabel(rec);
+      const monturaLabel = this.getMonturaRecomendadaLabel(rec);
 
-      // Generar HTML para medidas si existen
       const medidasHTML = (medidas?.horizontal || medidas?.vertical || medidas?.diagonal || medidas?.puente) ? `
-        <div class="recomendacion-field">
-          <label>Medidas:</label>
-          <div class="medidas-detail">
-            ${medidas?.horizontal ? `<div>Horizontal: ${medidas.horizontal} cm</div>` : ''}
-            ${medidas?.vertical ? `<div>Vertical: ${medidas.vertical} cm</div>` : ''}
-            ${medidas?.diagonal ? `<div>Diagonal: ${medidas.diagonal} cm</div>` : ''}
-            ${medidas?.puente ? `<div>Puente: ${medidas.puente} cm</div>` : ''}
+        <section class="recomendacion-panel-print">
+          <div class="recomendacion-panel-print__header">
+            <span class="recomendacion-panel-print__label">Medidas del lente</span>
           </div>
-        </div>
+          <div class="medidas-grid-print">
+            ${medidas?.horizontal ? `<div class="medida-pill-print"><label>Horizontal</label><span>${medidas.horizontal} cm</span></div>` : ''}
+            ${medidas?.vertical ? `<div class="medida-pill-print"><label>Vertical</label><span>${medidas.vertical} cm</span></div>` : ''}
+            ${medidas?.diagonal ? `<div class="medida-pill-print"><label>Diagonal</label><span>${medidas.diagonal} cm</span></div>` : ''}
+            ${medidas?.puente ? `<div class="medida-pill-print"><label>Puente</label><span>${medidas.puente} cm</span></div>` : ''}
+          </div>
+        </section>
       ` : '';
 
-      // Generar HTML para tipo de lentes de contacto si existe
-      const tipoLenteContacto = this.getTipoLenteContactoRecomendadoValor(rec);
       const lentesContactoHTML = tipoLenteContacto ? `
-        <div class="recomendacion-field">
-          <label>Tipo de lentes de contacto:</label>
-          <span>${this.getTipoLenteContactoLabel(tipoLenteContacto)}</span>
-        </div>
+        <section class="recomendacion-panel-print recomendacion-panel-print--full">
+          <div class="recomendacion-panel-print__header">
+            <span class="recomendacion-panel-print__label">Lentes de contacto</span>
+          </div>
+          <div class="recomendacion-panel-print__value">${this.getTipoLenteContactoLabel(tipoLenteContacto)}</div>
+        </section>
       ` : '';
 
       return `
       <div class="recomendacion-item-print">
         <div class="recomendacion-header-print">
-          <h4>Lente #${index + 1}</h4>
+          <div class="recomendacion-header-print__badge">Lente #${index + 1}</div>
+          <div class="recomendacion-header-print__title-group">
+            <strong>${tipoCristalLabel}</strong>
+            ${tipoLenteContacto ? `<small>${this.getTipoLenteContactoLabel(tipoLenteContacto)}</small>` : ''}
+          </div>
         </div>
         <div class="recomendacion-content-print">
-          <div class="recomendacion-field">
-            <label>Categorías recomendadas:</label>
-            <span>${this.getCategoriasRecomendadasLabel(rec)}</span>
-          </div>
-          <div class="recomendacion-field">
-            <label>Tipo de cristal:</label>
-            <span>${this.getCristalRecomendadoLabel(rec)}</span>
-          </div>
+          ${cristalLabel !== 'No aplica' ? `
+            <section class="recomendacion-panel-print recomendacion-panel-print--highlight">
+              <div class="recomendacion-panel-print__header">
+                <span class="recomendacion-panel-print__label">Cristal</span>
+              </div>
+              <div class="recomendacion-panel-print__value">${cristalLabel}</div>
+            </section>
+          ` : ''}
+          ${monturaLabel !== 'No especificada' ? `
+            <section class="recomendacion-panel-print recomendacion-panel-print--soft">
+              <div class="recomendacion-panel-print__header">
+                <span class="recomendacion-panel-print__label">Monturas</span>
+              </div>
+              <div class="recomendacion-panel-print__value">${monturaLabel}</div>
+            </section>
+          ` : ''}
           ${lentesContactoHTML}
           ${medidasHTML}
-          <div class="recomendacion-field full-width">
-            <label>Observaciones:</label>
-            <span>${rec.observaciones || 'Sin observaciones'}</span>
-          </div>
+          <section class="recomendacion-panel-print recomendacion-panel-print--notes recomendacion-panel-print--full">
+            <div class="recomendacion-panel-print__header">
+              <span class="recomendacion-panel-print__label">Observaciones</span>
+            </div>
+            <div class="recomendacion-panel-print__value recomendacion-panel-print__value--notes">${rec.observaciones || 'Sin observaciones'}</div>
+          </section>
         </div>
       </div>
     `;
@@ -3941,22 +4086,50 @@ export class HistoriasMedicasComponent implements OnInit {
     
     /* ========== RECOMENDACIONES ========== */
     .recomendacion-item-print {
-      background: #fafcff;
-      border: 1px solid #eef2ff;
-      border-radius: 12px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid #dbe5f0;
+      border-radius: 14px;
       padding: 12px;
       margin: 10px 0;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
     }
-    
-    .recomendacion-header-print h4 {
-      font-size: 9pt;
-      font-weight: 600;
-      color: #3b82f6;
-      margin-bottom: 8px;
-      display: inline-block;
-      background: #eff6ff;
-      padding: 2px 10px;
-      border-radius: 20px;
+
+    .recomendacion-header-print {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .recomendacion-header-print__badge {
+      font-size: 8pt;
+      font-weight: 700;
+      color: #19538a;
+      background: #eef6ff;
+      padding: 4px 10px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .recomendacion-header-print__title-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      text-align: right;
+      gap: 2px;
+    }
+
+    .recomendacion-header-print__title-group strong {
+      font-size: 8.5pt;
+      color: #1e293b;
+      line-height: 1.35;
+    }
+
+    .recomendacion-header-print__title-group small {
+      font-size: 7pt;
+      color: #64748b;
     }
     
     .recomendacion-content-print {
@@ -3964,41 +4137,81 @@ export class HistoriasMedicasComponent implements OnInit {
       grid-template-columns: repeat(2, 1fr);
       gap: 8px;
     }
-    
-    .recomendacion-field {
+
+    .recomendacion-panel-print {
       display: flex;
       flex-direction: column;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #dbe5f0;
+      border-radius: 12px;
+      padding: 10px;
     }
-    
-    .recomendacion-field.full-width {
+
+    .recomendacion-panel-print--highlight {
+      background: linear-gradient(135deg, #f9fcff 0%, #edf5ff 100%);
+      border-color: #bfd9f5;
+    }
+
+    .recomendacion-panel-print--soft {
+      background: linear-gradient(135deg, #fffdfa 0%, #fff1dd 100%);
+      border-color: #f1d2a4;
+    }
+
+    .recomendacion-panel-print--notes {
+      background: linear-gradient(135deg, #fbfcfe 0%, #f4f7fb 100%);
+    }
+
+    .recomendacion-panel-print--full {
       grid-column: span 2;
     }
-    
-    .recomendacion-field label {
+
+    .recomendacion-panel-print__label {
       font-size: 6.5pt;
       font-weight: 600;
       color: #94a3b8;
       text-transform: uppercase;
-      margin-bottom: 2px;
+      letter-spacing: 0.08em;
     }
-    
-    .recomendacion-field span {
+
+    .recomendacion-panel-print__value {
       font-size: 8pt;
       color: #1e293b;
+      line-height: 1.45;
     }
-    
-    .medidas-detail {
-      display: flex;
-      flex-wrap: wrap;
+
+    .recomendacion-panel-print__value--notes {
+      color: #475569;
+    }
+
+    .medidas-grid-print {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
-      margin-top: 2px;
     }
-    
-    .medidas-detail div {
-      font-size: 7.5pt;
-      background: #f1f5f9;
-      padding: 2px 6px;
-      border-radius: 12px;
+
+    .medida-pill-print {
+      background: #f8fbff;
+      border: 1px solid #d7e4f2;
+      border-radius: 10px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .medida-pill-print label {
+      font-size: 6.2pt;
+      text-transform: uppercase;
+      color: #64748b;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+
+    .medida-pill-print span {
+      font-size: 7.8pt;
+      color: #1e293b;
+      font-weight: 700;
     }
     
     /* ========== FIRMAS ========== */
@@ -5120,8 +5333,22 @@ export class HistoriasMedicasComponent implements OnInit {
 
     const productoCristal = this.obtenerProductoClinicoRecomendacion(recomendacion);
     if (productoCristal) {
-      const tipoCristal = this.obtenerTipoCristalDesdeProducto(productoCristal);
-      return tipoCristal ? this.getTipoCristalRecomendado(tipoCristal) : this.getProductoRecomendadoLabel(productoCristal);
+      return this.getProductoRecomendadoLabel(productoCristal);
+    }
+
+    return this.getTipoCristalRecomendado(recomendacion?.cristal);
+  }
+
+  getTipoCristalRecomendadoLabel(recomendacion: Recomendaciones | null | undefined): string {
+    if (!this.tieneCategoriaClinica(recomendacion)) {
+      return 'Selección personalizada';
+    }
+
+    const productoCristal = this.obtenerProductoClinicoRecomendacion(recomendacion);
+    const tipoCristal = this.obtenerTipoCristalDesdeProducto(productoCristal);
+
+    if (tipoCristal) {
+      return this.getTipoCristalRecomendado(tipoCristal);
     }
 
     return this.getTipoCristalRecomendado(recomendacion?.cristal);
