@@ -504,6 +504,24 @@
                     </div>
                   </div>
 
+                  <div class="col-md-4" *ngIf="esCristalConfigurableActual">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-tags"></i>
+                        {{ etiquetaPresentacionCristal }} <span class="required" *ngIf="presentacionCristalEsObligatoria">*</span>
+                      </label>
+                      <ng-select *ngIf="usaSelectorPresentacionCristal" [items]="opcionesPresentacionCristal" bindLabel="label"
+                        bindValue="label" [ngModel]="getPresentacionCristal(producto) || null" name="presentacionCristal"
+                        (ngModelChange)="onPresentacionCristalChange($event)" [searchable]="false" [clearable]="true"
+                        [disabled]="esSoloLectura" [placeholder]="placeholderPresentacionCristal" class="ng-select-moderno">
+                      </ng-select>
+                      <input *ngIf="!usaSelectorPresentacionCristal" type="text" class="form-control-moderno"
+                        [ngModel]="getPresentacionCristal(producto)" name="presentacionCristal" [disabled]="esSoloLectura"
+                        [required]="presentacionCristalEsObligatoria" [placeholder]="placeholderPresentacionCristal"
+                        (ngModelChange)="onPresentacionCristalChange($event)">
+                    </div>
+                  </div>
+
                   <!-- Marca -->
                   <div class="col-md-4" *ngIf="mostrarCampoMarca">
                     <div class="form-group-moderno">
@@ -511,12 +529,7 @@
                         <i class="bi bi-building"></i>
                         {{ etiquetaMarcaCategoria }} <span class="required" *ngIf="marcaEsObligatoria">*</span>
                       </label>
-                      <ng-select *ngIf="usaSelectorMarcaCategoria" [items]="opcionesMarcaCategoria" bindLabel="label"
-                        bindValue="label" [ngModel]="producto.marca || null" name="marca"
-                        (ngModelChange)="onMarcaProductoModelChange($event)" [searchable]="false" [clearable]="true"
-                        [disabled]="esSoloLectura" [placeholder]="placeholderMarcaCategoria" class="ng-select-moderno">
-                      </ng-select>
-                      <input *ngIf="!usaSelectorMarcaCategoria" type="text" class="form-control-moderno"
+                      <input type="text" class="form-control-moderno"
                         [(ngModel)]="producto.marca" name="marca" [disabled]="esSoloLectura"
                         [required]="marcaEsObligatoria" [placeholder]="placeholderMarcaCategoria"
                         (ngModelChange)="onMarcaProductoModelChange($event)">
@@ -621,8 +634,22 @@
                     </div>
                   </div>
 
+                  <div class="col-md-4" *ngIf="mostrarCampoRangoFormulaLenteContacto">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-sliders2"></i>
+                        Rango de fórmula
+                      </label>
+                      <input type="text" class="form-control-moderno"
+                        [ngModel]="producto.lenteContactoConfig?.rangoFormula || ''" name="rangoFormulaLenteContacto"
+                        (ngModelChange)="onRangoFormulaLenteContactoChange($event)" [disabled]="esSoloLectura"
+                        [placeholder]="placeholderRangoFormulaLenteContacto">
+                      <div class="campo-ayuda">• Disponible cuando el tipo de lente es formulado.</div>
+                    </div>
+                  </div>
+
                   <!-- Descripción -->
-                  <div [class.col-md-8]="esCristalConfigurableActual" [class.col-12]="!esCristalConfigurableActual">
+                  <div [class.col-md-8]="esCristalConfigurableActual || mostrarCampoRangoFormulaLenteContacto" [class.col-12]="!esCristalConfigurableActual && !mostrarCampoRangoFormulaLenteContacto">
                     <div class="form-group-moderno">
                       <label class="form-label-moderno">
                         <i class="bi bi-text-paragraph"></i>

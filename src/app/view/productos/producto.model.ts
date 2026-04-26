@@ -9,51 +9,69 @@ export type ProductoEstadoDisponibilidad = 'disponible' | 'bajo_pedido' | 'agota
 export type ProductoPrecioCristal = 'par' | 'ojo';
 
 export interface ProductoCristalConfig {
+  categoria?: string;
+  marca?: string;
   tipoCristal?: string;
   presentacion?: string;
+  modelo?: string;
   material?: string;
+  color?: string | null;
   proveedor?: string;
   tratamientos: string[];
   rangoFormula: string;
   precioPor?: ProductoPrecioCristal;
   costoLaboratorio?: number | null;
   materialOtro?: string;
+  descripcion?: string;
 }
 
 export interface ProductoMonturaConfig {
+  categoria?: string;
   marca: string;
   modelo: string;
   color: string;
   material: string;
   proveedor: string;
+  descripcion?: string;
 }
 
 export interface ProductoLenteContactoConfig {
+  categoria?: string;
   marca: string;
   tipoLenteContacto: string;
+  modelo?: string;
   color: string;
+  material?: string | null;
   proveedor: string;
+  rangoFormula?: string;
+  descripcion?: string;
 }
 
 export interface ProductoLiquidoConfig {
+  categoria?: string;
   marca: string;
   modelo: string;
   proveedor: string;
+  descripcion?: string;
 }
 
 export interface ProductoEstucheConfig {
+  categoria?: string;
   marca: string;
   modelo: string;
   material: string;
   proveedor: string;
+  descripcion?: string;
 }
 
 export interface ProductoAccesorioConfig {
+  categoria?: string;
   marca: string;
   modelo: string;
   color: string;
   material: string;
   proveedor: string;
+  descripcion?: string;
 }
 
 export interface ProductoInventarioMeta {
@@ -110,21 +128,22 @@ export interface Producto extends ProductoClasificacion, ProductoInventarioMeta 
 export interface ProductoDto {
   id: number;
   sede_id: string;
-  nombre: string;
+  nombre?: string;
   codigo: string;
-  marca: string;
+  marca?: string;
   modelo?: string;
   color?: string;
   material?: string;
   moneda: string;
   stock: number;
-  categoria: string;
-  proveedor: string;
+  categoria?: string;
+  proveedor?: string;
   aplicaIva: boolean;
   precioConIva?: number;
   precio: number;
   activo: boolean;
   descripcion?: string;
+  costoLaboratorio?: number;
   cristalConfig?: ProductoCristalConfig;
   monturaConfig?: ProductoMonturaConfig;
   lenteContactoConfig?: ProductoLenteContactoConfig;

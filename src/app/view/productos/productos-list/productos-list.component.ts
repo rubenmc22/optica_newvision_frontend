@@ -73,7 +73,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         MONOFOCAL: 'VISION SENCILLA',
         MONOFOCAL_DIGITAL: 'VISION SENCILLA DIGITAL',
         BIFOCAL: 'BIFOCAL',
-        PROGRESIVO_CONVENCIONAL: 'PROGRESIVO CONVENCIONAL',
+        PROGRESIVO_CONVENCIONAL: 'PROGRESIVO',
         PROGRESIVO_DIGITAL_BASICO: 'PROGRESIVO DIGITAL BASICO',
         PROGRESIVO_DIGITAL_INTERMEDIO: 'PROGRESIVO DIGITAL INTERMEDIO',
         PROGRESIVO_DIGITAL_AMPLIO: 'PROGRESIVO DIGITAL AMPLIO'
@@ -169,7 +169,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         { value: 'MONOFOCAL', label: 'Monofocal visión sencilla' },
         { value: 'MONOFOCAL_DIGITAL', label: 'Monofocal visión sencilla digital' },
         { value: 'BIFOCAL', label: 'Bifocal' },
-        { value: 'PROGRESIVO_CONVENCIONAL', label: 'Progresivo convencional' },
+        { value: 'PROGRESIVO_CONVENCIONAL', label: 'Progresivo' },
         { value: 'PROGRESIVO_DIGITAL_BASICO', label: 'Progresivo digital básico' },
         { value: 'PROGRESIVO_DIGITAL_INTERMEDIO', label: 'Progresivo digital intermedio' },
         { value: 'PROGRESIVO_DIGITAL_AMPLIO', label: 'Progresivo digital amplio' }
@@ -596,16 +596,13 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         const precioPersistencia = this.obtenerPrecioParaPersistencia(producto);
         const formData = new FormData();
 
-        formData.append('nombre', producto.nombre);
-        formData.append('marca', producto.marca);
-        formData.append('modelo', producto.modelo ?? '');
-        formData.append('color', producto.color ?? '');
-        formData.append('material', producto.material ?? '');
-        formData.append('proveedor', producto.proveedor);
-        formData.append('categoria', producto.categoria);
+        const esCristal = this.normalizarCategoriaProducto(producto.categoria) === 'cristales';
+        if (esCristal && producto.cristalConfig?.costoLaboratorio !== undefined && producto.cristalConfig?.costoLaboratorio !== null) {
+            formData.append('costoLaboratorio', String(producto.cristalConfig.costoLaboratorio));
+        }
+
         formData.append('stock', producto.stock.toString());
         formData.append('activo', producto.activo ? 'true' : 'false');
-        formData.append('descripcion', this.obtenerDescripcionPersistencia(producto));
         formData.append('fechaIngreso', producto.fechaIngreso);
         formData.append('aplicaIva', producto.aplicaIva.toString());
         formData.append('precio', precioPersistencia.toString());
@@ -645,16 +642,13 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         const precioPersistencia = this.obtenerPrecioParaPersistencia(producto);
         const formData = new FormData();
 
-        formData.append('nombre', producto.nombre ?? '');
-        formData.append('marca', producto.marca ?? '');
-        formData.append('modelo', producto.modelo ?? '');
-        formData.append('color', producto.color ?? '');
-        formData.append('material', producto.material ?? '');
-        formData.append('proveedor', producto.proveedor ?? '');
-        formData.append('categoria', producto.categoria ?? '');
+        const esCristal = this.normalizarCategoriaProducto(producto.categoria) === 'cristales';
+        if (esCristal && producto.cristalConfig?.costoLaboratorio !== undefined && producto.cristalConfig?.costoLaboratorio !== null) {
+            formData.append('costoLaboratorio', String(producto.cristalConfig.costoLaboratorio));
+        }
+
         formData.append('stock', producto.stock?.toString() ?? '0');
         formData.append('activo', producto.activo ? 'true' : 'false');
-        formData.append('descripcion', this.obtenerDescripcionPersistencia(producto));
         formData.append('fechaIngreso', producto.fechaIngreso ?? '');
         formData.append('aplicaIva', producto.aplicaIva.toString());
         formData.append('precio', precioPersistencia.toString());
@@ -1259,17 +1253,20 @@ export class ProductosListComponent implements OnInit, OnDestroy {
 
     private construirCristalConfigPayload(producto: Producto): Record<string, unknown> {
         const cristalConfig = normalizarProductoCristalConfig(producto.cristalConfig);
-        const costoLaboratorio = this.resolverCostoLaboratorioCristalParaPersistencia(cristalConfig.costoLaboratorio);
 
         return {
+            categoria: 'Cristales',
+            marca: String(producto.marca ?? '').trim(),
             tipoCristal: String(producto.modelo ?? '').trim(),
-            presentacion: String(producto.marca ?? '').trim(),
+            presentacion: this.getPresentacionCristal(producto),
+            modelo: String(producto.modelo ?? '').trim(),
             material: String(producto.material ?? '').trim(),
+            color: producto.color ?? null,
             proveedor: String(producto.proveedor ?? '').trim(),
             tratamientos: cristalConfig.tratamientos,
             rangoFormula: cristalConfig.rangoFormula,
-            costoLaboratorio,
-            materialOtro: cristalConfig.materialOtro
+            materialOtro: cristalConfig.materialOtro,
+            descripcion: this.resolverDescripcionProducto(producto)
         };
     }
 
@@ -1292,47 +1289,62 @@ export class ProductosListComponent implements OnInit, OnDestroy {
 
     private construirMonturaConfigPayload(producto: Producto): Record<string, unknown> {
         return {
+            categoria: 'Monturas',
             marca: String(producto.marca ?? '').trim(),
             modelo: String(producto.modelo ?? '').trim(),
             color: String(producto.color ?? '').trim(),
             material: String(producto.material ?? '').trim(),
-            proveedor: String(producto.proveedor ?? '').trim()
+            proveedor: String(producto.proveedor ?? '').trim(),
+            descripcion: this.resolverDescripcionProducto(producto)
         };
     }
 
     private construirLenteContactoConfigPayload(producto: Producto): Record<string, unknown> {
         return {
+            categoria: 'Lentes de contacto',
             marca: String(producto.marca ?? '').trim(),
             tipoLenteContacto: String(producto.modelo ?? '').trim(),
+            modelo: String(producto.modelo ?? '').trim(),
             color: String(producto.color ?? '').trim(),
-            proveedor: String(producto.proveedor ?? '').trim()
+            material: String(producto.material ?? '').trim() || null,
+            proveedor: String(producto.proveedor ?? '').trim(),
+            rangoFormula: this.esTipoLenteContactoFormulado(producto?.modelo)
+                ? this.getRangoFormulaLenteContacto(producto)
+                : '',
+            descripcion: this.resolverDescripcionProducto(producto)
         };
     }
 
     private construirLiquidoConfigPayload(producto: Producto): Record<string, unknown> {
         return {
+            categoria: 'Líquidos',
             marca: String(producto.marca ?? '').trim(),
             modelo: String(producto.modelo ?? '').trim(),
-            proveedor: String(producto.proveedor ?? '').trim()
+            proveedor: String(producto.proveedor ?? '').trim(),
+            descripcion: this.resolverDescripcionProducto(producto)
         };
     }
 
     private construirEstucheConfigPayload(producto: Producto): Record<string, unknown> {
         return {
+            categoria: 'Estuches',
             marca: String(producto.marca ?? '').trim(),
             modelo: String(producto.modelo ?? '').trim(),
             material: String(producto.material ?? '').trim(),
-            proveedor: String(producto.proveedor ?? '').trim()
+            proveedor: String(producto.proveedor ?? '').trim(),
+            descripcion: this.resolverDescripcionProducto(producto)
         };
     }
 
     private construirAccesorioConfigPayload(producto: Producto): Record<string, unknown> {
         return {
+            categoria: 'Accesorios',
             marca: String(producto.marca ?? '').trim(),
             modelo: String(producto.modelo ?? '').trim(),
             color: String(producto.color ?? '').trim(),
             material: String(producto.material ?? '').trim(),
-            proveedor: String(producto.proveedor ?? '').trim()
+            proveedor: String(producto.proveedor ?? '').trim(),
+            descripcion: this.resolverDescripcionProducto(producto)
         };
     }
 
@@ -1340,6 +1352,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         if (this.esCristalConfigurableActual) {
             const tratamientos = this.getTratamientosCristal(this.producto);
             const materialOtro = String(this.producto?.cristalConfig?.materialOtro ?? '').trim();
+            const presentacion = this.getPresentacionCristal(this.producto);
+
+            if (this.presentacionCristalEsObligatoria && !presentacion) {
+                return false;
+            }
 
             if (!tratamientos.length) {
                 return false;
@@ -1392,11 +1409,19 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     get usaSelectorMarcaCategoria(): boolean {
-        return this.esCristalConfigurableActual && this.opcionesMarcaCategoria.length > 0;
+        return false;
+    }
+
+    get usaSelectorPresentacionCristal(): boolean {
+        return this.esCristalConfigurableActual && this.opcionesPresentacionCristal.length > 0;
     }
 
     get mostrarCampoMaterialOtroCristal(): boolean {
         return this.esCristalConfigurableActual && String(this.producto?.material ?? '').trim() === 'Otro';
+    }
+
+    get mostrarCampoRangoFormulaLenteContacto(): boolean {
+        return this.categoriaProductoActual === 'lentes de contacto' && this.esTipoLenteContactoFormulado(this.producto?.modelo);
     }
 
     get mostrarCampoMaterial(): boolean {
@@ -1416,7 +1441,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     get marcaEsObligatoria(): boolean {
-        return this.usaSelectorMarcaCategoria;
+        return false;
+    }
+
+    get presentacionCristalEsObligatoria(): boolean {
+        return this.usaSelectorPresentacionCristal;
     }
 
     get stockEsObligatorio(): boolean {
@@ -1447,7 +1476,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     get etiquetaMarcaCategoria(): string {
-        return this.categoriaProductoActual === 'cristales' ? 'Presentación' : 'Marca';
+        return 'Marca';
+    }
+
+    get etiquetaPresentacionCristal(): string {
+        return 'Presentación';
     }
 
     get etiquetaMaterialCategoria(): string {
@@ -1498,7 +1531,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     get placeholderMarcaCategoria(): string {
         switch (this.categoriaProductoActual) {
             case 'cristales':
-                return 'Selecciona la presentación comercial';
+                return 'Ej. Essilor, Hoya, Kodak';
             case 'monturas':
                 return 'Ej. Ray-Ban, Vogue, Calvin Klein';
             case 'lentes de contacto':
@@ -1511,6 +1544,12 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             default:
                 return 'Marca comercial';
         }
+    }
+
+    get placeholderPresentacionCristal(): string {
+        return this.usaSelectorPresentacionCristal
+            ? 'Selecciona la presentación comercial'
+            : 'Ingresa la presentación comercial';
     }
 
     get placeholderProveedorCategoria(): string {
@@ -1579,6 +1618,10 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         return 'Ej. Esf. +4.00 a -6.00 | Cil hasta -2.00';
     }
 
+    get placeholderRangoFormulaLenteContacto(): string {
+        return 'Ej. Esf. -8.00 a +6.00 | Cil hasta -2.75';
+    }
+
     get placeholderStockCategoria(): string {
         switch (this.categoriaProductoActual) {
             case 'cristales':
@@ -1612,7 +1655,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         return this.usaSelectorMaterialCategoria ? this.materialesDisponibles : [];
     }
 
-    get opcionesMarcaCategoria(): OpcionSelect[] {
+    get opcionesPresentacionCristal(): OpcionSelect[] {
         if (!this.esCristalConfigurableActual) {
             return [];
         }
@@ -1658,11 +1701,29 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         return String(producto?.cristalConfig?.rangoFormula ?? '').trim();
     }
 
+    getRangoFormulaLenteContacto(producto: Partial<Producto> | null | undefined): string {
+        return String(producto?.lenteContactoConfig?.rangoFormula ?? '').trim();
+    }
+
+    getPresentacionCristal(producto: Partial<Producto> | null | undefined): string {
+        const presentacion = String(producto?.cristalConfig?.presentacion ?? '').trim();
+        if (presentacion) {
+            return presentacion;
+        }
+
+        const marcaCristal = String(producto?.cristalConfig?.marca ?? '').trim();
+        if (!marcaCristal && this.normalizarCategoriaProducto(producto?.categoria) === 'cristales') {
+            return String(producto?.marca ?? '').trim();
+        }
+
+        return '';
+    }
+
     getResumenConfiguracionCristal(producto: Partial<Producto> | null | undefined): string {
         const tratamientos = this.getTratamientosCristal(producto).join(' + ');
         const partes = [
             producto?.modelo?.trim(),
-            producto?.marca?.trim(),
+            this.getPresentacionCristal(producto),
             this.obtenerMaterialCristalDisplay(producto),
             tratamientos,
             this.getRangoFormulaCristal(producto),
@@ -1917,7 +1978,8 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             estadoOperativo: undefined,
             controlaStock: undefined,
             disponibilidadInventario: undefined,
-            cristalConfig: normalizarProductoCristalConfig(undefined)
+            cristalConfig: normalizarProductoCristalConfig(undefined),
+            lenteContactoConfig: undefined
         });
 
         setTimeout(() => this.desplazarModalASeccionCategoria(), 60);
@@ -1946,7 +2008,18 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         this.actualizarProductoFormulario({
             ...this.producto,
             modelo: modelo ?? '',
-            marca: this.esCristalConfigurableActual ? presentacionPorDefecto : this.producto?.marca ?? ''
+            cristalConfig: this.esCristalConfigurableActual
+                ? {
+                    ...normalizarProductoCristalConfig(this.producto?.cristalConfig),
+                    presentacion: presentacionPorDefecto
+                }
+                : this.producto?.cristalConfig,
+            lenteContactoConfig: this.categoriaProductoActual === 'lentes de contacto'
+                ? {
+                    ...this.producto?.lenteContactoConfig,
+                    rangoFormula: this.esTipoLenteContactoFormulado(modelo) ? this.getRangoFormulaLenteContacto(this.producto) : ''
+                }
+                : this.producto?.lenteContactoConfig
         });
     }
 
@@ -1998,6 +2071,22 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         });
     }
 
+    onPresentacionCristalChange(valor: string | null | Event): void {
+        if (!this.producto) {
+            return;
+        }
+
+        const presentacion = typeof valor === 'string' || valor === null ? valor : null;
+
+        this.actualizarProductoFormulario({
+            ...this.producto,
+            cristalConfig: {
+                ...normalizarProductoCristalConfig(this.producto?.cristalConfig),
+                presentacion: presentacion ?? ''
+            }
+        });
+    }
+
     onTratamientosCristalModelChange(valor: string[] | null): void {
         if (!this.producto) {
             return;
@@ -2023,6 +2112,22 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             ...this.producto,
             cristalConfig: {
                 ...normalizarProductoCristalConfig(this.producto?.cristalConfig),
+                rangoFormula: rangoFormula ?? ''
+            }
+        });
+    }
+
+    onRangoFormulaLenteContactoChange(valor: string | null | Event): void {
+        if (!this.producto) {
+            return;
+        }
+
+        const rangoFormula = typeof valor === 'string' || valor === null ? valor : null;
+
+        this.actualizarProductoFormulario({
+            ...this.producto,
+            lenteContactoConfig: {
+                ...this.producto?.lenteContactoConfig,
                 rangoFormula: rangoFormula ?? ''
             }
         });
@@ -2141,11 +2246,18 @@ export class ProductosListComponent implements OnInit, OnDestroy {
 
         if (categoria === 'cristales') {
             const opcionesPresentacion = this.obtenerOpcionesPresentacionCristal(siguiente.modelo);
+            const presentacionActual = this.getPresentacionCristal(siguiente);
 
             if (opcionesPresentacion.length === 1) {
-                siguiente.marca = opcionesPresentacion[0].label;
-            } else if (!this.valorPerteneceAOpciones(siguiente.marca, opcionesPresentacion)) {
-                siguiente.marca = '';
+                siguiente.cristalConfig = {
+                    ...normalizarProductoCristalConfig(siguiente.cristalConfig),
+                    presentacion: opcionesPresentacion[0].label
+                };
+            } else if (opcionesPresentacion.length > 0 && !this.valorPerteneceAOpciones(presentacionActual, opcionesPresentacion)) {
+                siguiente.cristalConfig = {
+                    ...normalizarProductoCristalConfig(siguiente.cristalConfig),
+                    presentacion: ''
+                };
             }
         }
 
@@ -2201,12 +2313,14 @@ export class ProductosListComponent implements OnInit, OnDestroy {
 
     private actualizarProductoFormulario(producto: Producto): void {
         const productoNormalizado = this.normalizarCamposSegunCategoria(producto);
-        const productoConNombre = this.nombreProductoPersonalizado
+        const mantenerNombreManual = this.nombreProductoPersonalizado && this.tieneNombrePersonalizado(productoNormalizado);
+        const productoConNombre = mantenerNombreManual
             ? {
                 ...productoNormalizado,
                 nombre: String(productoNormalizado.nombre ?? '').trim()
             }
             : this.sincronizarNombreProducto(productoNormalizado);
+        this.nombreProductoPersonalizado = mantenerNombreManual;
         const productoConDescripcion = this.descripcionProductoPersonalizada
             ? {
                 ...productoConNombre,
@@ -2261,17 +2375,67 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             return false;
         }
 
-        return nombreActual !== this.resolverNombreProducto({
+        const productoSinNombre = {
             ...producto,
             nombre: ''
-        });
-    }
+        };
+        const nombreSugerido = this.resolverNombreProducto(productoSinNombre);
 
-    private tieneDescripcionPersonalizada(producto: Partial<Producto> | null | undefined): boolean {
-        if (this.normalizarCategoriaProducto(producto?.categoria) !== 'cristales') {
+        if (this.normalizarNombreComparable(nombreActual) === this.normalizarNombreComparable(nombreSugerido)) {
             return false;
         }
 
+        return !this.esNombreAutomaticoLegacy(productoSinNombre, nombreActual);
+    }
+
+    private esNombreAutomaticoLegacy(producto: Partial<Producto> | null | undefined, nombreActual: string): boolean {
+        const categoria = this.obtenerCategoriaVisual(producto?.categoria);
+        const categoriaNormalizada = this.normalizarCategoriaProducto(categoria);
+        const nombreComparable = this.normalizarNombreComparable(nombreActual);
+
+        if (!categoria || !nombreComparable) {
+            return false;
+        }
+
+        const variantesLegacy: string[] = [];
+
+        if (categoriaNormalizada === 'monturas') {
+            variantesLegacy.push(
+                [categoria, producto?.marca?.trim(), producto?.modelo?.trim(), producto?.color?.trim()]
+                    .filter(Boolean)
+                    .join(' '),
+                [categoria, producto?.marca?.trim(), producto?.modelo?.trim()]
+                    .filter(Boolean)
+                    .join(' ')
+            );
+        }
+
+        if (['estuches', 'accesorios'].includes(categoriaNormalizada)) {
+            variantesLegacy.push(
+                [categoria, producto?.modelo?.trim()]
+                    .filter(Boolean)
+                    .join(' '),
+                [categoria, producto?.marca?.trim(), producto?.modelo?.trim()]
+                    .filter(Boolean)
+                    .join(' ')
+            );
+        }
+
+        return variantesLegacy
+            .map(item => this.normalizarNombreComparable(item))
+            .filter(Boolean)
+            .includes(nombreComparable);
+    }
+
+    private normalizarNombreComparable(valor: string | null | undefined): string {
+        return String(valor ?? '')
+            .replace(/[-|]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toUpperCase();
+    }
+
+    private tieneDescripcionPersonalizada(producto: Partial<Producto> | null | undefined): boolean {
         const descripcionActual = String(producto?.descripcion ?? '').trim();
 
         if (!descripcionActual) {
@@ -2319,18 +2483,54 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             return this.obtenerNombreProductoLineas(producto).join(' | ');
         }
 
-        const tipo = this.obtenerTipoParaNombre(producto, categoriaNormalizada);
+        const nombreBase = this.resolverNombreProductoBase(producto, categoria, categoriaNormalizada);
+        if (nombreBase) {
+            return nombreBase;
+        }
 
+        const tipo = this.obtenerTipoParaNombre(producto, categoriaNormalizada);
         return [categoria, tipo].filter(Boolean).join(' - ');
     }
 
     private resolverDescripcionProducto(producto: Partial<Producto> | null | undefined): string {
-        if (this.normalizarCategoriaProducto(producto?.categoria) !== 'cristales') {
-            return String(producto?.descripcion ?? '').trim();
+        const categoriaNormalizada = this.normalizarCategoriaProducto(producto?.categoria);
+
+        if (categoriaNormalizada === 'monturas') {
+            const partes = [
+                this.construirEtiquetaProducto('Montura', [producto?.marca, producto?.modelo]),
+                this.construirDetalleDescripcion('color', producto?.color),
+                this.construirDetalleDescripcion('material', producto?.material),
+                this.construirDetalleDescripcion('proveedor', producto?.proveedor)
+            ].filter(Boolean);
+
+            return this.finalizarDescripcionProducto(partes, 'Montura');
+        }
+
+        if (categoriaNormalizada === 'lentes de contacto') {
+            const partes = [
+                this.construirEtiquetaProducto('Lente de contacto', [producto?.marca, this.obtenerTipoParaNombre(producto, categoriaNormalizada)]),
+                this.construirDetalleDescripcion('color', producto?.color),
+                this.construirDetalleDescripcion('proveedor', producto?.proveedor)
+            ];
+
+            if (this.esTipoLenteContactoFormulado(producto?.modelo)) {
+                partes.push(this.construirDetalleDescripcion('rango de formula', this.getRangoFormulaLenteContacto(producto)));
+            }
+
+            return this.finalizarDescripcionProducto(partes.filter(Boolean), 'Lente de contacto');
+        }
+
+        if (categoriaNormalizada !== 'cristales') {
+            return this.finalizarDescripcionProducto([
+                this.construirEtiquetaProducto(this.obtenerCategoriaVisual(producto?.categoria) || 'Producto', [producto?.marca, producto?.modelo]),
+                this.construirDetalleDescripcion('material', producto?.material),
+                this.construirDetalleDescripcion('color', producto?.color),
+                this.construirDetalleDescripcion('proveedor', producto?.proveedor)
+            ].filter(Boolean), this.obtenerCategoriaVisual(producto?.categoria) || 'Producto');
         }
 
         const tipo = this.obtenerTipoCristalDescripcion(producto?.modelo);
-        const presentacion = this.obtenerPresentacionCristalDescripcion(producto?.modelo, producto?.marca);
+        const presentacion = this.obtenerPresentacionCristalDescripcion(producto?.modelo, this.getPresentacionCristal(producto));
         const material = this.obtenerMaterialCristalDescripcion(this.obtenerMaterialCristalDisplay(producto));
         const tratamientos = this.getTratamientosCristal(producto)
             .map(tratamiento => this.obtenerTratamientoCristalDescripcion(tratamiento))
@@ -2374,7 +2574,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         }
 
         const tipo = this.obtenerTipoCristalListaPrecios(producto?.modelo);
-        const presentacion = this.obtenerPresentacionCristalListaPrecios(producto?.modelo, producto?.marca);
+        const presentacion = this.obtenerPresentacionCristalListaPrecios(producto?.modelo, this.getPresentacionCristal(producto));
         const material = this.obtenerMaterialCristalListaPrecios(this.obtenerMaterialCristalDisplay(producto));
         const tratamientos = this.getTratamientosCristal(producto)
             .map(tratamiento => this.obtenerTratamientoCristalListaPrecios(tratamiento))
@@ -2394,8 +2594,49 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         categoria: string,
         categoriaNormalizada: string
     ): string {
-        const tipo = this.obtenerTipoParaNombre(producto, categoriaNormalizada);
-        return [categoria, tipo].filter(Boolean).join(' - ');
+        if (!producto) {
+            return '';
+        }
+
+        const modelo = categoriaNormalizada === 'lentes de contacto'
+            ? this.obtenerTipoParaNombre(producto, categoriaNormalizada)
+            : producto?.modelo?.trim();
+
+        const material = producto?.material?.trim();
+
+        return [categoria, producto?.marca?.trim(), modelo, material]
+            .filter(Boolean)
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toUpperCase();
+    }
+
+    private esTipoLenteContactoFormulado(valor: string | null | undefined): boolean {
+        return String(valor ?? '').trim().toLowerCase().includes('formulado');
+    }
+
+    private construirEtiquetaProducto(prefijo: string, valores: Array<string | null | undefined>): string {
+        const detalle = valores
+            .map(valor => String(valor ?? '').trim())
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+
+        return detalle ? `${prefijo} ${detalle}` : prefijo;
+    }
+
+    private construirDetalleDescripcion(etiqueta: string, valor: string | null | undefined): string {
+        const texto = String(valor ?? '').trim();
+        return texto ? `${etiqueta} ${texto}` : '';
+    }
+
+    private finalizarDescripcionProducto(partes: string[], fallback: string): string {
+        if (!partes.length) {
+            return `${fallback}.`;
+        }
+
+        return `${partes.join(', ')}.`.replace(/\s+,/g, ',').replace(/\.+$/, '.');
     }
 
     private abreviarTipoCristal(valor: string | null | undefined): string {

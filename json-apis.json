@@ -2644,323 +2644,123 @@ CONFIGURACION GENERAL - CIERRE DE CAJA
 }
 
 
-INVENTARIO - CONTRATO PROPUESTO CON MEJORAS
+INVENTARIO - APIS DE PRODUCTOS
 
-// nota funcional para backend:
-// - el frontend envia multipart/form-data en crear y actualizar cuando existe imagen
-// - aqui se documenta el contrato objetivo para revision funcional
-// - requiere_item_padre sale del contrato
-// - precioPor sale del contrato
-// - Filtro/Aditivos sale del flujo comercial de productos
-// - los campos comunes del producto quedan al nivel raiz
-// - las caracteristicas especificas de cada categoria viven dentro de su bloque config
-// - cada producto solo envia el bloque config que corresponde a su categoria
-// - moneda no se envia en create/update; backend la toma desde la moneda base configurada para la sede
-// - crear y actualizar productos usan la misma api, variando solo el bloque config segun la categoria
-// - cristalConfig debe incluir: tipoCristal, presentacion, material, proveedor, tratamientos, rangoFormula, costoLaboratorio y materialOtro
-// - monturaConfig debe incluir: marca, modelo, color, material y proveedor
-// - lenteContactoConfig debe incluir: marca, tipoLenteContacto, color y proveedor
-// - liquidoConfig debe incluir: marca, modelo y proveedor
-// - estucheConfig debe incluir: marca, modelo, material y proveedor
-// - accesorioConfig debe incluir: marca, modelo, color, material y proveedor
+// nota funcional actual:
+// - todos los endpoints requieren autenticacion bearer
+// - crear y actualizar usan multipart/form-data
+// - moneda no se envia en add/update; el backend toma la moneda base configurada para la sede
+// - todas las categorias usan contrato canonico: los datos especificos viven dentro de su *Config y no se repiten arriba
+// - para cristales costoLaboratorio viaja en top-level del request y tambien se retorna en top-level del response
+// - marca en cristales es opcional
+// - presentacion en cristales es obligatoria solo cuando en frontend se usa selector con opciones precargadas
+// - add/update siguen usando multipart/form-data, pero los campos de negocio por categoria viajan serializados dentro de su *Config
 
-// contrato base create/update
-// campos comunes del producto enviados en request
-{
-    "nombre": "string",
-    "categoria": "Cristales | Monturas | Lentes de contacto | Líquidos | Estuches | Accesorios",
-    "stock": 0,
-    "activo": true,
-    "descripcion": "string",
-    "fechaIngreso": "YYYY-MM-DD",
-    "aplicaIva": true,
-    "precio": 0,
-    "requiere_formula": false,
-    "imagen": "<archivo-opcional>",
-
-    "cristalConfig": null,
-    "monturaConfig": null,
-    "lenteContactoConfig": null,
-    "liquidoConfig": null,
-    "estucheConfig": null,
-    "accesorioConfig": null
-}
-
-// regla de contrato
-// - solo se envia un bloque config, el que corresponda a la categoria
-// - los demas bloques no se envian
-// - nombre, categoria, stock, activo, descripcion, fechaIngreso, aplicaIva, precio y requiere_formula son comunes
-// - moneda no se envia en request
-
-// definicion exacta por categoria
-
-// categoria: Cristales
-{
-    "cristalConfig": {
-        "tipoCristal": "string",
-        "presentacion": "string",
-        "material": "string",
-        "proveedor": "string",
-        "tratamientos": [
-            "string"
-        ],
-        "rangoFormula": "string",
-        "costoLaboratorio": 0,
-        "materialOtro": "string"
-    }
-}
-
-// categoria: Monturas
-{
-    "monturaConfig": {
-        "marca": "string",
-        "modelo": "string",
-        "color": "string",
-        "material": "string",
-        "proveedor": "string"
-    }
-}
-
-// categoria: Lentes de contacto
-{
-    "lenteContactoConfig": {
-        "marca": "string",
-        "tipoLenteContacto": "string",
-        "color": "string",
-        "proveedor": "string"
-    }
-}
-
-// categoria: Líquidos
-{
-    "liquidoConfig": {
-        "marca": "string",
-        "modelo": "string",
-        "proveedor": "string"
-    }
-}
-
-// categoria: Estuches
-{
-    "estucheConfig": {
-        "marca": "string",
-        "modelo": "string",
-        "material": "string",
-        "proveedor": "string"
-    }
-}
-
-// categoria: Accesorios
-{
-    "accesorioConfig": {
-        "marca": "string",
-        "modelo": "string",
-        "color": "string",
-        "material": "string",
-        "proveedor": "string"
-    }
-}
-
-// obtener inventario
 // GET /producto-get
 {
     "message": "ok",
     "iva": 16,
     "productos": [
         {
-            "id": 28,
-            "sede_id": "1",
-            "nombre": "VISION SENCILLA POLI BLUE BLOCK",
-            "codigo": "PR-000028",
-            "categoria": "Cristales",
-            "stock": 10,
-            "precio": 25.86,
-            "aplicaIva": true,
-            "precioConIva": 30,
+            "id": 49,
+            "sede_id": "guarenas",
+            "codigo": "PR-000049",
+            "stock": 3,
+            "precio": 25,
+            "aplicaIva": false,
+            "precioConIva": 25,
+            "costoLaboratorio": 12.5,
             "moneda": "dolar",
             "activo": true,
-            "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con blue block.",
+            "imagen_url": "/public/images/product-generic-image.jpg?t=1777165624595",
+            "created_at": "2026-04-25T10:27:04.000Z",
+            "updated_at": "2026-04-25T10:27:04.000Z",
+            "requiere_formula": true,
             "cristalConfig": {
+                "categoria": "Cristales",
+                "marca": "Hoya",
                 "tipoCristal": "Monofocal visión sencilla",
-                "presentacion": "V/S",
-                "material": "Policarbonato",
-                "proveedor": "Laboratorio Principal",
+                "presentacion": "Stock",
+                "modelo": "Monofocal visión sencilla",
+                "material": "CR-39",
+                "color": null,
+                "proveedor": "Laboratorio QA",
                 "tratamientos": [
-                    "Blue Block"
+                    "Antirreflejo"
                 ],
-                "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
-                "costoLaboratorio": 12,
-                "materialOtro": ""
-            },
-            "imagen_url": "/public/images/product-28.jpg?t=1770000000000",
-            "created_at": "2026-04-20T14:20:00.000Z",
-            "updated_at": "2026-04-20T14:20:00.000Z",
-            "requiere_formula": true
+                "rangoFormula": "Esf. +4.00 a -6.00",
+                "materialOtro": "",
+                "descripcion": "Producto QA para validar CRUD de cristales desde Postman."
+            }
         },
         {
             "id": 43,
-            "sede_id": "1",
-            "nombre": "Carrera 8847",
+            "sede_id": "guarenas",
             "codigo": "PR-000043",
-            "categoria": "Monturas",
             "stock": 12,
             "precio": 85,
             "aplicaIva": true,
             "precioConIva": 98.6,
             "moneda": "dolar",
             "activo": true,
-            "descripcion": "Montura completa disponible para venta directa.",
+            "imagen_url": "/public/images/product-43.jpg?t=1770000000001",
+            "created_at": "2026-04-20T14:40:00.000Z",
+            "updated_at": "2026-04-20T14:40:00.000Z",
+            "requiere_formula": false,
             "monturaConfig": {
+                "categoria": "Monturas",
                 "marca": "Carrera",
                 "modelo": "Carrera 8847",
                 "color": "Negro mate",
                 "material": "Acetato",
-                "proveedor": "Distribuidor oficial"
-            },
-            "imagen_url": "/public/images/product-43.jpg?t=1770000000001",
-            "created_at": "2026-04-20T14:40:00.000Z",
-            "updated_at": "2026-04-20T14:40:00.000Z",
-            "requiere_formula": false
-        },
-        {
-            "id": 45,
-            "sede_id": "1",
-            "nombre": "Biomedics Toric Azul",
-            "codigo": "PR-000045",
-            "categoria": "Lentes de contacto",
-            "stock": 24,
-            "precio": 18,
-            "aplicaIva": true,
-            "precioConIva": 20.88,
-            "moneda": "dolar",
-            "activo": true,
-            "descripcion": "Caja de lentes de contacto tóricos color azul.",
-            "lenteContactoConfig": {
-                "marca": "Biomedics",
-                "tipoLenteContacto": "Tóricos",
-                "color": "Azul",
-                "proveedor": "CooperVision"
-            },
-            "imagen_url": "/public/images/product-45.jpg?t=1770000000002",
-            "created_at": "2026-04-20T15:10:00.000Z",
-            "updated_at": "2026-04-20T15:10:00.000Z",
-            "requiere_formula": true
-        },
-        {
-            "id": 46,
-            "sede_id": "1",
-            "nombre": "Renu solución multiuso 120 ml",
-            "codigo": "PR-000046",
-            "categoria": "Líquidos",
-            "stock": 18,
-            "precio": 9.5,
-            "aplicaIva": true,
-            "precioConIva": 11.02,
-            "moneda": "dolar",
-            "activo": true,
-            "descripcion": "Solución multiuso para limpieza y conservación.",
-            "liquidoConfig": {
-                "marca": "Renu",
-                "modelo": "Solución multiuso 120 ml",
-                "proveedor": "Bausch + Lomb"
-            },
-            "imagen_url": null,
-            "created_at": "2026-04-20T15:20:00.000Z",
-            "updated_at": "2026-04-20T15:20:00.000Z",
-            "requiere_formula": false
-        },
-        {
-            "id": 47,
-            "sede_id": "1",
-            "nombre": "Estuche rígido negro",
-            "codigo": "PR-000047",
-            "categoria": "Estuches",
-            "stock": 30,
-            "precio": 4,
-            "aplicaIva": true,
-            "precioConIva": 4.64,
-            "moneda": "dolar",
-            "activo": true,
-            "descripcion": "Estuche rígido para resguardo de lentes.",
-            "estucheConfig": {
-                "marca": "Genérico",
-                "modelo": "Estuche rígido negro",
-                "material": "Plástico rígido",
-                "proveedor": "Proveedor local"
-            },
-            "imagen_url": null,
-            "created_at": "2026-04-20T15:30:00.000Z",
-            "updated_at": "2026-04-20T15:30:00.000Z",
-            "requiere_formula": false
-        },
-        {
-            "id": 48,
-            "sede_id": "1",
-            "nombre": "Cordón deportivo ajustable",
-            "codigo": "PR-000048",
-            "categoria": "Accesorios",
-            "stock": 16,
-            "precio": 3.5,
-            "aplicaIva": true,
-            "precioConIva": 4.06,
-            "moneda": "dolar",
-            "activo": true,
-            "descripcion": "Cordón ajustable para monturas de uso diario.",
-            "accesorioConfig": {
-                "marca": "Vision Case",
-                "modelo": "Cordón deportivo",
-                "color": "Negro",
-                "material": "Silicona",
-                "proveedor": "Proveedor local"
-            },
-            "imagen_url": null,
-            "created_at": "2026-04-20T15:40:00.000Z",
-            "updated_at": "2026-04-20T15:40:00.000Z",
-            "requiere_formula": false
+                "proveedor": "Distribuidor oficial",
+                "descripcion": "Montura completa disponible para venta directa."
+            }
         }
     ]
 }
 
-// obtener producto por id
-// GET /producto-get/28
+// GET /producto-get/:id
+// ejemplo: GET /producto-get/49
 {
     "message": "ok",
     "iva": 16,
     "productos": [
         {
-            "id": 28,
-            "sede_id": "1",
-            "nombre": "VISION SENCILLA POLI BLUE BLOCK",
-            "codigo": "PR-000028",
-            "categoria": "Cristales",
-            "stock": 10,
-            "precio": 25.86,
-            "aplicaIva": true,
-            "precioConIva": 30,
+            "id": 49,
+            "sede_id": "guarenas",
+            "codigo": "PR-000049",
+            "stock": 3,
+            "precio": 25,
+            "aplicaIva": false,
+            "precioConIva": 25,
+            "costoLaboratorio": 12.5,
             "moneda": "dolar",
             "activo": true,
-            "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con blue block.",
+            "imagen_url": "/public/images/product-generic-image.jpg?t=1777165624595",
+            "created_at": "2026-04-25T10:27:04.000Z",
+            "updated_at": "2026-04-25T10:27:04.000Z",
+            "requiere_formula": true,
             "cristalConfig": {
+                "categoria": "Cristales",
+                "marca": "Hoya",
                 "tipoCristal": "Monofocal visión sencilla",
-                "presentacion": "V/S",
-                "material": "Policarbonato",
-                "proveedor": "Laboratorio Principal",
+                "presentacion": "Stock",
+                "modelo": "Monofocal visión sencilla",
+                "material": "CR-39",
+                "color": null,
+                "proveedor": "Laboratorio QA",
                 "tratamientos": [
-                    "Blue Block"
+                    "Antirreflejo"
                 ],
-                "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
-                "costoLaboratorio": 12,
-                "materialOtro": ""
-            },
-            "imagen_url": "/public/images/product-28.jpg?t=1770000000000",
-            "created_at": "2026-04-20T14:20:00.000Z",
-            "updated_at": "2026-04-20T14:20:00.000Z",
-            "requiere_formula": true
+                "rangoFormula": "Esf. +4.00 a -6.00",
+                "materialOtro": "",
+                "descripcion": "Producto QA para validar CRUD de cristales desde Postman."
+            }
         }
     ]
 }
 
-// obtener categorias de productos
 // GET /categorias-get
 {
     "message": "ok",
@@ -2992,195 +2792,96 @@ INVENTARIO - CONTRATO PROPUESTO CON MEJORAS
     ]
 }
 
-// crear producto inventario - caso cristales
 // POST /producto-add
+// request multipart/form-data para cristales
 {
-    "nombre": "VISION SENCILLA POLI BLUE BLOCK",
-    "categoria": "Cristales",
-    "stock": 10,
-    "activo": true,
-    "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con blue block.",
-    "cristalConfig": {
-        "tipoCristal": "Monofocal visión sencilla",
-        "presentacion": "V/S",
-        "material": "Policarbonato",
-        "proveedor": "Laboratorio Principal",
-        "tratamientos": [
-            "Blue Block"
-        ],
-        "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
-        "costoLaboratorio": 12,
-        "materialOtro": ""
-    },
-    "fechaIngreso": "2026-04-15",
-    "aplicaIva": true,
-    "precio": 30,
-    "requiere_formula": true,
+    "stock": "3",
+    "precio": "25",
+    "aplicaIva": "false",
+    "requiere_formula": "true",
+    "requiere_item_padre": "false",
+    "activo": "true",
+    "costoLaboratorio": "12.5",
+    "cristalConfig": "{\"categoria\":\"Cristales\",\"marca\":\"Hoya\",\"tipoCristal\":\"Monofocal visión sencilla\",\"presentacion\":\"Stock\",\"modelo\":\"Monofocal visión sencilla\",\"material\":\"CR-39\",\"color\":null,\"proveedor\":\"Laboratorio QA\",\"tratamientos\":[\"Antirreflejo\"],\"rangoFormula\":\"Esf. +4.00 a -6.00\",\"materialOtro\":\"\",\"descripcion\":\"Producto QA para validar CRUD de cristales desde Postman.\"}",
     "imagen": "<archivo-opcional>"
 }
 
-// crear producto inventario - caso monturas
+// POST /producto-add
+// request multipart/form-data para monturas
 {
-    "nombre": "Carrera 8847",
-    "categoria": "Monturas",
-    "stock": 12,
-    "activo": true,
-    "descripcion": "Montura completa disponible para venta directa.",
-    "monturaConfig": {
-        "marca": "Carrera",
-        "modelo": "Carrera 8847",
-        "color": "Negro mate",
-        "material": "Acetato",
-        "proveedor": "Distribuidor oficial"
-    },
-    "fechaIngreso": "2026-04-15",
-    "aplicaIva": true,
-    "precio": 98.6,
-    "requiere_formula": false,
+    "stock": "12",
+    "precio": "98.6",
+    "aplicaIva": "true",
+    "requiere_formula": "false",
+    "requiere_item_padre": "false",
+    "activo": "true",
+    "monturaConfig": "{\"categoria\":\"Monturas\",\"marca\":\"Carrera\",\"modelo\":\"Carrera 8847\",\"color\":\"Negro mate\",\"material\":\"Acetato\",\"proveedor\":\"Distribuidor oficial\",\"descripcion\":\"Montura completa disponible para venta directa.\"}",
     "imagen": "<archivo-opcional>"
 }
 
-// crear producto inventario - caso lentes de contacto
+// POST /producto-add
+// request multipart/form-data para lentes de contacto
 {
-    "nombre": "Biomedics Toric Azul",
-    "categoria": "Lentes de contacto",
-    "stock": 24,
-    "activo": true,
-    "descripcion": "Caja de lentes de contacto tóricos color azul.",
-    "lenteContactoConfig": {
-        "marca": "Biomedics",
-        "tipoLenteContacto": "Tóricos",
-        "color": "Azul",
-        "proveedor": "CooperVision"
-    },
-    "fechaIngreso": "2026-04-15",
-    "aplicaIva": true,
-    "precio": 20.88,
-    "requiere_formula": true,
+    "stock": "6",
+    "precio": "18",
+    "aplicaIva": "false",
+    "requiere_formula": "true",
+    "requiere_item_padre": "false",
+    "activo": "true",
+    "lenteContactoConfig": "{\"categoria\":\"Lentes de contacto\",\"marca\":\"Bausch + Lomb\",\"tipoLenteContacto\":\"Esférico\",\"modelo\":\"Esférico\",\"color\":\"Transparente\",\"material\":null,\"proveedor\":\"Distribuidor LC\",\"rangoFormula\":\"-0.50 a -6.00\",\"descripcion\":\"Lente de contacto formulado para venta bajo receta.\"}",
     "imagen": "<archivo-opcional>"
 }
 
-// crear producto inventario - caso líquidos
-{
-    "nombre": "Renu solución multiuso 120 ml",
-    "categoria": "Líquidos",
-    "stock": 18,
-    "activo": true,
-    "descripcion": "Solución multiuso para limpieza y conservación.",
-    "liquidoConfig": {
-        "marca": "Renu",
-        "modelo": "Solución multiuso 120 ml",
-        "proveedor": "Bausch + Lomb"
-    },
-    "fechaIngreso": "2026-04-15",
-    "aplicaIva": true,
-    "precio": 11.02,
-    "requiere_formula": false,
-    "imagen": "<archivo-opcional>"
-}
-
-// crear producto inventario - caso estuches
-{
-    "nombre": "Estuche rígido negro",
-    "categoria": "Estuches",
-    "stock": 30,
-    "activo": true,
-    "descripcion": "Estuche rígido para resguardo de lentes.",
-    "estucheConfig": {
-        "marca": "Genérico",
-        "modelo": "Estuche rígido negro",
-        "material": "Plástico rígido",
-        "proveedor": "Proveedor local"
-    },
-    "fechaIngreso": "2026-04-15",
-    "aplicaIva": true,
-    "precio": 4.64,
-    "requiere_formula": false,
-    "imagen": "<archivo-opcional>"
-}
-
-// crear producto inventario - caso accesorios
-{
-    "nombre": "Cordón deportivo ajustable",
-    "categoria": "Accesorios",
-    "stock": 16,
-    "activo": true,
-    "descripcion": "Cordón ajustable para monturas de uso diario.",
-    "accesorioConfig": {
-        "marca": "Vision Case",
-        "modelo": "Cordón deportivo",
-        "color": "Negro",
-        "material": "Silicona",
-        "proveedor": "Proveedor local"
-    },
-    "fechaIngreso": "2026-04-15",
-    "aplicaIva": true,
-    "precio": 4.06,
-    "requiere_formula": false,
-    "imagen": "<archivo-opcional>"
-}
-
-// respuesta crear producto - caso cristales
+// respuesta exitosa de add - caso cristal
 {
     "message": "ok",
     "iva": 16,
     "producto": {
-        "id": 28,
-        "sede_id": "1",
-        "nombre": "VISION SENCILLA POLI BLUE BLOCK",
-        "codigo": "PR-000028",
-        "categoria": "Cristales",
-        "stock": 10,
-        "precio": 25.86,
-        "aplicaIva": true,
-        "precioConIva": 30,
+        "id": 49,
+        "sede_id": "guarenas",
+        "codigo": "PR-000049",
+        "stock": 3,
+        "precio": 25,
+        "aplicaIva": false,
+        "precioConIva": 25,
+        "costoLaboratorio": 12.5,
         "moneda": "dolar",
         "activo": true,
-        "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con blue block.",
+        "imagen_url": "/public/images/product-generic-image.jpg?t=1777165624595",
+        "created_at": "2026-04-25T10:27:04.000Z",
+        "updated_at": "2026-04-25T10:27:04.000Z",
+        "requiere_formula": true,
         "cristalConfig": {
+            "categoria": "Cristales",
+            "marca": "Hoya",
             "tipoCristal": "Monofocal visión sencilla",
-            "presentacion": "V/S",
-            "material": "Policarbonato",
-            "proveedor": "Laboratorio Principal",
+            "presentacion": "Stock",
+            "modelo": "Monofocal visión sencilla",
+            "material": "CR-39",
+            "color": null,
+            "proveedor": "Laboratorio QA",
             "tratamientos": [
-                "Blue Block"
+                "Antirreflejo"
             ],
-            "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
-            "costoLaboratorio": 12,
-            "materialOtro": ""
-        },
-        "imagen_url": "/public/images/product-28.jpg?t=1770000000000",
-        "created_at": "2026-04-20T14:20:00.000Z",
-        "updated_at": "2026-04-20T14:20:00.000Z",
-        "requiere_formula": true
+            "rangoFormula": "Esf. +4.00 a -6.00",
+            "materialOtro": "",
+            "descripcion": "Producto QA para validar CRUD de cristales desde Postman."
+        }
     }
 }
 
-// actualizar producto inventario - caso cristales
-// PUT /producto-update/28
+// PUT /producto-update/:id
+// ejemplo: PUT /producto-update/49
+// request multipart/form-data para cristales
 {
-    "nombre": "VISION SENCILLA POLI FOTO BLUE BLOCK",
-    "categoria": "Cristales",
-    "stock": 8,
-    "activo": true,
-    "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con fotocromático y blue block.",
-    "cristalConfig": {
-        "tipoCristal": "Monofocal visión sencilla",
-        "presentacion": "V/S",
-        "material": "Policarbonato",
-        "proveedor": "Laboratorio principal",
-        "tratamientos": [
-            "Fotocromático",
-            "Blue Block"
-        ],
-        "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
-        "costoLaboratorio": 15,
-        "materialOtro": ""
-    },
-    "fechaIngreso": "2026-04-15",
-    "aplicaIva": true,
-    "precio": 35,
-    "requiere_formula": true,
+    "stock": "4",
+    "precio": "31",
+    "aplicaIva": "false",
+    "requiere_formula": "true",
+    "requiere_item_padre": "false",
+    "activo": "true",
+    "costoLaboratorio": "15.75",
+    "cristalConfig": "{\"categoria\":\"Cristales\",\"marca\":\"Essilor\",\"tipoCristal\":\"Monofocal visión sencilla\",\"presentacion\":\"Semi-terminado\",\"modelo\":\"Monofocal visión sencilla\",\"material\":\"Policarbonato\",\"color\":null,\"proveedor\":\"Laboratorio QA 2\",\"tratamientos\":[\"Antirreflejo\",\"Filtro azul\"],\"rangoFormula\":\"Esf. +6.00 a -8.00\",\"materialOtro\":\"\",\"descripcion\":\"Producto QA actualizado desde Postman.\"}",
     "imagen": "<archivo-opcional>"
 }
 
@@ -3188,36 +2889,50 @@ INVENTARIO - CONTRATO PROPUESTO CON MEJORAS
     "message": "ok",
     "iva": 16,
     "producto": {
-        "id": 28,
-        "sede_id": "1",
-        "nombre": "VISION SENCILLA POLI FOTO BLUE BLOCK",
-        "codigo": "PR-000028",
-        "categoria": "Cristales",
-        "stock": 8,
-        "precio": 30.17,
-        "aplicaIva": true,
-        "precioConIva": 35,
+        "id": 49,
+        "sede_id": "guarenas",
+        "codigo": "PR-000049",
+        "stock": 4,
+        "precio": 31,
+        "aplicaIva": false,
+        "precioConIva": 31,
+        "costoLaboratorio": 15.75,
         "moneda": "dolar",
         "activo": true,
-        "descripcion": "Cristal monofocal visión sencilla en material policarbonato, con fotocromático y blue block.",
+        "imagen_url": "/public/images/product-generic-image.jpg?t=1777165624595",
+        "created_at": "2026-04-25T10:27:04.000Z",
+        "updated_at": "2026-04-25T10:35:00.000Z",
+        "requiere_formula": true,
         "cristalConfig": {
+            "categoria": "Cristales",
+            "marca": "Essilor",
             "tipoCristal": "Monofocal visión sencilla",
-            "presentacion": "V/S",
+            "presentacion": "Semi-terminado",
+            "modelo": "Monofocal visión sencilla",
             "material": "Policarbonato",
-            "proveedor": "Laboratorio principal",
+            "color": null,
+            "proveedor": "Laboratorio QA 2",
             "tratamientos": [
-                "Fotocromático",
-                "Blue Block"
+                "Antirreflejo",
+                "Filtro azul"
             ],
-            "rangoFormula": "Esf. +4.00 a -6.00 | Cil hasta -2.00",
-            "costoLaboratorio": 15,
-            "materialOtro": ""
-        },
-        "imagen_url": "/public/images/product-28.jpg?t=1770000000000",
-        "created_at": "2026-04-20T14:20:00.000Z",
-        "updated_at": "2026-04-20T14:45:00.000Z",
-        "requiere_formula": true
+            "rangoFormula": "Esf. +6.00 a -8.00",
+            "materialOtro": "",
+            "descripcion": "Producto QA actualizado desde Postman."
+        }
     }
+}
+
+// DELETE /producto-delete/:id
+// ejemplo: DELETE /producto-delete/49
+{
+    "message": "ok"
+}
+
+// PUT /producto-remove-image/:id
+// ejemplo: PUT /producto-remove-image/49
+{
+    "message": "ok"
 }
 
 // errores frecuentes crear o actualizar producto
@@ -3247,16 +2962,4 @@ INVENTARIO - CONTRATO PROPUESTO CON MEJORAS
 
 {
     "message": "No se puede modificar productos de otras sedes."
-}
-
-// eliminar producto
-// DELETE /producto-delete/28
-{
-    "message": "ok"
-}
-
-// remover imagen de producto
-// PUT /producto-remove-image/28
-{
-    "message": "ok"
 }

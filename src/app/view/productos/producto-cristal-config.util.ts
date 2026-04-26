@@ -23,6 +23,7 @@ export function normalizarTratamientosCristal(valor: unknown): string[] {
 
 export function normalizarProductoCristalConfig(config: Partial<ProductoCristalConfig> | null | undefined): ProductoCristalConfig {
   return {
+    marca: String(config?.marca ?? '').trim(),
     tipoCristal: String(config?.tipoCristal ?? '').trim(),
     presentacion: String(config?.presentacion ?? '').trim(),
     material: String(config?.material ?? '').trim(),
