@@ -1,75 +1,74 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
-import { Presupuesto, Cliente } from './presupuesto.interfaz';
-
-
+import { Observable } from 'rxjs';
+import { map, catchError, timeout } from 'rxjs/operators';
+import { Presupuesto } from './presupuesto.interfaz';
+import { environment } from 'src/environments/environment';
+import { ErrorHandlerService } from './../../../core/services/errorHandlerService';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PresupuestoService {
-  private apiUrl = 'api/presupuestos'; // URL de tu API
-  private clientesUrl = 'api/clientes';
+  private readonly apiUrl = `${environment.apiUrl}`;
+  private readonly REQUEST_TIMEOUT = 8000;
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private errorHandler: ErrorHandlerService
+  ) { }
 
-  // Obtener todos los presupuestos
   getPresupuestos(): Observable<Presupuesto[]> {
-    return this.http.get<Presupuesto[]>(this.apiUrl);
-  }
-
-  // Obtener presupuesto por ID
-  getPresupuesto(id: number): Observable<Presupuesto> {
-    return this.http.get<Presupuesto>(`${this.apiUrl}/${id}`);
-  }
-
-  // Crear nuevo presupuesto
-  crearPresupuesto(presupuesto: Presupuesto): Observable<Presupuesto> {
-    return this.http.post<Presupuesto>(this.apiUrl, presupuesto);
-  }
-
-  // Actualizar presupuesto
-  actualizarPresupuesto(id: number, presupuesto: Presupuesto): Observable<Presupuesto> {
-    return this.http.put<Presupuesto>(`${this.apiUrl}/${id}`, presupuesto);
-  }
-
-  // Eliminar presupuesto
-  eliminarPresupuesto(id: number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/${id}`);
-  }
-
-  // Buscar cliente por cédula
-  buscarClientePorCedula(cedula: string): Observable<Cliente | null> {
-    return this.http.get<Cliente[]>(`${this.clientesUrl}?cedula=${cedula}`).pipe(
-      map(clientes => clientes.length > 0 ? clientes[0] : null),
-      catchError(() => of(null))
+    return this.http.get<{ presupuestos?: Presupuesto[] }>(`${this.apiUrl}/presupuestos-get`).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      map((response) => Array.isArray(response?.presupuestos) ? response.presupuestos : []),
+      catchError(error => this.errorHandler.handleHttpError(error))
     );
   }
 
-  // Crear cliente
-  crearCliente(cliente: Cliente): Observable<Cliente> {
-    return this.http.post<Cliente>(this.clientesUrl, cliente);
+  getPresupuesto(id: number): Observable<Presupuesto> {
+    return this.http.get<{ presupuesto: Presupuesto }>(`${this.apiUrl}/presupuestos-get/${id}`).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      map((response) => response.presupuesto),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
   }
 
-  // Auto-archivar presupuestos vencidos
-  autoArchivarPresupuestos(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/auto-archivar`, {});
+  crearPresupuesto(presupuesto: unknown): Observable<Presupuesto> {
+    return this.http.post<{ presupuesto: Presupuesto }>(`${this.apiUrl}/presupuestos-add`, presupuesto).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      map((response) => response.presupuesto),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
   }
 
-  // Convertir presupuesto a venta
-  convertirAVenta(presupuestoId: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/${presupuestoId}/convertir-venta`, {});
+  actualizarPresupuesto(id: number, presupuesto: unknown): Observable<Presupuesto> {
+    return this.http.put<{ presupuesto: Presupuesto }>(`${this.apiUrl}/presupuestos-update/${id}`, presupuesto).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      map((response) => response.presupuesto),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
   }
 
-  // Renovar presupuesto
+  eliminarPresupuesto(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/presupuestos-delete/${id}`).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
+  }
+
   renovarPresupuesto(id: number, dias: number = 7): Observable<Presupuesto> {
-    return this.http.put<Presupuesto>(`${this.apiUrl}/${id}/renovar`, { dias });
+    return this.http.put<{ presupuesto: Presupuesto }>(`${this.apiUrl}/presupuestos-renovar/${id}`, { dias }).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      map((response) => response.presupuesto),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
   }
 
-  // Obtener productos disponibles
-  getProductos(): Observable<any[]> {
-    return this.http.get<any[]>('api/productos');
+  autoArchivarPresupuestos(dias: number): Observable<{ archivados: number; dias: number }> {
+    return this.http.post<{ archivados: number; dias: number }>(`${this.apiUrl}/presupuestos-auto-archivar`, { dias }).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
   }
 }

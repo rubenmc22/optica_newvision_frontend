@@ -31,12 +31,17 @@
 /* RESET DE SWEETALERT2 - CON BORDE DEFINIDO */
 /* ==================== */
 .swal2-container {
+  // El proyecto eleva los modales Bootstrap a 2010/2011 en estilos globales.
+  // Este valor asegura que SweetAlert quede por encima de cualquier modal activo.
+  z-index: 2147483646 !important;
+
   &.swal2-backdrop-show {
     background: rgba(0, 0, 0, 0.5) !important;
     backdrop-filter: blur(3px);
   }
 
   .swal2-popup {
+    z-index: 2147483647 !important;
     // background: transparent !important;
     background: #dee2e6;
     border: 1px solid rgba(0, 0, 0, 0.15) !important;
@@ -355,6 +360,22 @@
   .swal-modern-cancel {
     width: 100% !important;
     margin: 0 !important;
+  }
+}
+
+/* Selector de presupuesto: botones apilados y de ancho completo */
+.swal-modern-actions--presupuesto-select {
+  grid-template-columns: minmax(0, 1fr) !important;
+  width: min(100%, 380px) !important;
+
+  .swal-modern-confirm,
+  .swal-modern-cancel,
+  .swal-modern-deny {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    min-height: 44px;
   }
 }
 

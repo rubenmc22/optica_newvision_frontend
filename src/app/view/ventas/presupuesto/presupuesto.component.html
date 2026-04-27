@@ -117,12 +117,17 @@
         <!-- Contenido - Presupuestos Vigentes -->
         <div class="tab-content" [class.active]="tabActiva === 'vigentes'">
             <div class="presupuestos-grid scrollable-grid">
-                <div class="presupuesto-card" *ngFor="let presupuesto of presupuestosFiltradosVigentes">
+                <div class="presupuesto-card" *ngFor="let presupuesto of presupuestosFiltradosVigentes"
+                    (click)="verDetallePresupuesto(presupuesto)">
                     <div class="presupuesto-header">
                         <div class="presupuesto-codigo">
                             <strong>{{ presupuesto.codigo }}</strong>
                             <span class="badge" [ngClass]="presupuesto.estadoColor">
                                 {{ getEstadoTexto(presupuesto.estadoColor) }}
+                            </span>
+                            <span class="badge venta-generada" *ngIf="esVentaGenerada(presupuesto)">
+                                <i class="bi bi-cart-check"></i>
+                                Venta generada
                             </span>
                         </div>
                         <div class="presupuesto-fecha">
@@ -160,10 +165,6 @@
                     </div>
 
                     <div class="presupuesto-actions">
-                        <button class="btn-action" type="button" title="Ver/Editar"
-                            (click)="$event.stopPropagation(); verDetallePresupuesto(presupuesto)">
-                            <i class="bi bi-eye"></i>
-                        </button>
                         <button class="btn-action" type="button" title="Imprimir"
                             (click)="$event.stopPropagation(); imprimirPresupuesto(presupuesto)">
                             <i class="bi bi-printer"></i>
@@ -215,7 +216,7 @@
                             </div>
                             
                             <div *ngIf="!hayFiltrosActivos() && tabActiva === 'vigentes'" class="empty-state-actions">
-                                <button class="btn btn-primary" (click)="abrirModalNuevoPresupuesto()">
+                                <button class="btn btn-primary btn-crear-primer-presupuesto" (click)="abrirModalNuevoPresupuesto()">
                                     <i class="bi bi-plus-circle"></i>
                                     Crear primer presupuesto
                                 </button>
@@ -229,12 +230,17 @@
         <!-- Contenido - Presupuestos Vencidos -->
         <div class="tab-content" [class.active]="tabActiva === 'vencidos'">
             <div class="presupuestos-grid scrollable-grid">
-                <div class="presupuesto-card" *ngFor="let presupuesto of presupuestosFiltradosVencidos">
+                <div class="presupuesto-card" *ngFor="let presupuesto of presupuestosFiltradosVencidos"
+                    (click)="verDetallePresupuesto(presupuesto)">
                     <div class="presupuesto-header">
                         <div class="presupuesto-codigo">
                             <strong>{{ presupuesto.codigo }}</strong>
                             <span class="badge vencido">
                                 Vencido
+                            </span>
+                            <span class="badge venta-generada" *ngIf="esVentaGenerada(presupuesto)">
+                                <i class="bi bi-cart-check"></i>
+                                Venta generada
                             </span>
                         </div>
                         <div class="presupuesto-fecha">
@@ -261,10 +267,6 @@
                     </div>
 
                     <div class="presupuesto-actions">
-                        <button class="btn-action" type="button" title="Ver/Editar"
-                            (click)="$event.stopPropagation(); verDetallePresupuesto(presupuesto)">
-                            <i class="bi bi-eye"></i>
-                        </button>
                         <button class="btn-action btn-warning" type="button" title="Renovar"
                             (click)="$event.stopPropagation(); renovarPresupuesto(presupuesto)">
                             <i class="bi bi-arrow-clockwise"></i>
@@ -397,7 +399,7 @@
 
     <div class="modal-body scrollable-modal">
         <!-- Información del Cliente -->
-        <div class="info-card">
+        <div class="info-card info-card--formula-externa">
             <div class="info-header">
                 <i class="bi bi-person-circle"></i>
                 <h4>Información del Cliente</h4>
@@ -558,16 +560,209 @@
             </div>
         </div>
 
+        <div class="info-card">
+            <div class="info-header">
+                <i class="bi bi-journal-medical"></i>
+                <h4>Fórmula externa</h4>
+            </div>
+            <div class="info-content formula-externa-section">
+                <div class="formula-externa-header">
+                    <div class="formula-externa-switch">
+                        <label class="switch-moderno">
+                            <input
+                                type="checkbox"
+                                [ngModel]="esFormulaExternaActivaNuevo()"
+                                (ngModelChange)="onCambioFormulaExternaNuevo($event)">
+                            <span class="slider-moderno round"></span>
+                        </label>
+                        <span class="switch-label" [class.text-primary]="esFormulaExternaActivaNuevo()">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                            Este presupuesto se basa en fórmula externa del paciente
+                        </span>
+                    </div>
+                </div>
+
+                <div class="formula-externa-alert" *ngIf="esFormulaExternaActivaNuevo() && !esFormulaExternaCompletaNuevo()">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span>{{ getMensajeFormulaExternaIncompleta() }}</span>
+                </div>
+
+                <div class="lensometria-moderna lensometria-scroll-fixed" *ngIf="esFormulaExternaActivaNuevo()">
+                    <div class="lensometria-header">
+                        <div class="campo-label">Ojo</div>
+                        <div class="campo-label">ESF</div>
+                        <div class="campo-label">CIL</div>
+                        <div class="campo-label">EJE</div>
+                        <div class="campo-label">ADD</div>
+                        <div class="campo-label">ALT</div>
+                        <div class="campo-label">DP</div>
+                    </div>
+
+                    <div class="lensometria-fila ojo-fila">
+                        <div class="ojo-label">
+                            <span class="ojo-tag ojo-od">OD</span>
+                        </div>
+
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['esf']"
+                                [(selectedValue)]="nuevoPresupuesto.formulaExterna.refraccionFinal.od.esfera"
+                                placeholder="ESF">
+                            </app-ref-option-autocomplete>
+                        </div>
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['cil']"
+                                [(selectedValue)]="nuevoPresupuesto.formulaExterna.refraccionFinal.od.cilindro"
+                                placeholder="CIL">
+                            </app-ref-option-autocomplete>
+                        </div>
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['eje']"
+                                [(selectedValue)]="nuevoPresupuesto.formulaExterna.refraccionFinal.od.eje"
+                                placeholder="EJE">
+                            </app-ref-option-autocomplete>
+                        </div>
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['add']"
+                                [(selectedValue)]="nuevoPresupuesto.formulaExterna.refraccionFinal.od.adicion"
+                                placeholder="ADD">
+                            </app-ref-option-autocomplete>
+                        </div>
+                        <div class="campo-input">
+                            <input type="text" class="form-control-small"
+                                [(ngModel)]="nuevoPresupuesto.formulaExterna.refraccionFinal.od.alt" placeholder="ALT">
+                        </div>
+                        <div class="campo-input">
+                            <input type="text" class="form-control-small"
+                                [(ngModel)]="nuevoPresupuesto.formulaExterna.refraccionFinal.od.dp" placeholder="DP">
+                        </div>
+                    </div>
+
+                    <div class="lensometria-fila ojo-fila">
+                        <div class="ojo-label">
+                            <span class="ojo-tag ojo-oi">OI</span>
+                        </div>
+
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['esf']"
+                                [(selectedValue)]="nuevoPresupuesto.formulaExterna.refraccionFinal.oi.esfera"
+                                placeholder="ESF">
+                            </app-ref-option-autocomplete>
+                        </div>
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['cil']"
+                                [(selectedValue)]="nuevoPresupuesto.formulaExterna.refraccionFinal.oi.cilindro"
+                                placeholder="CIL">
+                            </app-ref-option-autocomplete>
+                        </div>
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['eje']"
+                                [(selectedValue)]="nuevoPresupuesto.formulaExterna.refraccionFinal.oi.eje"
+                                placeholder="EJE">
+                            </app-ref-option-autocomplete>
+                        </div>
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['add']"
+                                [(selectedValue)]="nuevoPresupuesto.formulaExterna.refraccionFinal.oi.adicion"
+                                placeholder="ADD">
+                            </app-ref-option-autocomplete>
+                        </div>
+                        <div class="campo-input">
+                            <input type="text" class="form-control-small"
+                                [(ngModel)]="nuevoPresupuesto.formulaExterna.refraccionFinal.oi.alt" placeholder="ALT">
+                        </div>
+                        <div class="campo-input">
+                            <input type="text" class="form-control-small"
+                                [(ngModel)]="nuevoPresupuesto.formulaExterna.refraccionFinal.oi.dp" placeholder="DP">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Productos -->
         <div class="form-section">
-            <h3><i class="bi bi-box"></i> Productos</h3>
+            <h3><i class="bi bi-box"></i> Productos y servicios</h3>
+
+            <div class="presupuesto-opciones-shell">
+                <div class="presupuesto-opciones-header">
+                    <div>
+                        <h4>Opciones cotizadas</h4>
+                        <p>{{ getCantidadOpcionesConProductos(nuevoPresupuesto) }} opción(es) con productos para este paciente.</p>
+                    </div>
+                    <div class="presupuesto-opciones-actions">
+                        <button class="btn btn-outline-primary" type="button" (click)="agregarOpcionNuevo()">
+                            <i class="bi bi-plus-lg"></i>
+                            Añadir opción
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button" (click)="duplicarOpcionNuevo()"
+                            [disabled]="!opcionActivaNuevoId">
+                            <i class="bi bi-files"></i>
+                            Duplicar activa
+                        </button>
+                    </div>
+                </div>
+
+                <div class="presupuesto-opciones-grid">
+                    <div class="presupuesto-opcion-card"
+                        *ngFor="let opcion of opcionesNuevoPresupuesto"
+                        [class.active]="opcion.id === opcionActivaNuevoId"
+                        (click)="seleccionarOpcionNuevo(opcion.id)">
+                        <div class="presupuesto-opcion-card__top">
+                            <input class="opcion-nombre-input" type="text" [(ngModel)]="opcion.nombre"
+                                (click)="$event.stopPropagation()" placeholder="Nombre de la opción">
+                            <button type="button" class="opcion-principal-btn"
+                                [class.active]="opcion.id === nuevoPresupuesto.opcionPrincipalId"
+                                (click)="$event.stopPropagation(); marcarOpcionPrincipalNuevo(opcion.id)">
+                                {{ opcion.id === nuevoPresupuesto.opcionPrincipalId ? 'Principal' : 'Marcar principal' }}
+                            </button>
+                        </div>
+                        <div class="presupuesto-opcion-card__meta">
+                            <span>{{ opcion.productos.length }} ítem(s)</span>
+                            <strong>{{ formatMoneda(opcion.total) }}</strong>
+                        </div>
+                        <div class="presupuesto-opcion-card__totals">
+                            <div class="presupuesto-opcion-card__total-item">
+                                <span class="label">Subtotal</span>
+                                <strong>{{ formatMoneda(opcion.subtotal) }}</strong>
+                            </div>
+                            <div class="presupuesto-opcion-card__total-item">
+                                <span class="label">IVA</span>
+                                <strong>{{ formatMoneda(opcion.iva) }}</strong>
+                            </div>
+                            <div class="presupuesto-opcion-card__total-item presupuesto-opcion-card__total-item--highlight">
+                                <span class="label">Total</span>
+                                <strong>{{ formatMoneda(opcion.total) }}</strong>
+                            </div>
+                        </div>
+                        <button type="button" class="opcion-remove-btn"
+                            (click)="$event.stopPropagation(); eliminarOpcionNuevo(opcion.id)"
+                            [disabled]="opcionesNuevoPresupuesto.length === 1">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Buscar y agregar productos -->
             <div class="agregar-producto">
                 <div class="search-product-container">
                     <i class="bi bi-search"></i>
                     <input type="text" placeholder="Buscar productos por código o descripción..."
-                        [(ngModel)]="terminoBusqueda" (keyup)="filtrarProductos()">
+                        [(ngModel)]="terminoBusqueda" (keyup)="filtrarProductos()"
+                        [disabled]="debeBloquearSeleccionProductosPorFormulaExterna()">
+                </div>
+
+                <div class="acciones-buscador-productos">
+                    <button class="btn btn-outline-primary" type="button" (click)="agregarConsultaMedica()"
+                        [disabled]="cargandoConsultaMedica || tieneConsultaEnNuevoPresupuesto() || debeBloquearSeleccionProductosPorFormulaExterna()">
+                        <i class="bi" [ngClass]="cargandoConsultaMedica ? 'bi-arrow-repeat spin' : 'bi-clipboard2-pulse'"></i>
+                        Agregar consulta médica
+                    </button>
+                    <button class="btn btn-outline-primary" type="button" (click)="abrirModalCatalogoProductos()"
+                        [disabled]="debeBloquearSeleccionProductosPorFormulaExterna()">
+                        <i class="bi bi-grid-3x3-gap"></i>
+                        Ver todos los productos
+                    </button>
                 </div>
 
                 <!-- Lista de productos filtrados -->
@@ -616,36 +811,50 @@
                             <td>
                                 <div class="producto-descripcion">
                                     <strong>{{ producto.descripcion }}</strong>
-                                    <small *ngIf="producto.codigo">{{ producto.codigo }}</small>
+                                    <small *ngIf="producto.codigo || esLineaConsulta(producto)">
+                                        {{ esLineaConsulta(producto) ? 'Servicio' : producto.codigo }}
+                                    </small>
                                 </div>
                             </td>
                             <td>
-                                <div class="monto-celda">
+                                <div class="monto-celda" *ngIf="esLineaConsulta(producto); else precioSoloLecturaNuevo">
                                     <input type="number" [(ngModel)]="producto.precio" (change)="actualizarProducto(i)"
                                         min="0" step="0.01" class="precio-input">
                                     <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
                                         Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
                                     </small>
                                 </div>
+                                <ng-template #precioSoloLecturaNuevo>
+                                    <div class="monto-celda monto-celda--compacta">
+                                        <span>{{ formatMoneda(producto.precio) }}</span>
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
+                                        </small>
+                                    </div>
+                                </ng-template>
                             </td>
                             <td>
                                 <div class="cantidad-control">
-                                    <button class="btn-cantidad decremento" (click)="modificarCantidad(i, -1)">
+                                    <button class="btn-cantidad decremento" (click)="modificarCantidad(i, -1)"
+                                        [disabled]="esLineaConsulta(producto)">
                                         <i class="bi bi-dash"></i>
                                     </button>
                                     <input type="number" [(ngModel)]="producto.cantidad"
-                                        (change)="actualizarProducto(i)" min="1" class="cantidad-input">
-                                    <button class="btn-cantidad incremento" (click)="modificarCantidad(i, 1)">
+                                        (change)="actualizarProducto(i)" min="1" class="cantidad-input"
+                                        [disabled]="esLineaConsulta(producto)">
+                                    <button class="btn-cantidad incremento" (click)="modificarCantidad(i, 1)"
+                                        [disabled]="esLineaConsulta(producto)">
                                         <i class="bi bi-plus"></i>
                                     </button>
                                 </div>
                             </td>
                             <td>
                                 <input type="number" [(ngModel)]="producto.descuento" (change)="actualizarProducto(i)"
-                                    min="0" max="100" class="descuento-input">
-                                <small class="descuento-valor" *ngIf="producto.descuento > 0">
+                                    min="0" max="100" class="descuento-input" [disabled]="esLineaConsulta(producto)">
+                                <small class="descuento-valor" *ngIf="producto.descuento > 0 && !esLineaConsulta(producto)">
                                     {{ formatMoneda(producto.precio * producto.cantidad * (producto.descuento / 100)) }}
                                 </small>
+                                <small class="descuento-valor" *ngIf="esLineaConsulta(producto)">No aplica</small>
                             </td>
                             <td class="total-columna">
                                 <div class="monto-celda monto-celda--compacta">
@@ -714,7 +923,7 @@
         </div>
 
         <!-- Observaciones -->
-        <div class="info-card">
+        <div class="info-card info-card--formula-externa">
             <div class="info-header">
                 <i class="bi bi-chat-left-text"></i>
                 <h4>Observaciones</h4>
@@ -731,16 +940,101 @@
             <i class="bi bi-x-circle"></i>
             Cancelar
         </button>
-        <button class="btn btn-primary" (click)="generarPresupuesto()">
+        <button class="btn btn-success btn-generar-presupuesto" (click)="generarPresupuesto()" [disabled]="!puedeGenerarPresupuesto()">
             <i class="bi bi-check-circle"></i>
             Generar Presupuesto
         </button>
     </div>
 </div>
 
+<!-- Modal catálogo completo de productos -->
+<div class="presupuesto-modal-backdrop" *ngIf="mostrarModalCatalogoProductos" (click)="cerrarModalCatalogoProductos()"></div>
+<div class="modal-catalogo-productos" *ngIf="mostrarModalCatalogoProductos">
+    <div class="modal-header">
+        <div class="header-left">
+            <h2>
+                <i class="bi bi-box-seam"></i>
+                Catálogo de productos
+            </h2>
+            <div class="orden-status">
+                <span class="text-muted">
+                    {{ productosCatalogoFiltrados.length }} resultados
+                </span>
+            </div>
+        </div>
+        <button class="btn-close-modal" type="button" (click)="cerrarModalCatalogoProductos()" aria-label="Cerrar">
+            <i class="bi bi-x"></i>
+        </button>
+    </div>
+
+    <div class="modal-body">
+        <div class="catalogo-filtros">
+            <div class="search-product-container">
+                <i class="bi bi-search"></i>
+                <input
+                    type="text"
+                    placeholder="Buscar por nombre, código o ID..."
+                    [(ngModel)]="terminoBusquedaCatalogoProductos"
+                    (input)="aplicarFiltroCatalogoProductos()">
+            </div>
+
+            <div class="filtro-categoria-container">
+                <i class="bi bi-funnel"></i>
+                <select
+                    [(ngModel)]="categoriaFiltroCatalogoProductos"
+                    (change)="aplicarFiltroCatalogoProductos()">
+                    <option value="todas">Todas las categorías</option>
+                    <option *ngFor="let categoria of obtenerCategoriasCatalogoProductos()" [value]="categoria.toLowerCase()">
+                        {{ categoria }}
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <div class="catalogo-listado" *ngIf="productosCatalogoFiltrados.length > 0; else estadoVacioCatalogo">
+            <div class="producto-item" *ngFor="let producto of productosCatalogoFiltrados"
+                [class.producto-item--en-presupuesto]="obtenerCantidadProductoEnContextoCatalogo(producto.id) > 0"
+                [class.producto-item--recien-agregado]="esProductoRecienAgregadoEnCatalogo(producto.id)">
+                <div class="producto-info">
+                    <strong>{{ producto.descripcion }}</strong>
+                    <small>
+                        <span>{{ producto.codigo || ('ID ' + producto.id) }} • {{ producto.categoria || 'Sin categoria' }}</span>
+                        <span>• {{ formatMoneda(producto.precio) }}</span>
+                        <span *ngIf="debeMostrarReferenciaBs()">• Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}</span>
+                        <span class="catalogo-tag catalogo-tag--ok" *ngIf="obtenerCantidadProductoEnContextoCatalogo(producto.id) > 0">
+                            En presupuesto: {{ obtenerCantidadProductoEnContextoCatalogo(producto.id) }}
+                        </span>
+                        <span class="catalogo-tag catalogo-tag--new" *ngIf="esProductoRecienAgregadoEnCatalogo(producto.id)">
+                            Agregado
+                        </span>
+                    </small>
+                </div>
+                <button class="btn-agregar" type="button" (click)="agregarProductoDesdeCatalogo(producto)"
+                    [class.btn-agregar--activo]="obtenerCantidadProductoEnContextoCatalogo(producto.id) > 0 || esProductoRecienAgregadoEnCatalogo(producto.id)">
+                    <i class="bi" [ngClass]="esProductoRecienAgregadoEnCatalogo(producto.id) ? 'bi-check2' : 'bi-plus'"></i>
+                </button>
+            </div>
+        </div>
+
+        <ng-template #estadoVacioCatalogo>
+            <div class="empty-state catalogo-empty-state">
+                <i class="bi bi-search"></i>
+                <p>No hay productos para los filtros seleccionados.</p>
+            </div>
+        </ng-template>
+    </div>
+
+    <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" (click)="cerrarModalCatalogoProductos()">
+            <i class="bi bi-x-circle"></i>
+            Cerrar
+        </button>
+    </div>
+</div>
+
 <!-- Modal Detalle/Edición Presupuesto -->
 <div class="presupuesto-modal-backdrop" *ngIf="mostrarModalDetallePresupuesto" (click)="cerrarModalDetalle()"></div>
-<div class="modal-nuevo-presupuesto" *ngIf="mostrarModalDetallePresupuesto && presupuestoSeleccionado">
+<div class="modal-nuevo-presupuesto modal-detalle-presupuesto" *ngIf="mostrarModalDetallePresupuesto && presupuestoSeleccionado">
     <div class="modal-header">
         <div class="header-left">
             <h2>
@@ -770,7 +1064,7 @@
                     <span class="slider round"></span>
                 </label>
                 <small class="toggle-hint" *ngIf="modoEditable">
-                    Solo fecha de vencimiento y observaciones son editables
+                    Puede editar vencimiento, observaciones, productos y opciones cotizadas
                 </small>
             </div>
         </div>
@@ -784,63 +1078,62 @@
 
     <div class="modal-body scrollable-modal">
         <!-- Información del Cliente  -->
-        <div class="info-card">
+        <div class="info-card info-card--cliente">
             <div class="info-header">
-                <i class="bi bi-person-circle"></i>
-                <h4>Información del Cliente</h4>
+                <div class="info-header-main">
+                    <i class="bi bi-person-circle"></i>
+                    <h4>Información del Cliente</h4>
+                </div>
+
+                <span class="badge-tipo-persona" [ngClass]="{
+                    'badge-natural': presupuestoSeleccionado.cliente.tipoPersona === 'natural',
+                    'badge-juridica': presupuestoSeleccionado.cliente.tipoPersona === 'juridica'
+                }">
+                    <i class="bi" [class.bi-person]="presupuestoSeleccionado.cliente.tipoPersona === 'natural'"
+                        [class.bi-building]="presupuestoSeleccionado.cliente.tipoPersona === 'juridica'"></i>
+                    {{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ? 'Persona Natural' : 'Persona Jurídica' }}
+                </span>
             </div>
             <div class="info-content">
-                <div class="cliente-info-view">
-                    <div class="cliente-header">
-                        <!-- Badge de Tipo de Persona -->
-                        <span class="badge-tipo-persona" [ngClass]="{
-                'badge-natural': presupuestoSeleccionado.cliente.tipoPersona === 'natural',
-                'badge-juridica': presupuestoSeleccionado.cliente.tipoPersona === 'juridica'
-                }">
-                            <i class="bi" [class.bi-person]="presupuestoSeleccionado.cliente.tipoPersona === 'natural'"
-                                [class.bi-building]="presupuestoSeleccionado.cliente.tipoPersona === 'juridica'"></i>
-                            {{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ? 'Persona Natural' : 'Persona Jurídica' }}
-                        </span>
-
-                        <!-- Información compacta -->
-                        <div class="cliente-datos-compactos">
-                            <div class="cliente-dato">
-                                <span class="dato-label">{{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ?
-                                    'Cédula:' : 'RIF:' }}</span>
-                                <span class="dato-valor">{{ presupuestoSeleccionado.cliente.cedula }}</span>
+                <div class="cliente-resumen-compacto">
+                    <div class="cliente-contacto-compacto-grid">
+                        <div class="contacto-chip">
+                            <i class="bi bi-person-badge"></i>
+                            <div>
+                                <small>{{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ? 'Nombre' : 'Razón Social' }}</small>
+                                <span>{{ presupuestoSeleccionado.cliente.nombreCompleto || 'No especificado' }}</span>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Nombre/Razón Social -->
-                    <div class="cliente-nombre">
-                        <label>{{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ? 'Nombre:' : 'Razón Social:' }}</label>
-                        <div class="nombre-valor">{{ presupuestoSeleccionado.cliente.nombreCompleto }}</div>
-                    </div>
+                        <div class="contacto-chip">
+                            <i class="bi bi-card-text"></i>
+                            <div>
+                                <small>{{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ? 'Cédula' : 'RIF' }}</small>
+                                <span>{{ presupuestoSeleccionado.cliente.cedula || 'No especificado' }}</span>
+                            </div>
+                        </div>
 
-                    <!-- Información de contacto en grid -->
-                    <div class="cliente-contacto-grid">
-                        <div class="contacto-item">
+                        <div class="contacto-chip">
                             <i class="bi bi-telephone"></i>
                             <div>
-                                <label>Teléfono</label>
-                                <span class="contacto-valor">{{ presupuestoSeleccionado.cliente.telefono || 'No especificado' }}</span>
+                                <small>Teléfono</small>
+                                <span>{{ presupuestoSeleccionado.cliente.telefono || 'No especificado' }}</span>
                             </div>
                         </div>
 
-                        <div class="contacto-item">
+                        <div class="contacto-chip">
                             <i class="bi bi-envelope"></i>
                             <div>
-                                <label>Email</label>
-                                <span class="contacto-valor">{{ presupuestoSeleccionado.cliente.email || 'No especificado' }}</span>
+                                <small>Email</small>
+                                <span>{{ presupuestoSeleccionado.cliente.email || 'No especificado' }}</span>
                             </div>
                         </div>
 
-                        <div class="contacto-item full-width">
+                        <div class="contacto-chip contacto-chip--full">
                             <i class="bi bi-geo-alt"></i>
                             <div>
-                                <label>Dirección</label>
-                                <span class="contacto-valor">{{ presupuestoSeleccionado.cliente.direccion || 'No especificada' }}</span>
+                                <small>Dirección</small>
+                                <span>{{ presupuestoSeleccionado.cliente.direccion || 'No especificada' }}</span>
                             </div>
                         </div>
                     </div>
@@ -883,14 +1176,259 @@
             </div>
         </div>
 
+        <div class="info-card">
+            <div class="info-header">
+                <i class="bi bi-journal-medical"></i>
+                <h4>Fórmula externa</h4>
+            </div>
+            <div class="info-content formula-externa-section">
+                <div class="formula-externa-header">
+                    <div class="formula-externa-switch">
+                        <label class="switch-moderno">
+                            <input
+                                type="checkbox"
+                                [ngModel]="esFormulaExternaActivaDetalle()"
+                                (ngModelChange)="onCambioFormulaExternaDetalle($event)"
+                                [disabled]="!modoEditable">
+                            <span class="slider-moderno round"></span>
+                        </label>
+                        <span class="switch-label" [class.text-primary]="esFormulaExternaActivaDetalle()">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                            Este presupuesto se basa en fórmula externa del paciente
+                        </span>
+                    </div>
+                </div>
+
+                <div class="formula-externa-alert" *ngIf="esFormulaExternaActivaDetalle() && !esFormulaExternaCompletaDetalle()">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span>{{ getMensajeFormulaExternaIncompleta() }}</span>
+                </div>
+
+                <div class="lensometria-moderna lensometria-scroll-fixed" *ngIf="esFormulaExternaActivaDetalle()">
+                    <div class="lensometria-header">
+                        <div class="campo-label">Ojo</div>
+                        <div class="campo-label">ESF</div>
+                        <div class="campo-label">CIL</div>
+                        <div class="campo-label">EJE</div>
+                        <div class="campo-label">ADD</div>
+                        <div class="campo-label">ALT</div>
+                        <div class="campo-label">DP</div>
+                    </div>
+
+                    <div class="lensometria-fila ojo-fila">
+                        <div class="ojo-label">
+                            <span class="ojo-tag ojo-od">OD</span>
+                        </div>
+
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['esf']"
+                                [(selectedValue)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.od.esfera"
+                                placeholder="ESF" [disabled]="!modoEditable">
+                            </app-ref-option-autocomplete>
+                        </div>
+
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['cil']"
+                                [(selectedValue)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.od.cilindro"
+                                placeholder="CIL" [disabled]="!modoEditable">
+                            </app-ref-option-autocomplete>
+                        </div>
+
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['eje']"
+                                [(selectedValue)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.od.eje"
+                                placeholder="EJE" [disabled]="!modoEditable">
+                            </app-ref-option-autocomplete>
+                        </div>
+
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['add']"
+                                [(selectedValue)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.od.adicion"
+                                placeholder="ADD" [disabled]="!modoEditable">
+                            </app-ref-option-autocomplete>
+                        </div>
+
+                        <div class="campo-input">
+                            <input type="text" class="form-control-small"
+                                [(ngModel)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.od.alt" placeholder="ALT"
+                                [disabled]="!modoEditable">
+                        </div>
+
+                        <div class="campo-input">
+                            <input type="text" class="form-control-small"
+                                [(ngModel)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.od.dp" placeholder="DP"
+                                [disabled]="!modoEditable">
+                        </div>
+                    </div>
+
+                    <div class="lensometria-fila ojo-fila">
+                        <div class="ojo-label">
+                            <span class="ojo-tag ojo-oi">OI</span>
+                        </div>
+
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['esf']"
+                                [(selectedValue)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.oi.esfera"
+                                placeholder="ESF" [disabled]="!modoEditable">
+                            </app-ref-option-autocomplete>
+                        </div>
+
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['cil']"
+                                [(selectedValue)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.oi.cilindro"
+                                placeholder="CIL" [disabled]="!modoEditable">
+                            </app-ref-option-autocomplete>
+                        </div>
+
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['eje']"
+                                [(selectedValue)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.oi.eje"
+                                placeholder="EJE" [disabled]="!modoEditable">
+                            </app-ref-option-autocomplete>
+                        </div>
+
+                        <div class="campo-input">
+                            <app-ref-option-autocomplete [items]="opcionesRef['add']"
+                                [(selectedValue)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.oi.adicion"
+                                placeholder="ADD" [disabled]="!modoEditable">
+                            </app-ref-option-autocomplete>
+                        </div>
+
+                        <div class="campo-input">
+                            <input type="text" class="form-control-small"
+                                [(ngModel)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.oi.alt" placeholder="ALT"
+                                [disabled]="!modoEditable">
+                        </div>
+
+                        <div class="campo-input">
+                            <input type="text" class="form-control-small"
+                                [(ngModel)]="presupuestoSeleccionado.formulaExterna.refraccionFinal.oi.dp" placeholder="DP"
+                                [disabled]="!modoEditable">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Productos -->
         <div class="info-card">
             <div class="info-header">
                 <i class="bi bi-box-seam"></i>
-                <h4>Productos ({{ presupuestoSeleccionado.productos.length }})</h4>
+                <h4>Productos y servicios ({{ presupuestoSeleccionado.productos.length }})</h4>
             </div>
             <div class="info-content">
-                <div class="productos-view-table">
+                <div class="presupuesto-opciones-shell presupuesto-opciones-shell--detalle">
+                    <div class="presupuesto-opciones-header">
+                        <div>
+                            <h4>Opciones cotizadas</h4>
+                            <p>
+                                {{ modoEditable
+                                    ? 'Desde aquí puedes agregar, duplicar, eliminar y marcar la opción principal antes de guardar.'
+                                    : 'Selecciona la alternativa que quieres revisar, editar o convertir.' }}
+                            </p>
+                        </div>
+                        <div class="presupuesto-opciones-actions" *ngIf="modoEditable">
+                            <button class="btn btn-outline-primary" type="button" (click)="agregarOpcionDetalle()">
+                                <i class="bi bi-plus-lg"></i>
+                                Añadir opción
+                            </button>
+                            <button class="btn btn-outline-secondary" type="button" (click)="duplicarOpcionDetalle()"
+                                [disabled]="!opcionActivaDetalleId">
+                                <i class="bi bi-files"></i>
+                                Duplicar activa
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="presupuesto-opciones-grid">
+                        <div class="presupuesto-opcion-card"
+                            *ngFor="let opcion of opcionesDetallePresupuesto"
+                            [class.active]="opcion.id === opcionActivaDetalleId"
+                            (click)="seleccionarOpcionDetalle(opcion.id)">
+                            <div class="presupuesto-opcion-card__top">
+                                <input class="opcion-nombre-input" type="text" [(ngModel)]="opcion.nombre"
+                                    [disabled]="!modoEditable" (click)="$event.stopPropagation()"
+                                    placeholder="Nombre de la opción">
+                                <button type="button" class="opcion-principal-btn"
+                                    [class.active]="opcion.id === presupuestoSeleccionado.opcionPrincipalId"
+                                    (click)="$event.stopPropagation(); marcarOpcionPrincipalDetalle(opcion.id)"
+                                    [disabled]="!modoEditable">
+                                    {{ opcion.id === presupuestoSeleccionado.opcionPrincipalId ? 'Principal' : 'Marcar principal' }}
+                                </button>
+                            </div>
+                            <div class="presupuesto-opcion-card__meta">
+                                <span>{{ opcion.productos.length }} ítem(s)</span>
+                                <strong>{{ formatMoneda(opcion.total) }}</strong>
+                            </div>
+                            <div class="presupuesto-opcion-card__totals">
+                                <div class="presupuesto-opcion-card__total-item">
+                                    <span class="label">Subtotal</span>
+                                    <strong>{{ formatMoneda(opcion.subtotal) }}</strong>
+                                </div>
+                                <div class="presupuesto-opcion-card__total-item">
+                                    <span class="label">IVA</span>
+                                    <strong>{{ formatMoneda(opcion.iva) }}</strong>
+                                </div>
+                                <div class="presupuesto-opcion-card__total-item presupuesto-opcion-card__total-item--highlight">
+                                    <span class="label">Total</span>
+                                    <strong>{{ formatMoneda(opcion.total) }}</strong>
+                                </div>
+                            </div>
+                            <button type="button" class="opcion-remove-btn"
+                                *ngIf="modoEditable"
+                                (click)="$event.stopPropagation(); eliminarOpcionDetalle(opcion.id)"
+                                [disabled]="opcionesDetallePresupuesto.length === 1">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detalle-productos-editor" *ngIf="modoEditable">
+                    <div class="search-product-container">
+                        <i class="bi bi-search"></i>
+                        <input type="text" placeholder="Buscar producto por código o descripción..."
+                            [(ngModel)]="terminoBusquedaDetalleProducto" (keyup)="filtrarProductosDetalle()"
+                            [disabled]="debeBloquearSeleccionProductosPorFormulaExternaDetalle()">
+                    </div>
+
+                    <div class="acciones-buscador-productos">
+                        <button class="btn btn-outline-primary" type="button" (click)="agregarConsultaMedicaDetalle()"
+                            [disabled]="cargandoConsultaMedica || tieneConsultaEnDetalle() || debeBloquearSeleccionProductosPorFormulaExternaDetalle()">
+                            <i class="bi" [ngClass]="cargandoConsultaMedica ? 'bi-arrow-repeat spin' : 'bi-clipboard2-pulse'"></i>
+                            Agregar consulta médica
+                        </button>
+                        <button class="btn btn-outline-primary" type="button" (click)="abrirModalCatalogoProductos()"
+                            [disabled]="debeBloquearSeleccionProductosPorFormulaExternaDetalle()">
+                            <i class="bi bi-grid-3x3-gap"></i>
+                            Ver todos los productos
+                        </button>
+                    </div>
+
+                    <div class="productos-disponibles"
+                        *ngIf="terminoBusquedaDetalleProducto && productosDetalleFiltrados.length > 0">
+                        <div class="producto-item" *ngFor="let producto of productosDetalleFiltrados">
+                            <div class="producto-info">
+                                <strong>{{ producto.descripcion }}</strong>
+                                <small>
+                                    <span>{{ producto.codigo }} • {{ formatMoneda(producto.precio) }}</span>
+                                    <span *ngIf="debeMostrarReferenciaBs()">• Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}</span>
+                                </small>
+                            </div>
+                            <button class="btn-agregar" type="button" (click)="agregarProductoDetalle(producto)">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="empty-state"
+                        *ngIf="terminoBusquedaDetalleProducto && !productosCargando && productosDetalleFiltrados.length === 0">
+                        <i class="bi bi-search"></i>
+                        <p>No se encontraron productos</p>
+                    </div>
+                </div>
+
+                <div class="productos-view-table" *ngIf="!modoEditable">
                     <table>
                         <thead>
                             <tr>
@@ -907,9 +1445,10 @@
                                 <td class="text-center">
                                     <div class="producto-desc text-center">
                                         <strong>{{ producto.descripcion }}</strong>
+                                        <small *ngIf="esLineaConsulta(producto)">Servicio</small>
                                     </div>
                                 </td>
-                                <td class="text-center">{{ producto.codigo }}</td>
+                                <td class="text-center">{{ esLineaConsulta(producto) ? 'Servicio' : producto.codigo }}</td>
                                 <td class="text-center">
                                     <div class="monto-celda monto-celda--compacta">
                                         <span>{{ formatMoneda(producto.precio) }}</span>
@@ -935,6 +1474,158 @@
                                 </td>
                             </tr>
                         </tbody>
+                        <tfoot>
+                            <tr class="tabla-totales-row">
+                                <td colspan="5" class="tabla-totales-label">Subtotal</td>
+                                <td class="tabla-totales-value">
+                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
+                                        <span>{{ formatMoneda(presupuestoSeleccionado.subtotal) }}</span>
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.subtotal), 'VES') }}
+                                        </small>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="tabla-totales-row">
+                                <td colspan="5" class="tabla-totales-label">{{ getEtiquetaIva() }}</td>
+                                <td class="tabla-totales-value">
+                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
+                                        <span>{{ formatMoneda(presupuestoSeleccionado.iva) }}</span>
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.iva), 'VES') }}
+                                        </small>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="tabla-totales-row tabla-totales-row--final">
+                                <td colspan="5" class="tabla-totales-label">Total</td>
+                                <td class="tabla-totales-value">
+                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
+                                        <span>{{ formatMoneda(presupuestoSeleccionado.total) }}</span>
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.total), 'VES') }}
+                                        </small>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="productos-seleccionados detalle-productos-seleccionados" *ngIf="modoEditable">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Descripción</th>
+                                <th>Precio</th>
+                                <th>Cantidad</th>
+                                <th>Descuento %</th>
+                                <th>Total</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let producto of presupuestoSeleccionado.productos; let i = index">
+                                <td>
+                                    <div class="producto-descripcion">
+                                        <strong>{{ producto.descripcion }}</strong>
+                                        <small *ngIf="producto.codigo || esLineaConsulta(producto)">
+                                            {{ esLineaConsulta(producto) ? 'Servicio' : producto.codigo }}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="monto-celda" *ngIf="esLineaConsulta(producto); else precioSoloLecturaDetalle">
+                                        <input type="number" [(ngModel)]="producto.precio" (change)="actualizarProductoDetalle(i)"
+                                            min="0" step="0.01" class="precio-input">
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
+                                        </small>
+                                    </div>
+                                    <ng-template #precioSoloLecturaDetalle>
+                                        <div class="monto-celda monto-celda--compacta">
+                                            <span>{{ formatMoneda(producto.precio) }}</span>
+                                            <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                                Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
+                                            </small>
+                                        </div>
+                                    </ng-template>
+                                </td>
+                                <td>
+                                    <div class="cantidad-control">
+                                        <button class="btn-cantidad decremento" type="button" (click)="modificarCantidadDetalle(i, -1)"
+                                            [disabled]="esLineaConsulta(producto)">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <input type="number" [(ngModel)]="producto.cantidad" (change)="actualizarProductoDetalle(i)"
+                                            min="1" class="cantidad-input" [disabled]="esLineaConsulta(producto)">
+                                        <button class="btn-cantidad incremento" type="button" (click)="modificarCantidadDetalle(i, 1)"
+                                            [disabled]="esLineaConsulta(producto)">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td>
+                                    <input type="number" [(ngModel)]="producto.descuento" (change)="actualizarProductoDetalle(i)"
+                                        min="0" max="100" class="descuento-input" [disabled]="esLineaConsulta(producto)">
+                                    <small class="descuento-valor" *ngIf="producto.descuento > 0 && !esLineaConsulta(producto)">
+                                        {{ formatMoneda(producto.precio * producto.cantidad * (producto.descuento / 100)) }}
+                                    </small>
+                                    <small class="descuento-valor" *ngIf="esLineaConsulta(producto)">No aplica</small>
+                                </td>
+                                <td class="total-columna">
+                                    <div class="monto-celda monto-celda--compacta">
+                                        <span>{{ formatMoneda(producto.total) }}</span>
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(producto.total), 'VES') }}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn-eliminar" type="button" (click)="eliminarProductoDetalle(i)" title="Eliminar producto">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="tabla-totales-row">
+                                <td colspan="4" class="tabla-totales-label">Subtotal</td>
+                                <td class="tabla-totales-value">
+                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
+                                        <span>{{ formatMoneda(presupuestoSeleccionado.subtotal) }}</span>
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.subtotal), 'VES') }}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr class="tabla-totales-row">
+                                <td colspan="4" class="tabla-totales-label">{{ getEtiquetaIva() }}</td>
+                                <td class="tabla-totales-value">
+                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
+                                        <span>{{ formatMoneda(presupuestoSeleccionado.iva) }}</span>
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.iva), 'VES') }}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr class="tabla-totales-row tabla-totales-row--final">
+                                <td colspan="4" class="tabla-totales-label">Total</td>
+                                <td class="tabla-totales-value">
+                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
+                                        <span>{{ formatMoneda(presupuestoSeleccionado.total) }}</span>
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.total), 'VES') }}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -961,82 +1652,52 @@
                 </ng-template>
             </div>
         </div>
-
-        <!-- Totales -->
-        <div class="info-content">
-            <div class="totales-section">
-                <div class="total-row">
-                    <span>Subtotal:</span>
-                    <div class="total-stack">
-                        <span>{{ formatMoneda(presupuestoSeleccionado.subtotal) }}</span>
-                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.subtotal), 'VES') }}
-                        </small>
-                    </div>
-                </div>
-
-                <div class="total-row" *ngIf="presupuestoSeleccionado.descuentoTotal > 0">
-                    <span>Descuento total:</span>
-                    <div class="total-stack">
-                        <span class="descuento-total">- {{ formatMoneda(presupuestoSeleccionado.descuentoTotal) }}</span>
-                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.descuentoTotal), 'VES') }}
-                        </small>
-                    </div>
-                </div>
-
-                <div class="total-row">
-                    <span>{{ getEtiquetaIva() }}:</span>
-                    <div class="total-stack">
-                        <span>{{ formatMoneda(presupuestoSeleccionado.iva) }}</span>
-                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.iva), 'VES') }}
-                        </small>
-                    </div>
-                </div>
-
-                <div class="total-row total-final">
-                    <strong>Total:</strong>
-                    <div class="total-stack">
-                        <strong>{{ formatMoneda(presupuestoSeleccionado.total) }}</strong>
-                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.total), 'VES') }}
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <div class="modal-actions detail-modal-actions">
+    <div class="modal-actions detail-modal-actions" [class.detail-modal-actions--view]="!modoEditable">
         <div class="detail-modal-actions__secondary">
             <button class="btn btn-secondary" type="button" (click)="cerrarModalDetalle()">
                 <i class="bi bi-x-circle"></i>
                 Cancelar
             </button>
 
-            <button *ngIf="!modoEditable" class="btn btn-info" type="button"
-                (click)="imprimirPresupuesto(presupuestoSeleccionado)">
-                <i class="bi bi-printer"></i>
-                Imprimir
-            </button>
+            <div *ngIf="!modoEditable" class="detail-options-menu"
+                (mouseenter)="abrirMenuAccionesDetalle()"
+                (mouseleave)="cerrarMenuAccionesDetalle()">
+                <button class="btn btn-sidebar-options" type="button" [class.active]="mostrarMenuAccionesDetalle">
+                    <i class="bi bi-three-dots"></i>
+                    Opciones
+                    <i class="bi bi-chevron-up"></i>
+                </button>
 
-            <button *ngIf="!modoEditable && presupuestoSeleccionado?.estadoColor === 'vencido'" class="btn btn-warning"
-                type="button" (click)="renovarPresupuesto(presupuestoSeleccionado)">
-                <i class="bi bi-arrow-repeat"></i>
-                Renovar
-            </button>
+                <div class="detail-options-dropdown" *ngIf="mostrarMenuAccionesDetalle"
+                    (mouseenter)="mantenerMenuAccionesDetalleAbierto()"
+                    (mouseleave)="cerrarMenuAccionesDetalle()">
+                    <button class="dropdown-item" type="button"
+                        (click)="imprimirPresupuesto(presupuestoSeleccionado); cerrarMenuAccionesDetalleInmediato()">
+                        <i class="bi bi-printer"></i>
+                        Imprimir
+                    </button>
+
+                    <button class="dropdown-item" type="button"
+                        *ngIf="presupuestoSeleccionado?.estadoColor === 'vencido'"
+                        (click)="renovarPresupuesto(presupuestoSeleccionado); cerrarMenuAccionesDetalleInmediato()">
+                        <i class="bi bi-arrow-repeat"></i>
+                        Renovar
+                    </button>
+
+                    <button class="dropdown-item" type="button"
+                        [disabled]="!puedeConvertirPresupuesto(presupuestoSeleccionado)"
+                        [title]="puedeConvertirPresupuesto(presupuestoSeleccionado) ? 'Cargar en ventas' : obtenerMotivoNoConversion(presupuestoSeleccionado)"
+                        (click)="convertirAVenta(presupuestoSeleccionado); cerrarMenuAccionesDetalleInmediato()">
+                        <i class="bi bi-cart-check"></i>
+                        Cargar en Venta
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="detail-modal-actions__primary">
-            <button *ngIf="!modoEditable" class="btn btn-success" type="button"
-                [disabled]="!puedeConvertirPresupuesto(presupuestoSeleccionado)"
-                [title]="puedeConvertirPresupuesto(presupuestoSeleccionado) ? 'Cargar en ventas' : obtenerMotivoNoConversion(presupuestoSeleccionado)"
-                (click)="convertirAVenta(presupuestoSeleccionado)">
-                <i class="bi bi-cart-check"></i>
-                Cargar en Venta
-            </button>
-
             <button *ngIf="modoEditable" class="btn btn-primary" type="button" (click)="guardarCambiosPresupuesto()">
                 <i class="bi bi-check-circle"></i>
                 Actualizar Presupuesto
@@ -1095,6 +1756,33 @@
                 <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
                     Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoConversion.total), 'VES') }}
                 </small>
+            </div>
+        </div>
+
+        <div class="presupuesto-opciones-shell presupuesto-opciones-shell--conversion" *ngIf="opcionesConversionPresupuesto.length > 0">
+            <div class="presupuesto-opciones-header">
+                <div>
+                    <h4>Opción a convertir</h4>
+                    <p>Solo la opción seleccionada se enviará al carrito de venta.</p>
+                </div>
+            </div>
+
+            <div class="presupuesto-opciones-grid presupuesto-opciones-grid--conversion">
+                <button type="button" class="presupuesto-opcion-card"
+                    *ngFor="let opcion of opcionesConversionPresupuesto"
+                    [class.active]="opcion.id === opcionActivaConversionId"
+                    (click)="seleccionarOpcionConversion(opcion.id)">
+                    <div class="presupuesto-opcion-card__top">
+                        <span class="opcion-nombre-label">{{ opcion.nombre }}</span>
+                        <span class="opcion-principal-badge" *ngIf="opcion.id === presupuestoConversion.opcionPrincipalId">
+                            Principal
+                        </span>
+                    </div>
+                    <div class="presupuesto-opcion-card__meta">
+                        <span>{{ opcion.productos.length }} ítem(s)</span>
+                        <strong>{{ formatMoneda(opcion.total) }}</strong>
+                    </div>
+                </button>
             </div>
         </div>
 

@@ -54,6 +54,7 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
 import { ClickOutsideDirective } from '../directives/click-outside.directive';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
+import { RefOptionAutocompleteComponent } from '../shared/ref-option-autocomplete/ref-option-autocomplete.component';
 
 @NgModule({
   declarations: [
@@ -72,6 +73,7 @@ import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
     VerPacientesComponent,
     HistoriasMedicasComponent,
     ClickOutsideDirective,
+    RefOptionAutocompleteComponent,
     GraficoComparativaSedesComponent,
     GraficoTotalSedeComponent,
     GraficoPacientesPorMesComponent,

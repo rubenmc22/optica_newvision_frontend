@@ -1,19 +1,27 @@
 import { Component, OnDestroy, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { OPCIONES_REF } from 'src/app/shared/constants/historias-medicas';
 import { ActivatedRoute, Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { Subscription } from 'rxjs';
 import { ClienteService } from './../../clientes/clientes.services';
 import { ProductoService } from './../../productos/producto.service';
+import { parseDescripcionProductoCristal } from './../../productos/producto-cristal-config.util';
+import { resolverClasificacionMaestra, normalizarTextoClasificacion } from './../../productos/producto-classification.catalog';
 import { Producto } from './../../productos/producto.model';
 import { ProductoConversionService } from './../../productos/productos-list/producto-conversion.service';
 import { SystemConfigService } from './../../system-config/system-config.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { ExcelExportService } from './../../../core/services/excel-export/excel-export.service';
+import { GenerarVentaService } from '../generar-venta/generar-venta.service';
 import { UserStateService } from './../../../core/services/userState/user-state-service';
 import { Empleado, User } from './../../../Interfaces/models-interface';
 import { SedeCompleta } from './../../login/login-interface';
 import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/presupuesto-venta-handoff.util';
+import { HISTORIA_VENTA_HANDOFF_STORAGE_KEY } from '../shared/historia-venta-handoff.util';
+import { PresupuestoService } from './presupuesto.service';
+import { LoaderService } from './../../../shared/loader/loader.service';
+import { OpcionPresupuesto, Presupuesto } from './presupuesto.interfaz';
 
 @Component({
   selector: 'app-presupuesto',
@@ -22,10 +30,14 @@ import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/
   styleUrls: ['./presupuesto.component.scss']
 })
 
-export class PresupuestoComponent implements OnInit, OnDestroy {
-  private readonly PRESUPUESTOS_STORAGE_KEY = 'optica_presupuestos_locales';
 
+export class PresupuestoComponent implements OnInit, OnDestroy {
   @ViewChild('clienteCedulaInput') clienteCedulaInput!: ElementRef;
+
+  private contadorOpcionesPresupuesto: number = 0;
+
+  // Opciones de refracción para selects (igual que historia médica)
+  public opcionesRef = OPCIONES_REF;
 
   // Variables principales
   mostrarModalNuevoPresupuesto: boolean = false;
@@ -48,6 +60,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   // En tu componente
   terminoBusqueda: string = '';
   productosFiltrados: any[] = [];
+  terminoBusquedaDetalleProducto: string = '';
+  productosDetalleFiltrados: any[] = [];
 
   // Agrega estas variables al componente
   mostrarMenuExportar: boolean = false;
@@ -58,6 +72,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   ];
   // Variables para el menú de exportar
   timeoutCerrarMenu: any;
+  mostrarMenuAccionesDetalle: boolean = false;
+  timeoutCerrarMenuDetalle: any;
 
   // Nuevo presupuesto
   nuevoPresupuesto: any = {
@@ -67,13 +83,89 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     fechaVencimiento: new Date(),
     diasVencimiento: 7,
     vendedor: '',
+    opciones: [],
+    opcionPrincipalId: '',
     productos: [],
     subtotal: 0,
     iva: 0,
     total: 0,
     observaciones: '',
-    estado: 'vigente'
+    estado: 'vigente',
+    formulaExterna: {
+      activa: false,
+      refraccionFinal: {
+        od: { esfera: null, cilindro: null, eje: null, adicion: null, alt: null, dp: null },
+        oi: { esfera: null, cilindro: null, eje: null, adicion: null, alt: null, dp: null }
+      }
+    }
   };
+  // Si tienes lógica para cargar o editar presupuestos, asegúrate de que los campos de refracción final también se inicialicen como null si están vacíos
+
+  /**
+   * Normaliza los campos de refracción final a null si están vacíos (para edición)
+   */
+  normalizarRefraccionFinal(presupuesto: any) {
+    if (presupuesto && presupuesto.formulaExterna && presupuesto.formulaExterna.refraccionFinal) {
+      ['od', 'oi'].forEach(ojo => {
+        const ref = presupuesto.formulaExterna.refraccionFinal[ojo];
+        if (ref) {
+          ['esfera', 'cilindro', 'eje', 'adicion', 'alt', 'dp'].forEach(campo => {
+            if (ref[campo] === '') ref[campo] = null;
+          });
+        }
+      });
+    }
+  }
+
+  fixSelectOverflow(): void {
+    setTimeout(() => {
+      const openedSelects = Array.from(document.querySelectorAll('.ng-select.ng-select-opened')) as HTMLElement[];
+      const dropdowns = Array.from(document.querySelectorAll('.ng-dropdown-panel')) as HTMLElement[];
+
+      if (!openedSelects.length || !dropdowns.length) {
+        return;
+      }
+
+      const activeSelect = openedSelects[openedSelects.length - 1];
+      const activePanel = dropdowns[dropdowns.length - 1];
+      const selectContainer = activeSelect.querySelector('.ng-select-container') as HTMLElement | null;
+
+      if (!selectContainer) {
+        return;
+      }
+
+      const triggerRect = selectContainer.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const panelHeight = Math.min(activePanel.scrollHeight || 230, 230);
+      const spaceAbove = triggerRect.top;
+      const spaceBelow = viewportHeight - triggerRect.bottom;
+      const shouldOpenTop = activePanel.classList.contains('ng-select-top') || spaceAbove > spaceBelow;
+      const top = shouldOpenTop
+        ? Math.max(8, triggerRect.top - panelHeight - 4)
+        : Math.min(viewportHeight - panelHeight - 8, triggerRect.bottom + 4);
+      const left = Math.min(
+        Math.max(8, triggerRect.left),
+        Math.max(8, viewportWidth - triggerRect.width - 8)
+      );
+
+      activePanel.style.position = 'fixed';
+      activePanel.style.left = `${left}px`;
+      activePanel.style.top = `${top}px`;
+      activePanel.style.width = `${triggerRect.width}px`;
+      activePanel.style.minWidth = `${triggerRect.width}px`;
+      activePanel.style.maxWidth = `${triggerRect.width}px`;
+      activePanel.style.maxHeight = `${panelHeight}px`;
+      activePanel.style.overflowY = 'auto';
+      activePanel.style.zIndex = '1000000';
+      activePanel.style.visibility = 'visible';
+      activePanel.style.opacity = '1';
+      activePanel.style.pointerEvents = 'auto';
+    }, 10);
+  }
+
+  // Llama a esta función después de cargar un presupuesto para edición:
+  // this.normalizarRefraccionFinal(presupuestoEditado);
 
   // Variables para validación de cliente (usando tu estructura)
   validandoCliente: boolean = false;
@@ -123,7 +215,19 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   // Modal para agregar producto
   mostrarModalAgregarProducto: boolean = false;
+  mostrarModalCatalogoProductos: boolean = false;
+  detalleModalOcultoPorCatalogo: boolean = false;
+  posicionScrollDetalleAntesCatalogo: number = 0;
+  opcionActivaNuevoId: string = '';
+  opcionActivaDetalleId: string = '';
+  opcionActivaConversionId: string = '';
   busquedaProducto: string = '';
+  terminoBusquedaCatalogoProductos: string = '';
+  categoriaFiltroCatalogoProductos: string = 'todas';
+  productosCatalogoFiltrados: any[] = [];
+  productosCatalogoRecienAgregados = new Set<string>();
+  private timeoutIndicadoresCatalogo = new Map<string, any>();
+  cargandoConsultaMedica: boolean = false;
 
   constructor(
     private clienteService: ClienteService,
@@ -133,13 +237,18 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     private empleadosService: EmpleadosService,
+    private presupuestoService: PresupuestoService,
     private excelExportService: ExcelExportService,
+    private generarVentaService: GenerarVentaService,
     private userStateService: UserStateService,
     private router: Router,
     private route: ActivatedRoute,
+    private loader: LoaderService,
   ) { }
 
   ngOnInit() {
+    // Cierra cualquier loader global residual de una vista previa para evitar overlays bloqueados.
+    this.loader.forceHide();
     this.sincronizarContextoUsuario();
     this.obtenerConfiguracionSistema();
     this.suscribirCambiosConfiguracion();
@@ -157,6 +266,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
     if (this.configSubscription) {
       this.configSubscription.unsubscribe();
+    }
+
+    if (this.timeoutCerrarMenuDetalle) {
+      clearTimeout(this.timeoutCerrarMenuDetalle);
     }
 
     document.body.classList.remove('modal-open');
@@ -223,33 +336,760 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     };
   }
 
-  private obtenerPresupuestosLocales(): any[] | null {
-    const data = localStorage.getItem(this.PRESUPUESTOS_STORAGE_KEY);
+  get opcionesNuevoPresupuesto(): OpcionPresupuesto[] {
+    return Array.isArray(this.nuevoPresupuesto?.opciones) ? this.nuevoPresupuesto.opciones : [];
+  }
 
-    if (data === null) {
-      return null;
+  get opcionesDetallePresupuesto(): OpcionPresupuesto[] {
+    return Array.isArray(this.presupuestoSeleccionado?.opciones) ? this.presupuestoSeleccionado.opciones : [];
+  }
+
+  get opcionesConversionPresupuesto(): OpcionPresupuesto[] {
+    return Array.isArray(this.presupuestoParaConvertir?.opciones) ? this.presupuestoParaConvertir.opciones : [];
+  }
+
+  private crearIdOpcionPresupuesto(): string {
+    this.contadorOpcionesPresupuesto += 1;
+    return `opc-${Date.now()}-${this.contadorOpcionesPresupuesto}`;
+  }
+
+  private normalizarProductoPresupuestoPersistido(producto: any): any {
+    const productoId = producto?.productoId ?? producto?.producto_id ?? producto?.id ?? null;
+
+    return {
+      ...producto,
+      id: productoId,
+      productoId,
+      itemId: producto?.itemId,
+      nombre: String(producto?.nombre || producto?.producto?.nombre || '').trim(),
+      descripcion: this.obtenerDescripcionVisibleProducto(producto),
+      codigo: String(producto?.codigo || producto?.productoCodigo || '').trim(),
+      precio: Number(producto?.precio ?? producto?.precioUnitario ?? 0),
+      precioUnitario: Number(producto?.precioUnitario ?? producto?.precio ?? 0),
+      precioOriginal: Number(producto?.precioOriginal ?? producto?.precio ?? producto?.precioUnitario ?? 0),
+      cantidad: Number(producto?.cantidad || 1),
+      descuento: Number(producto?.descuento ?? producto?.descuentoPorcentaje ?? 0),
+      descuentoPorcentaje: Number(producto?.descuentoPorcentaje ?? producto?.descuento ?? 0),
+      subtotalLinea: Number(producto?.subtotalLinea || 0),
+      total: Number(producto?.total ?? producto?.totalLinea ?? 0),
+      totalLinea: Number(producto?.totalLinea ?? producto?.total ?? 0),
+      moneda: producto?.moneda ?? this.monedaSistema,
+      monedaOriginal: producto?.monedaOriginal ?? producto?.moneda ?? this.monedaSistema,
+      tasaConversion: Number(producto?.tasaConversion ?? 1),
+      categoria: producto?.categoria ?? producto?.producto?.categoria ?? producto?.configuracionTecnica?.categoria,
+      cristalConfig: producto?.cristalConfig ?? producto?.configuracionTecnica?.cristalConfig ?? null,
+      configuracionTecnica: producto?.configuracionTecnica ?? null,
+      tipoItem: producto?.tipoItem ?? producto?.configuracionTecnica?.tipoItem ?? null,
+      esConsulta: this.normalizarBanderaBooleana(producto?.esConsulta ?? producto?.configuracionTecnica?.esConsulta),
+      aplicaIva: producto?.aplicaIva !== false
+    };
+  }
+
+  private construirPayloadProductoPresupuesto(producto: any): any {
+    const productoId = producto?.productoId ?? producto?.id ?? null;
+    const precioUnitario = Number(producto?.precioUnitario ?? producto?.precio ?? 0);
+    const descuentoPorcentaje = Number(producto?.descuentoPorcentaje ?? producto?.descuento ?? 0);
+
+    return {
+      productoId: productoId !== null && productoId !== undefined ? Number(productoId) : null,
+      codigo: String(producto?.codigo || '').trim(),
+      descripcion: this.obtenerDescripcionVisibleProducto(producto),
+      precioUnitario,
+      cantidad: Number(producto?.cantidad || 1),
+      descuentoPorcentaje,
+      aplicaIva: this.lineaAplicaIva(producto),
+      tipoItem: this.esLineaConsulta(producto) ? 'servicio_consulta' : (producto?.tipoItem || null),
+      esConsulta: this.esLineaConsulta(producto),
+      moneda: producto?.moneda || this.monedaSistema,
+      precioOriginal: Number(producto?.precioOriginal ?? precioUnitario ?? 0),
+      monedaOriginal: producto?.monedaOriginal || producto?.moneda || this.monedaSistema,
+      tasaConversion: Number(producto?.tasaConversion ?? 1)
+    };
+  }
+
+  private crearOpcionPresupuesto(nombre?: string, productos: any[] = [], overrides: Partial<OpcionPresupuesto> = {}): OpcionPresupuesto {
+    const opcion: OpcionPresupuesto = {
+      id: String(overrides.id || this.crearIdOpcionPresupuesto()),
+      nombre: String(nombre || overrides.nombre || `Opción ${this.contadorOpcionesPresupuesto}`).trim(),
+      productos: Array.isArray(productos)
+        ? productos.map((producto) => this.normalizarProductoPresupuestoPersistido(producto))
+        : [],
+      subtotal: Number(overrides.subtotal || 0),
+      descuentoTotal: Number(overrides.descuentoTotal || 0),
+      iva: Number(overrides.iva || 0),
+      total: Number(overrides.total || 0),
+      observaciones: String(overrides.observaciones || ''),
+      esPrincipal: Boolean(overrides.esPrincipal)
+    };
+
+    this.recalcularTotalesPresupuesto(opcion as any);
+    return opcion;
+  }
+
+  private normalizarOpcionPresupuestoPersistida(opcion: any, index: number): OpcionPresupuesto {
+    const productos = Array.isArray(opcion?.productos)
+      ? opcion.productos.map((producto: any) => this.normalizarProductoPresupuestoPersistido(producto))
+      : [];
+
+    const opcionNormalizada = this.crearOpcionPresupuesto(opcion?.nombre || `Opción ${index + 1}`, productos, {
+      id: String(opcion?.id || this.crearIdOpcionPresupuesto()),
+      subtotal: Number(opcion?.subtotal || 0),
+      descuentoTotal: Number(opcion?.descuentoTotal || 0),
+      iva: Number(opcion?.iva || 0),
+      total: Number(opcion?.total || 0),
+      observaciones: String(opcion?.observaciones || ''),
+      esPrincipal: Boolean(opcion?.esPrincipal)
+    });
+
+    this.recalcularTotalesPresupuesto(opcionNormalizada as any);
+    return opcionNormalizada;
+  }
+
+  private asegurarOpcionesPresupuesto(presupuesto: any): OpcionPresupuesto[] {
+    if (!presupuesto) {
+      return [];
     }
 
-    try {
-      const presupuestos = JSON.parse(data);
+    if (Array.isArray(presupuesto?.opciones) && presupuesto.opciones.length > 0) {
+      const opcionesExistentes = presupuesto.opciones as OpcionPresupuesto[];
+      let opcionPrincipalId = String(
+        presupuesto?.opcionPrincipalId
+        || opcionesExistentes.find((opcion) => opcion?.esPrincipal)?.id
+        || opcionesExistentes[0]?.id
+        || ''
+      ).trim();
 
-      if (!Array.isArray(presupuestos)) {
-        return null;
+      if (!opcionesExistentes.some((opcion) => opcion?.id === opcionPrincipalId)) {
+        opcionPrincipalId = String(opcionesExistentes[0]?.id || '').trim();
       }
 
-      return presupuestos.map((presupuesto) => this.normalizarPresupuestoPersistido(presupuesto));
-    } catch (error) {
-      console.warn('No se pudieron leer los presupuestos locales, se usarán los datos semilla:', error);
+      opcionesExistentes.forEach((opcion, index) => {
+        if (!opcion.id) {
+          opcion.id = this.crearIdOpcionPresupuesto();
+        }
+
+        if (!opcion.nombre || !String(opcion.nombre).trim()) {
+          opcion.nombre = `Opción ${index + 1}`;
+        }
+
+        if (!Array.isArray(opcion.productos)) {
+          opcion.productos = [];
+        }
+
+        opcion.productos = opcion.productos.map((producto: any) => this.normalizarProductoPresupuestoPersistido(producto));
+
+        opcion.subtotal = Number(opcion.subtotal || 0);
+        opcion.descuentoTotal = Number(opcion.descuentoTotal || 0);
+        opcion.iva = Number(opcion.iva || 0);
+        opcion.total = Number(opcion.total || 0);
+        opcion.observaciones = String(opcion.observaciones || '');
+        opcion.esPrincipal = opcion.id === opcionPrincipalId;
+      });
+
+      presupuesto.opcionPrincipalId = opcionPrincipalId;
+      return opcionesExistentes;
+    }
+
+    const opcionesFuente = Array.isArray(presupuesto?.opciones) && presupuesto.opciones.length > 0
+      ? presupuesto.opciones
+      : [this.crearOpcionPresupuesto('Opción 1', presupuesto?.productos || [], {
+        id: presupuesto?.opcionPrincipalId || this.crearIdOpcionPresupuesto(),
+        subtotal: Number(presupuesto?.subtotal || 0),
+        descuentoTotal: Number(presupuesto?.descuentoTotal || 0),
+        iva: Number(presupuesto?.iva || 0),
+        total: Number(presupuesto?.total || 0),
+        esPrincipal: true
+      })];
+
+    const opciones = opcionesFuente.map((opcion: any, index: number) => this.normalizarOpcionPresupuestoPersistida(opcion, index));
+    let opcionPrincipalId = String(
+      presupuesto?.opcionPrincipalId
+      || opciones.find((opcion) => opcion.esPrincipal)?.id
+      || opciones[0]?.id
+      || ''
+    ).trim();
+
+    if (!opciones.some((opcion) => opcion.id === opcionPrincipalId) && opciones.length > 0) {
+      opcionPrincipalId = opciones[0].id;
+    }
+
+    opciones.forEach((opcion) => {
+      opcion.esPrincipal = opcion.id === opcionPrincipalId;
+      this.recalcularTotalesPresupuesto(opcion as any);
+    });
+
+    presupuesto.opciones = opciones;
+    presupuesto.opcionPrincipalId = opcionPrincipalId;
+    return opciones;
+  }
+
+  private obtenerOpcionPresupuesto(presupuesto: any, opcionId?: string | null): OpcionPresupuesto | null {
+    const opciones = this.asegurarOpcionesPresupuesto(presupuesto);
+
+    if (!opciones.length) {
       return null;
+    }
+
+    return opciones.find((opcion) => opcion.id === opcionId)
+      || opciones.find((opcion) => opcion.id === presupuesto?.opcionPrincipalId)
+      || opciones[0];
+  }
+
+  private sincronizarPresupuestoDesdeOpcion(presupuesto: any, opcion: OpcionPresupuesto | null): void {
+    if (!presupuesto || !opcion) {
+      return;
+    }
+
+    presupuesto.productos = opcion.productos;
+    presupuesto.subtotal = Number(opcion.subtotal || 0);
+    presupuesto.descuentoTotal = Number(opcion.descuentoTotal || 0);
+    presupuesto.iva = Number(opcion.iva || 0);
+    presupuesto.total = Number(opcion.total || 0);
+  }
+
+  private sincronizarResumenDesdeOpcionPrincipal(presupuesto: any): void {
+    const opcionPrincipal = this.obtenerOpcionPresupuesto(presupuesto, presupuesto?.opcionPrincipalId);
+
+    if (!opcionPrincipal) {
+      return;
+    }
+
+    this.recalcularTotalesPresupuesto(opcionPrincipal as any);
+    presupuesto.opcionPrincipalId = opcionPrincipal.id;
+    this.sincronizarPresupuestoDesdeOpcion(presupuesto, opcionPrincipal);
+  }
+
+  private sincronizarOpcionActivaNuevo(opcionId?: string | null): void {
+    const opcion = this.obtenerOpcionPresupuesto(this.nuevoPresupuesto, opcionId || this.opcionActivaNuevoId);
+
+    if (!opcion) {
+      this.opcionActivaNuevoId = '';
+      return;
+    }
+
+    this.recalcularTotalesPresupuesto(opcion as any);
+    this.opcionActivaNuevoId = opcion.id;
+    this.sincronizarPresupuestoDesdeOpcion(this.nuevoPresupuesto, opcion);
+  }
+
+  private sincronizarOpcionActivaDetalle(opcionId?: string | null): void {
+    const opcion = this.obtenerOpcionPresupuesto(this.presupuestoSeleccionado, opcionId || this.opcionActivaDetalleId);
+
+    if (!opcion) {
+      this.opcionActivaDetalleId = '';
+      return;
+    }
+
+    this.recalcularTotalesPresupuesto(opcion as any);
+    this.opcionActivaDetalleId = opcion.id;
+    this.sincronizarPresupuestoDesdeOpcion(this.presupuestoSeleccionado, opcion);
+  }
+
+  private sincronizarOpcionActivaConversion(opcionId?: string | null): void {
+    const opcion = this.obtenerOpcionPresupuesto(this.presupuestoParaConvertir, opcionId || this.opcionActivaConversionId);
+
+    if (!opcion) {
+      this.opcionActivaConversionId = '';
+      return;
+    }
+
+    this.recalcularTotalesPresupuesto(opcion as any);
+    this.opcionActivaConversionId = opcion.id;
+    this.sincronizarPresupuestoDesdeOpcion(this.presupuestoParaConvertir, opcion);
+  }
+
+  private agregarOpcionEnPresupuesto(presupuesto: any, contexto: 'nuevo' | 'detalle'): void {
+    const opciones = this.asegurarOpcionesPresupuesto(presupuesto);
+    const nuevaOpcion = this.crearOpcionPresupuesto(`Opción ${opciones.length + 1}`);
+    opciones.push(nuevaOpcion);
+
+    if (!presupuesto.opcionPrincipalId) {
+      presupuesto.opcionPrincipalId = nuevaOpcion.id;
+      nuevaOpcion.esPrincipal = true;
+    }
+
+    if (contexto === 'nuevo') {
+      this.sincronizarOpcionActivaNuevo(nuevaOpcion.id);
+      return;
+    }
+
+    this.sincronizarOpcionActivaDetalle(nuevaOpcion.id);
+  }
+
+  private duplicarOpcionEnPresupuesto(presupuesto: any, contexto: 'nuevo' | 'detalle', opcionId?: string | null): void {
+    const opcionBase = this.obtenerOpcionPresupuesto(presupuesto, opcionId);
+
+    if (!opcionBase) {
+      return;
+    }
+
+    const opciones = this.asegurarOpcionesPresupuesto(presupuesto);
+    const copia = this.crearOpcionPresupuesto(`${opcionBase.nombre} copia`, opcionBase.productos, {
+      observaciones: opcionBase.observaciones
+    });
+    opciones.push(copia);
+
+    if (contexto === 'nuevo') {
+      this.sincronizarOpcionActivaNuevo(copia.id);
+      return;
+    }
+
+    this.sincronizarOpcionActivaDetalle(copia.id);
+  }
+
+  private eliminarOpcionEnPresupuesto(presupuesto: any, contexto: 'nuevo' | 'detalle', opcionId: string): void {
+    const opciones = this.asegurarOpcionesPresupuesto(presupuesto);
+
+    if (opciones.length <= 1) {
+      this.snackBar.open('Debe conservar al menos una opción en el presupuesto', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    const index = opciones.findIndex((opcion) => opcion.id === opcionId);
+    if (index === -1) {
+      return;
+    }
+
+    const [opcionEliminada] = opciones.splice(index, 1);
+    if (presupuesto.opcionPrincipalId === opcionEliminada.id) {
+      presupuesto.opcionPrincipalId = opciones[0].id;
+    }
+
+    opciones.forEach((opcion) => {
+      opcion.esPrincipal = opcion.id === presupuesto.opcionPrincipalId;
+    });
+
+    const siguiente = opciones[Math.max(0, index - 1)] || opciones[0];
+    if (contexto === 'nuevo') {
+      this.sincronizarOpcionActivaNuevo(siguiente.id);
+      return;
+    }
+
+    this.sincronizarOpcionActivaDetalle(siguiente.id);
+  }
+
+  private marcarOpcionPrincipalEnPresupuesto(presupuesto: any, opcionId: string, contexto: 'nuevo' | 'detalle'): void {
+    const opciones = this.asegurarOpcionesPresupuesto(presupuesto);
+    presupuesto.opcionPrincipalId = opcionId;
+    opciones.forEach((opcion) => {
+      opcion.esPrincipal = opcion.id === opcionId;
+    });
+
+    if (contexto === 'nuevo') {
+      this.sincronizarOpcionActivaNuevo(opcionId);
+      return;
+    }
+
+    this.sincronizarOpcionActivaDetalle(opcionId);
+  }
+
+  agregarOpcionNuevo(): void {
+    this.agregarOpcionEnPresupuesto(this.nuevoPresupuesto, 'nuevo');
+  }
+
+  duplicarOpcionNuevo(opcionId?: string | null): void {
+    this.duplicarOpcionEnPresupuesto(this.nuevoPresupuesto, 'nuevo', opcionId || this.opcionActivaNuevoId);
+  }
+
+  eliminarOpcionNuevo(opcionId: string): void {
+    this.eliminarOpcionEnPresupuesto(this.nuevoPresupuesto, 'nuevo', opcionId);
+  }
+
+  seleccionarOpcionNuevo(opcionId: string): void {
+    this.sincronizarOpcionActivaNuevo(opcionId);
+  }
+
+  marcarOpcionPrincipalNuevo(opcionId: string): void {
+    this.marcarOpcionPrincipalEnPresupuesto(this.nuevoPresupuesto, opcionId, 'nuevo');
+  }
+
+  agregarOpcionDetalle(): void {
+    this.agregarOpcionEnPresupuesto(this.presupuestoSeleccionado, 'detalle');
+  }
+
+  duplicarOpcionDetalle(opcionId?: string | null): void {
+    this.duplicarOpcionEnPresupuesto(this.presupuestoSeleccionado, 'detalle', opcionId || this.opcionActivaDetalleId);
+  }
+
+  eliminarOpcionDetalle(opcionId: string): void {
+    this.eliminarOpcionEnPresupuesto(this.presupuestoSeleccionado, 'detalle', opcionId);
+  }
+
+  seleccionarOpcionDetalle(opcionId: string): void {
+    this.sincronizarOpcionActivaDetalle(opcionId);
+  }
+
+  marcarOpcionPrincipalDetalle(opcionId: string): void {
+    this.marcarOpcionPrincipalEnPresupuesto(this.presupuestoSeleccionado, opcionId, 'detalle');
+  }
+
+  seleccionarOpcionConversion(opcionId: string): void {
+    this.sincronizarOpcionActivaConversion(opcionId);
+  }
+
+  private presupuestoTieneProductos(presupuesto: any): boolean {
+    const opciones = Array.isArray(presupuesto?.opciones) ? presupuesto.opciones : [];
+
+    if (opciones.length > 0) {
+      return opciones.some((opcion) => Array.isArray(opcion.productos) && opcion.productos.length > 0);
+    }
+
+    const productos = Array.isArray(presupuesto?.productos) ? presupuesto.productos : [];
+    return productos.length > 0;
+  }
+
+  getCantidadOpcionesConProductos(presupuesto: any): number {
+    const opciones = Array.isArray(presupuesto?.opciones) ? presupuesto.opciones : [];
+    return opciones.filter((opcion) => Array.isArray(opcion.productos) && opcion.productos.length > 0).length;
+  }
+
+  private obtenerProductosBusquedaPresupuesto(presupuesto: any): any[] {
+    const opciones = Array.isArray(presupuesto?.opciones) ? presupuesto.opciones : [];
+
+    if (opciones.length > 0) {
+      return opciones.flatMap((opcion: any) => Array.isArray(opcion?.productos) ? opcion.productos : []);
+    }
+
+    return Array.isArray(presupuesto?.productos) ? presupuesto.productos : [];
+  }
+
+  private sincronizarClienteFormularioConPresupuesto(): void {
+    const cliente = {
+      ...this.getClienteVacio(),
+      ...(this.nuevoPresupuesto?.cliente || {}),
+      ...(this.clienteSinPaciente || {})
+    };
+
+    cliente.cedula = String(cliente.cedula || '').trim();
+    cliente.nombreCompleto = String(cliente.nombreCompleto || '').trim();
+    cliente.telefono = String(cliente.telefono || '').trim();
+    cliente.email = String(cliente.email || '').trim();
+    cliente.razonSocial = String(cliente.razonSocial || '').trim();
+
+    this.clienteSinPaciente = { ...cliente };
+    this.nuevoPresupuesto.cliente = { ...cliente };
+  }
+
+  private sincronizarClienteFormularioDesdePresupuesto(): void {
+    this.clienteSinPaciente = {
+      ...this.getClienteVacio(),
+      ...(this.nuevoPresupuesto?.cliente || {})
+    };
+  }
+
+  validarEmail(email: string): boolean {
+    if (!email || email.trim() === '') {
+      return true;
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email.trim());
+  }
+
+  validarCedula(cedula: string, tipoPersona: string): boolean {
+    if (!cedula || cedula.trim() === '') {
+      return false;
+    }
+
+    const cedulaLimpia = cedula.trim();
+
+    if (tipoPersona === 'juridica') {
+      return /^[JjVvGgEe]-?\d{7,9}$/.test(cedulaLimpia);
+    }
+
+    return /^\d{1,8}$/.test(cedulaLimpia);
+  }
+
+  validarNombre(nombre: string): boolean {
+    if (!nombre || nombre.trim() === '') {
+      return false;
+    }
+
+    if (this.clienteSinPaciente.tipoPersona === 'juridica') {
+      return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\.\,\-\&]+$/.test(nombre.trim());
+    }
+
+    return /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.trim());
+  }
+
+  validarTelefono(telefono: string): boolean {
+    if (!telefono || telefono.trim() === '') {
+      return false;
+    }
+
+    const telefonoLimpio = telefono.trim();
+    const formatosAceptados = [
+      /^\+\d{1,3}\s\d{7,15}$/,
+      /^\d{1,3}\s\d{7,15}$/,
+      /^\d{10,11}$/,
+      /^\+?\d{10,15}$/,
+      /^\d{1,3}\s+\d{7,15}$/
+    ];
+
+    return formatosAceptados.some((pattern) => pattern.test(telefonoLimpio));
+  }
+
+  getMensajeErrorCedula(): string {
+    return this.clienteSinPaciente.tipoPersona === 'juridica'
+      ? 'Formato de RIF invalido. Use J- seguido de 7-9 numeros.'
+      : 'La cedula debe contener solo numeros y maximo 8 digitos.';
+  }
+
+  private getMensajeErrorTelefono(): string {
+    return 'Formato invalido. Para Venezuela use 4121234567 o +58 4121234567.';
+  }
+
+  getEstadoCampoCedula(): { valido: boolean, mensaje: string } {
+    const cedula = this.clienteSinPaciente.cedula;
+
+    if (!cedula || cedula.trim() === '') {
+      return { valido: false, mensaje: 'La cedula o RIF es obligatorio.' };
+    }
+
+    return {
+      valido: this.validarCedula(cedula, this.clienteSinPaciente.tipoPersona),
+      mensaje: this.getMensajeErrorCedula()
+    };
+  }
+
+  onTipoPersonaChange(): void {
+    this.clienteSinPaciente.tipoPersona = this.clienteSinPaciente.tipoPersona === 'juridica' ? 'juridica' : 'natural';
+    this.limpiarEstadoValidacion();
+    this.sincronizarClienteFormularioConPresupuesto();
+  }
+
+  onCampoEditadoManualmente(): void {
+    if (this.clienteEncontrado) {
+      this.clienteEncontrado = false;
+      this.validacionIntentada = false;
+      this.mensajeValidacionCliente = 'Editando datos manualmente';
+    }
+
+    this.sincronizarClienteFormularioConPresupuesto();
+  }
+
+  onCedulaChange(): void {
+    let cedula = String(this.clienteSinPaciente.cedula || '').trim();
+
+    if (this.clienteSinPaciente.tipoPersona === 'juridica') {
+      const prefijo = cedula.charAt(0).toUpperCase();
+      const numeros = cedula.replace(/[^0-9]/g, '');
+      if (/[JVEG]/.test(prefijo)) {
+        cedula = `${prefijo}-${numeros}`;
+      }
+    } else {
+      cedula = cedula.replace(/\D/g, '').slice(0, 8);
+    }
+
+    this.clienteSinPaciente.cedula = cedula;
+
+    if (this.cedulaAnterior && cedula !== this.cedulaAnterior) {
+      this.clienteEncontrado = false;
+      this.validacionIntentada = false;
+      this.mensajeValidacionCliente = '';
+    }
+
+    this.sincronizarClienteFormularioConPresupuesto();
+  }
+
+  onCedulaBlur(): void {
+    const cedula = String(this.clienteSinPaciente.cedula || '').trim();
+
+    if (!cedula) {
+      this.limpiarEstadoValidacion();
+      return;
+    }
+
+    if (!this.validarCedula(cedula, this.clienteSinPaciente.tipoPersona)) {
+      this.clienteEncontrado = false;
+      this.validacionIntentada = false;
+      this.mensajeValidacionCliente = this.getMensajeErrorCedula();
+      return;
+    }
+
+    if (cedula.length >= 4 && cedula !== this.cedulaAnterior) {
+      void this.validarClientePorCedula();
     }
   }
 
-  private persistirPresupuestosLocales(): void {
-    localStorage.setItem(this.PRESUPUESTOS_STORAGE_KEY, JSON.stringify(this.obtenerTodosLosPresupuestos()));
+  forzarValidacionCliente(): void {
+    const cedula = String(this.clienteSinPaciente.cedula || '').trim();
+
+    if (!cedula) {
+      this.mensajeValidacionCliente = 'Ingrese una cedula o RIF para validar.';
+      return;
+    }
+
+    if (!this.validarCedula(cedula, this.clienteSinPaciente.tipoPersona)) {
+      this.mensajeValidacionCliente = this.getMensajeErrorCedula();
+      return;
+    }
+
+    void this.validarClientePorCedula();
   }
 
-  private obtenerTodosLosPresupuestos(): any[] {
-    return [...this.presupuestosVigentes, ...this.presupuestosVencidos];
+  getClaseBotonValidar(): string {
+    let clase = 'btn-validar-compact';
+
+    if (this.validandoCliente) {
+      clase += ' btn-validando';
+    } else if (this.clienteEncontrado) {
+      clase += ' btn-encontrado';
+    } else if (this.validacionIntentada && this.clienteSinPaciente.cedula) {
+      clase += ' btn-no-encontrado';
+    }
+
+    return clase;
+  }
+
+  getTooltipBotonValidar(): string {
+    if (this.validandoCliente) {
+      return 'Buscando cliente...';
+    }
+
+    if (this.clienteEncontrado) {
+      return 'Cliente encontrado';
+    }
+
+    if (!this.clienteSinPaciente.cedula) {
+      return 'Ingrese una cedula para buscar';
+    }
+
+    if (!this.validarCedula(this.clienteSinPaciente.cedula, this.clienteSinPaciente.tipoPersona)) {
+      return 'Corrija el formato de la cedula o RIF';
+    }
+
+    return 'Buscar cliente en base de datos';
+  }
+
+  onNombreChange(): void {
+    this.clienteSinPaciente.nombreCompleto = String(this.clienteSinPaciente.nombreCompleto || '');
+    this.sincronizarClienteFormularioConPresupuesto();
+  }
+
+  onTelefonoChange(): void {
+    this.clienteSinPaciente.telefono = String(this.clienteSinPaciente.telefono || '').replace(/[^\d+\s]/g, '');
+    this.sincronizarClienteFormularioConPresupuesto();
+
+    if (!this.clienteSinPaciente.telefono || this.validarTelefono(this.clienteSinPaciente.telefono)) {
+      this.mensajeValidacionCliente = this.clienteEncontrado ? 'Cliente encontrado' : '';
+      return;
+    }
+
+    this.mensajeValidacionCliente = this.getMensajeErrorTelefono();
+  }
+
+  onTelefonoBlur(): void {
+    const telefono = String(this.clienteSinPaciente.telefono || '').trim();
+    if (!telefono) {
+      this.sincronizarClienteFormularioConPresupuesto();
+      return;
+    }
+
+    this.clienteSinPaciente.telefono = telefono.replace(/\s+/g, ' ');
+    this.sincronizarClienteFormularioConPresupuesto();
+
+    if (!this.validarTelefono(this.clienteSinPaciente.telefono)) {
+      this.mensajeValidacionCliente = this.getMensajeErrorTelefono();
+    }
+  }
+
+  onEmailChange(): void {
+    this.clienteSinPaciente.email = String(this.clienteSinPaciente.email || '').trim().toLowerCase();
+    this.sincronizarClienteFormularioConPresupuesto();
+
+    if (!this.validarEmail(this.clienteSinPaciente.email)) {
+      this.mensajeValidacionCliente = 'Formato de email invalido.';
+    }
+  }
+
+  private limpiarCamposCliente(): void {
+    const cedulaActual = this.clienteSinPaciente.cedula;
+    const tipoPersonaActual = this.clienteSinPaciente.tipoPersona;
+
+    this.clienteSinPaciente = {
+      ...this.getClienteVacio(),
+      cedula: cedulaActual,
+      tipoPersona: tipoPersonaActual
+    };
+
+    this.sincronizarClienteFormularioConPresupuesto();
+  }
+
+  private limpiarEstadoValidacion(): void {
+    this.clienteEncontrado = false;
+    this.validandoCliente = false;
+    this.validacionIntentada = false;
+    this.mensajeValidacionCliente = '';
+    this.cedulaAnterior = '';
+  }
+
+  private autocompletarDatosCliente(respuesta: any): void {
+    const cliente = respuesta?.cliente || respuesta || {};
+
+    this.clienteSinPaciente = {
+      ...this.getClienteVacio(),
+      tipoPersona: cliente?.cedula?.toUpperCase?.().startsWith('J') ? 'juridica' : (cliente?.tipoPersona || this.clienteSinPaciente.tipoPersona || 'natural'),
+      cedula: String(cliente?.cedula || this.clienteSinPaciente.cedula || '').trim(),
+      nombreCompleto: String(cliente?.nombreCompleto || cliente?.nombre || cliente?.razonSocial || '').trim(),
+      telefono: String(cliente?.telefono || '').trim(),
+      email: String(cliente?.email || '').trim(),
+      direccion: String(cliente?.direccion || '').trim(),
+      razonSocial: String(cliente?.razonSocial || cliente?.nombreCompleto || cliente?.nombre || '').trim()
+    };
+
+    this.sincronizarClienteFormularioConPresupuesto();
+  }
+
+  async validarClientePorCedula(): Promise<void> {
+    const cedula = String(this.clienteSinPaciente.cedula || '').trim();
+
+    if (!cedula || !this.validarCedula(cedula, this.clienteSinPaciente.tipoPersona)) {
+      return;
+    }
+
+    this.cedulaAnterior = cedula;
+    this.validandoCliente = true;
+    this.clienteEncontrado = false;
+    this.validacionIntentada = false;
+    this.mensajeValidacionCliente = 'Buscando cliente...';
+
+    try {
+      const respuesta = await lastValueFrom(this.clienteService.buscarPorCedula(cedula));
+
+      if (String(this.clienteSinPaciente.cedula || '').trim() !== cedula) {
+        return;
+      }
+
+      this.validacionIntentada = true;
+      const clienteExiste = Boolean(respuesta?.cliente?.cedula);
+
+      if (clienteExiste) {
+        this.autocompletarDatosCliente(respuesta);
+        this.clienteEncontrado = true;
+        this.mensajeValidacionCliente = 'Cliente encontrado';
+      } else {
+        this.clienteEncontrado = false;
+        this.mensajeValidacionCliente = 'Cliente no encontrado. Complete los datos manualmente.';
+        this.limpiarCamposCliente();
+        this.clienteSinPaciente.cedula = cedula;
+        this.sincronizarClienteFormularioConPresupuesto();
+      }
+    } catch (error) {
+      console.error('Error validando cliente para presupuesto:', error);
+      this.validacionIntentada = true;
+      this.clienteEncontrado = false;
+      this.mensajeValidacionCliente = 'No se pudo validar el cliente.';
+      this.limpiarCamposCliente();
+      this.clienteSinPaciente.cedula = cedula;
+      this.sincronizarClienteFormularioConPresupuesto();
+    } finally {
+      this.validandoCliente = false;
+      this.cdr.detectChanges();
+    }
   }
 
   private aplicarPresupuestosDesdeFuente(presupuestos: any[]): void {
@@ -262,36 +1102,25 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.inicializarPresupuestosFiltrados();
     this.filtrarPresupuestos();
     this.calcularEstadisticas();
-    this.persistirPresupuestosLocales();
   }
 
   private normalizarPresupuestoPersistido(presupuesto: any): any {
     const fechaCreacion = presupuesto?.fechaCreacion ? new Date(presupuesto.fechaCreacion) : new Date();
     const fechaVencimiento = presupuesto?.fechaVencimiento ? new Date(presupuesto.fechaVencimiento) : new Date();
     const productos = Array.isArray(presupuesto?.productos)
-      ? presupuesto.productos.map((producto: any) => ({
-        ...producto,
-        id: producto?.id,
-        precio: Number(producto?.precio || 0),
-        precioOriginal: Number(producto?.precioOriginal ?? producto?.precio ?? 0),
-        cantidad: Number(producto?.cantidad || 1),
-        descuento: Number(producto?.descuento || 0),
-        total: Number(producto?.total || 0),
-        moneda: producto?.moneda ?? this.monedaSistema,
-        monedaOriginal: producto?.monedaOriginal ?? producto?.moneda ?? this.monedaSistema,
-        tasaConversion: Number(producto?.tasaConversion ?? 1)
-      }))
+      ? presupuesto.productos.map((producto: any) => this.normalizarProductoPresupuestoPersistido(producto))
       : [];
 
     const subtotal = Number(presupuesto?.subtotal || 0);
     const descuentoTotal = Number(presupuesto?.descuentoTotal || 0);
     const iva = Number(presupuesto?.iva || 0);
     const total = Number(presupuesto?.total || 0);
+    const formulaExterna = this.normalizarFormulaExternaPersistida(presupuesto?.formulaExterna);
 
-    return {
+    const presupuestoNormalizado: Presupuesto = {
       ...presupuesto,
       id: Number(presupuesto?.id || 0),
-      codigo: presupuesto?.codigo || this.obtenerSiguienteCodigoPresupuesto(),
+      codigo: String(presupuesto?.codigo || '').trim(),
       cliente: {
         ...this.getClienteVacio(),
         ...(presupuesto?.cliente || {})
@@ -304,56 +1133,91 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       descuentoTotal,
       iva,
       total,
+      opciones: Array.isArray(presupuesto?.opciones) ? presupuesto.opciones : [],
+      opcionPrincipalId: String(presupuesto?.opcionPrincipalId || ''),
       observaciones: presupuesto?.observaciones || '',
+      formulaExterna,
       estado: presupuesto?.estado || 'vigente',
       estadoColor: presupuesto?.estadoColor || 'vigente',
       diasRestantes: Number(presupuesto?.diasRestantes ?? 0)
     };
+
+    this.asegurarOpcionesPresupuesto(presupuestoNormalizado);
+    this.sincronizarResumenDesdeOpcionPrincipal(presupuestoNormalizado);
+    return presupuestoNormalizado;
   }
 
-  private obtenerSiguienteIdPresupuesto(): number {
-    return this.obtenerTodosLosPresupuestos().reduce((maximo, presupuesto) => {
-      return Math.max(maximo, Number(presupuesto?.id || 0));
-    }, 0) + 1;
-  }
-
-  private obtenerSiguienteCodigoPresupuesto(): string {
-    const year = new Date().getFullYear();
-    const ultimoCorrelativo = this.obtenerTodosLosPresupuestos().reduce((maximo, presupuesto) => {
-      const codigo = String(presupuesto?.codigo || '');
-      const match = codigo.match(/^P-(\d{4})-(\d+)$/i);
-
-      if (!match || Number(match[1]) !== year) {
-        return maximo;
+  private async cargarPresupuestosDesdeApi(mostrarError: boolean = true, autoArchivar: boolean = true): Promise<void> {
+    try {
+      if (autoArchivar) {
+        await lastValueFrom(this.presupuestoService.autoArchivarPresupuestos(this.diasParaAutoArchivo));
       }
 
-      return Math.max(maximo, Number(match[2] || 0));
-    }, 0);
+      const presupuestos = await lastValueFrom(this.presupuestoService.getPresupuestos());
+      this.aplicarPresupuestosDesdeFuente(presupuestos);
+    } catch (error) {
+      console.error('Error cargando presupuestos desde API:', error);
+      this.presupuestosVigentes = [];
+      this.presupuestosVencidos = [];
+      this.inicializarPresupuestosFiltrados();
+      this.calcularEstadisticas();
 
-    return `P-${year}-${String(ultimoCorrelativo + 1).padStart(3, '0')}`;
+      if (mostrarError) {
+        this.snackBar.open('No se pudieron cargar los presupuestos', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-warning']
+        });
+      }
+    }
   }
 
-  private crearSnapshotPresupuestoNuevo(): any {
-    const fechaCreacion = new Date(this.nuevoPresupuesto.fechaCreacion || new Date());
-    const fechaVencimiento = new Date(this.nuevoPresupuesto.fechaVencimiento || new Date());
-    const diasRestantes = this.calcularDiasRestantesParaFecha(fechaVencimiento);
+  private construirPayloadPresupuesto(presupuesto: any): any {
+    const cliente = presupuesto?.cliente || this.getClienteVacio();
+    const tipoPersona = cliente?.tipoPersona === 'juridica' ? 'juridica' : 'natural';
+    const nombreCompleto = String(
+      tipoPersona === 'juridica'
+        ? (cliente?.razonSocial || cliente?.nombreCompleto || cliente?.nombre || '')
+        : (cliente?.nombreCompleto || cliente?.nombre || '')
+    ).trim();
+    const opciones = this.asegurarOpcionesPresupuesto(presupuesto).map((opcion) => {
+      this.recalcularTotalesPresupuesto(opcion as any);
+      return {
+        id: opcion.id,
+        nombre: String(opcion.nombre || '').trim(),
+        observaciones: String(opcion.observaciones || '').trim(),
+        esPrincipal: opcion.id === presupuesto?.opcionPrincipalId,
+        subtotal: Number(opcion.subtotal || 0),
+        descuentoTotal: Number(opcion.descuentoTotal || 0),
+        iva: Number(opcion.iva || 0),
+        total: Number(opcion.total || 0),
+        productos: (opcion.productos || []).map((producto: any) => this.construirPayloadProductoPresupuesto(producto))
+      };
+    });
+    const opcionPrincipal = opciones.find((opcion) => opcion.esPrincipal) || opciones[0];
+    const productosPrincipal = opcionPrincipal?.productos || [];
 
     return {
-      ...this.nuevoPresupuesto,
-      id: this.obtenerSiguienteIdPresupuesto(),
-      codigo: this.obtenerSiguienteCodigoPresupuesto(),
-      cliente: { ...this.nuevoPresupuesto.cliente },
-      fechaCreacion,
-      fechaVencimiento,
-      diasVencimiento: Number(this.nuevoPresupuesto.diasVencimiento || 7),
-      productos: this.nuevoPresupuesto.productos.map((producto: any) => ({ ...producto })),
-      subtotal: Number(this.nuevoPresupuesto.subtotal || 0),
-      descuentoTotal: Number(this.nuevoPresupuesto.descuentoTotal || 0),
-      iva: Number(this.nuevoPresupuesto.iva || 0),
-      total: Number(this.nuevoPresupuesto.total || 0),
-      estado: diasRestantes < 0 ? 'vencido' : 'vigente',
-      estadoColor: this.getEstadoColor(diasRestantes),
-      diasRestantes
+      codigo: String(presupuesto?.codigo || '').trim(),
+      cliente: {
+        tipoPersona,
+        cedula: String(cliente?.cedula || '').trim(),
+        nombreCompleto,
+        razonSocial: tipoPersona === 'juridica' ? nombreCompleto : '',
+        telefono: String(cliente?.telefono || '').trim(),
+        email: String(cliente?.email || '').trim(),
+        direccion: String(cliente?.direccion || '').trim()
+      },
+      fechaCreacion: presupuesto?.fechaCreacion,
+      fechaVencimiento: presupuesto?.fechaVencimiento,
+      diasVencimiento: Number(presupuesto?.diasVencimiento || 7),
+      vendedor: String(presupuesto?.vendedor || this.usuarioActual?.nombre || '').trim(),
+      observaciones: this.construirObservacionesConFormulaExterna(presupuesto),
+      formulaExterna: this.normalizarFormulaExternaPersistida(presupuesto?.formulaExterna),
+      estado: String(presupuesto?.estado || 'vigente').trim(),
+      ivaPorcentaje: this.ivaPorcentaje,
+      opcionPrincipalId: opcionPrincipal?.id || '',
+      opciones,
+      productos: productosPrincipal.map((producto: any) => this.construirPayloadProductoPresupuesto(producto))
     };
   }
 
@@ -370,806 +1234,48 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   inicializarNuevoPresupuesto() {
     this.sincronizarContextoUsuario();
 
+    const fechaCreacion = new Date();
+    const fechaVencimiento = new Date();
+    fechaVencimiento.setDate(fechaVencimiento.getDate() + 7);
+
     this.nuevoPresupuesto = {
       codigo: '',
       cliente: this.getClienteVacio(),
-      fechaCreacion: new Date(),
-      fechaVencimiento: new Date(),
+      fechaCreacion,
+      fechaVencimiento,
       diasVencimiento: 7,
       vendedor: this.usuarioActual?.nombre?.trim() || '',
+      opciones: [],
+      opcionPrincipalId: '',
       productos: [],
       subtotal: 0,
+      descuentoTotal: 0,
       iva: 0,
       total: 0,
       observaciones: '',
-      estado: 'vigente'
-    };
-    this.clienteSinPaciente = this.getClienteVacio();
-    this.resetearEstadoValidacionCliente();
-  }
-
-  resetearEstadoValidacionCliente() {
-    this.validandoCliente = false;
-    this.clienteEncontrado = false;
-    this.validacionIntentada = false;
-    this.mensajeValidacionCliente = '';
-    this.cedulaAnterior = '';
-  }
-
-  onTipoPersonaChange(): void {
-    if (this.clienteSinPaciente.tipoPersona === 'juridica') {
-      this.clienteSinPaciente.nombreCompleto = '';
-      this.clienteSinPaciente.razonSocial = '';
-    } else {
-      this.clienteSinPaciente.razonSocial = '';
-    }
-    this.actualizarClienteEnPresupuesto();
-    this.cdr.detectChanges();
-  }
-
-  actualizarClienteEnPresupuesto() {
-    this.nuevoPresupuesto.cliente = { ...this.clienteSinPaciente };
-  }
-
-  onCedulaBlur(): void {
-    const cedula = this.clienteSinPaciente.cedula?.trim();
-    const tipoPersona = this.clienteSinPaciente.tipoPersona;
-
-    if (!cedula) {
-      return;
-    }
-
-    if (!this.validarCedula(cedula, tipoPersona)) {
-      this.mensajeValidacionCliente = this.getMensajeErrorCedula();
-      return;
-    }
-
-    if (cedula.length >= 4) {
-      this.validarClientePorCedula();
-    }
-  }
-
-  forzarValidacionCliente(): void {
-    const cedula = this.clienteSinPaciente.cedula?.trim();
-
-    if (!cedula) {
-      this.mensajeValidacionCliente = 'Ingrese una cédula o RIF para validar';
-      return;
-    }
-
-    if (!this.validarCedula(cedula, this.clienteSinPaciente.tipoPersona)) {
-      this.mensajeValidacionCliente = this.getMensajeErrorCedula();
-      return;
-    }
-
-    this.validarClientePorCedula();
-  }
-
-  async validarClientePorCedula(): Promise<void> {
-    const cedula = this.clienteSinPaciente.cedula?.trim();
-
-    // Validaciones básicas
-    if (!cedula) {
-      this.mensajeValidacionCliente = 'Ingrese una cédula o RIF para validar';
-      this.validacionIntentada = false;
-      return;
-    }
-
-    if (!this.validarCedula(cedula, this.clienteSinPaciente.tipoPersona)) {
-      this.mensajeValidacionCliente = this.getMensajeErrorCedula();
-      this.validacionIntentada = false;
-      return;
-    }
-
-    // Guardar la cédula actual por si necesitamos restaurarla
-    const cedulaActual = this.clienteSinPaciente.cedula;
-
-    // Iniciar validación
-    this.validandoCliente = true;
-    this.clienteEncontrado = false;
-    this.validacionIntentada = false;
-    this.mensajeValidacionCliente = '🔍 Buscando cliente en la base de datos...';
-    this.cdr.detectChanges();
-
-    try {
-      const respuesta = await lastValueFrom(this.clienteService.buscarPorCedula(cedula));
-
-      // MARCAR QUE LA VALIDACIÓN SE INTENTÓ
-      this.validacionIntentada = true;
-
-      if (respuesta.cliente) {
-        this.clienteEncontrado = true;
-        this.mensajeValidacionCliente = '✅ Cliente encontrado - Datos autocompletados';
-        this.autocompletarDatosCliente(respuesta.cliente);
-
-        this.snackBar.open('Cliente encontrado - Datos autocompletados', 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-success']
-        });
-      } else {
-        this.clienteEncontrado = false;
-        this.mensajeValidacionCliente = 'Cliente no encontrado - Complete los datos manualmente';
-
-        this.limpiarCamposCliente();
-        this.clienteSinPaciente.cedula = cedulaActual;
-
-        this.snackBar.open('Cliente no encontrado. Complete los datos manualmente.', 'Cerrar', {
-          duration: 4000,
-          panelClass: ['snackbar-info']
-        });
+      estado: 'vigente',
+      estadoColor: 'vigente',
+      diasRestantes: this.calcularDiasRestantesParaFecha(fechaVencimiento),
+      formulaExterna: {
+        activa: false,
+        refraccionFinal: this.crearRefraccionFinalVacia()
       }
-
-    } catch (error: any) {
-      this.validacionIntentada = true;
-      this.clienteEncontrado = false;
-      this.mensajeValidacionCliente = '⚠️ Error al conectar con el servidor';
-
-      this.limpiarCamposCliente();
-      this.clienteSinPaciente.cedula = cedulaActual;
-
-      let mensajeError = 'Error al validar cliente. Verifique su conexión.';
-      if (error.error?.message) {
-        mensajeError = error.error.message;
-      } else if (error.message) {
-        mensajeError = error.message;
-      }
-
-      this.snackBar.open(mensajeError, 'Cerrar', {
-        duration: 3000,
-        panelClass: ['snackbar-warning']
-      });
-
-    } finally {
-      this.validandoCliente = false;
-      this.cdr.detectChanges();
-    }
-  }
-
-  autocompletarDatosCliente(cliente: any) {
-    this.clienteSinPaciente = {
-      tipoPersona: cliente.tipoPersona || 'natural',
-      cedula: cliente.cedula || '',
-      nombreCompleto: cliente.nombreCompleto || cliente.nombre || '',
-      telefono: cliente.telefono || '',
-      email: cliente.email || '',
-      direccion: cliente.direccion || '',
-      razonSocial: cliente.razonSocial || ''
     };
-    this.actualizarClienteEnPresupuesto();
+
+    this.asegurarOpcionesPresupuesto(this.nuevoPresupuesto);
+    this.sincronizarOpcionActivaNuevo(this.nuevoPresupuesto.opcionPrincipalId);
+
+    this.sincronizarClienteFormularioDesdePresupuesto();
+    this.limpiarEstadoValidacion();
   }
-
-  limpiarCamposCliente() {
-    const cedulaActual = this.clienteSinPaciente.cedula;
-    this.clienteSinPaciente = this.getClienteVacio();
-    this.clienteSinPaciente.cedula = cedulaActual;
-    this.actualizarClienteEnPresupuesto();
-  }
-
-  onCedulaChange(): void {
-    const cedula = this.clienteSinPaciente.cedula;
-    const tipoPersona = this.clienteSinPaciente.tipoPersona;
-
-    // Resetear estado de validación anterior solo si cambia la cédula
-    if (cedula !== this.cedulaAnterior) {
-      this.clienteEncontrado = false;
-      this.mensajeValidacionCliente = '';
-      this.validacionIntentada = false;
-      this.cedulaAnterior = cedula;
-    }
-
-    if (!this.validarCedula(cedula, tipoPersona)) {
-      this.mensajeValidacionCliente = this.getMensajeErrorCedula();
-    } else {
-      this.mensajeValidacionCliente = '';
-    }
-
-    this.actualizarEstadoValidacion();
-  }
-
-  validarCedula(cedula: string, tipoPersona: string): boolean {
-    if (!cedula || cedula.trim() === '') return false;
-
-    const cedulaLimpia = cedula.trim();
-
-    if (tipoPersona === 'juridica') {
-      // Para persona jurídica (RIF): J-123456789
-      const rifRegex = /^[JjVGgEe]-?\d{7,9}$/;
-      if (!rifRegex.test(cedulaLimpia)) return false;
-
-      // Si no tiene la J al inicio, agregarla automáticamente
-      if (!cedulaLimpia.toUpperCase().startsWith('J')) {
-        this.clienteSinPaciente.cedula = 'J-' + cedulaLimpia.replace(/[^0-9]/g, '');
-        this.actualizarClienteEnPresupuesto();
-      }
-      return true;
-    } else {
-      // Para persona natural: solo números, máximo 8 dígitos
-      const cedulaRegex = /^\d{1,8}$/;
-      return cedulaRegex.test(cedulaLimpia);
-    }
-  }
-
-  getMensajeErrorCedula(): string {
-    const cedula = this.clienteSinPaciente.cedula;
-    const tipoPersona = this.clienteSinPaciente.tipoPersona;
-
-    if (!cedula || cedula.trim() === '') {
-      return 'La cédula/RIF es obligatorio';
-    }
-
-    if (tipoPersona === 'juridica') {
-      return 'Formato RIF inválido. Ej: J-123456789';
-    } else {
-      return 'Cédula inválida. Solo números, máximo 8 dígitos';
-    }
-  }
-
-  getEstadoCampoCedula(): { valido: boolean, mensaje: string } {
-    const cedula = this.clienteSinPaciente.cedula;
-    const tipoPersona = this.clienteSinPaciente.tipoPersona;
-    if (!cedula || cedula.trim() === '') {
-      return { valido: false, mensaje: 'La cédula/RIF es obligatorio' };
-    }
-    return {
-      valido: this.validarCedula(cedula, tipoPersona),
-      mensaje: this.getMensajeErrorCedula()
-    };
-  }
-
-  getTooltipBotonValidar(): string {
-    if (this.validandoCliente) {
-      return 'Buscando cliente...';
-    } else if (this.clienteEncontrado) {
-      return 'Cliente encontrado - Click para re-validar';
-    } else if (this.validacionIntentada && !this.clienteEncontrado) {
-      return 'Cliente no encontrado - Complete los datos manualmente';
-    } else if (!this.clienteSinPaciente.cedula) {
-      return 'Ingrese una cédula para buscar';
-    } else if (!this.validarCedula(this.clienteSinPaciente.cedula, this.clienteSinPaciente.tipoPersona)) {
-      return 'Cédula inválida - Corrija el formato';
-    } else if (this.clienteSinPaciente.cedula.length < 4) {
-      return 'Ingrese al menos 4 caracteres para buscar';
-    } else {
-      return 'Buscar cliente en base de datos';
-    }
-  }
-
-  getClaseBotonValidar(): string {
-    let baseClass = 'btn-validar-cedula';
-
-    if (this.validandoCliente) {
-      return `${baseClass} validando`;
-    } else if (this.clienteEncontrado) {
-      return `${baseClass} encontrado`;
-    } else if (this.validacionIntentada && !this.clienteEncontrado) {
-      return `${baseClass} no-encontrado`;
-    } else {
-      return `${baseClass} default`;
-    }
-  }
-
-  onNombreChange(): void {
-    this.actualizarClienteEnPresupuesto();
-    this.onCampoEditadoManualmente();
-  }
-
-  onTelefonoBlur(): void {
-    const telefono = this.clienteSinPaciente.telefono;
-    if (telefono) {
-      this.clienteSinPaciente.telefono = this.formatearTelefono(telefono);
-      this.actualizarClienteEnPresupuesto();
-    }
-  }
-
-  onTelefonoChange(): void {
-    this.actualizarClienteEnPresupuesto();
-    this.onCampoEditadoManualmente();
-  }
-
-  onEmailChange(): void {
-    this.actualizarClienteEnPresupuesto();
-    this.onCampoEditadoManualmente();
-  }
-
-  onCampoEditadoManualmente(): void {
-    this.clienteEncontrado = false;
-    this.validacionIntentada = false;
-  }
-
-  actualizarEstadoValidacion(): void {
-    this.cdr.detectChanges();
-  }
-
-  formatearTelefono(telefono: string): string {
-    const limpio = telefono.replace(/\D/g, '');
-
-    // Si comienza con 58 (código de Venezuela)
-    if (limpio.startsWith('58')) {
-      return `+${limpio}`;
-    }
-
-    // Si tiene 11 dígitos (04121234567)
-    if (limpio.length === 11) {
-      return `+58${limpio.slice(1)}`;
-    }
-
-    // Si tiene 10 dígitos (4121234567)
-    if (limpio.length === 10) {
-      return `+58${limpio}`;
-    }
-
-    return telefono;
-  }
-
-  // ========== MÉTODOS PARA PRESUPUESTOS ==========
 
   cargarDatos() {
-    // Cargar datos iniciales
     this.cargarPresupuestos();
     this.cargarProductos();
   }
 
   cargarPresupuestos() {
-    // Simular carga de datos
-    setTimeout(() => {
-      const presupuestosLocales = this.obtenerPresupuestosLocales();
-
-      if (presupuestosLocales !== null) {
-        this.aplicarPresupuestosDesdeFuente(presupuestosLocales);
-        return;
-      }
-
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0); // Establecer hora a medianoche para cálculos precisos
-
-      // Presupuestos VIGENTES (con diferentes días restantes)
-      this.presupuestosVigentes = [
-        {
-          id: 1,
-          codigo: 'P-2025-001',
-          cliente: {
-            tipoPersona: 'natural',
-            cedula: '12345678',
-            nombreCompleto: 'Ruben Darío Martínez Castro',
-            telefono: '+5841223920817',
-            email: 'ruben.martinez@email.com',
-            direccion: 'Las rosas, conj res, country villas'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 3 * 24 * 60 * 60 * 1000), // Hace 3 días
-          fechaVencimiento: new Date(hoy.getTime() + 14 * 24 * 60 * 60 * 1000), // 14 días en el futuro
-          diasVencimiento: 17,
-          vendedor: '12332',
-          productos: [
-            {
-              descripcion: '758684-RETRO-0',
-              codigo: '758684-RETRO-0',
-              precio: 1108.23,
-              cantidad: 1,
-              descuento: 0,
-              total: 1108.23
-            },
-            {
-              descripcion: 'Lente Blue Filter',
-              codigo: 'PR-000038',
-              precio: 380.00,
-              cantidad: 2,
-              descuento: 5,
-              total: 722.00
-            }
-          ],
-          subtotal: 1488.23,
-          iva: 238.12,
-          descuentoTotal: 38.00,
-          total: 1688.35,
-          observaciones: 'Cliente regular, 5% de descuento especial',
-          estado: 'vigente',
-          diasRestantes: 14,
-          estadoColor: 'vigente'
-        },
-        {
-          id: 2,
-          codigo: 'P-2025-002',
-          cliente: {
-            tipoPersona: 'juridica',
-            cedula: 'J-123456789',
-            nombreCompleto: 'Óptica Vision Plus C.A.',
-            telefono: '+584141234567',
-            email: 'ventas@opticavisionplus.com',
-            direccion: 'Av. Principal, Centro Comercial Galerías'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 2 * 24 * 60 * 60 * 1000), // Hace 2 días
-          fechaVencimiento: new Date(hoy.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 días en el futuro
-          diasVencimiento: 9,
-          vendedor: '45678',
-          productos: [
-            {
-              descripcion: 'Lente Progresivo Essilor',
-              codigo: 'PR-000001',
-              precio: 850.00,
-              cantidad: 3,
-              descuento: 10,
-              total: 2295.00
-            },
-            {
-              descripcion: 'Armazón Ray-Ban',
-              codigo: 'PR-000042',
-              precio: 320.50,
-              cantidad: 5,
-              descuento: 15,
-              total: 1362.13
-            }
-          ],
-          subtotal: 5852.50,
-          iva: 936.40,
-          descuentoTotal: 1001.87,
-          total: 5787.03,
-          observaciones: 'Empresa cliente, descuento por volumen',
-          estado: 'vigente',
-          diasRestantes: 7,
-          estadoColor: 'vigente'
-        },
-        {
-          id: 3,
-          codigo: 'P-2025-003',
-          cliente: {
-            tipoPersona: 'natural',
-            cedula: '23456789',
-            nombreCompleto: 'María Gabriela López Pérez',
-            telefono: '+584147894561',
-            email: 'maria.gabriela@email.com',
-            direccion: 'Urbanización Los Naranjos, Calle 5'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 1 * 24 * 60 * 60 * 1000), // Hace 1 día
-          fechaVencimiento: new Date(hoy.getTime() + 3 * 24 * 60 * 60 * 1000), // 3 días en el futuro
-          diasVencimiento: 4,
-          vendedor: '78901',
-          productos: [
-            {
-              descripcion: 'Lente Fotocromático',
-              codigo: 'PR-000027',
-              precio: 720.00,
-              cantidad: 1,
-              descuento: 0,
-              total: 720.00
-            },
-            {
-              descripcion: 'Armazón Oakley',
-              codigo: 'PR-000045',
-              precio: 450.00,
-              cantidad: 1,
-              descuento: 0,
-              total: 450.00
-            }
-          ],
-          subtotal: 1170.00,
-          iva: 187.20,
-          descuentoTotal: 0,
-          total: 1357.20,
-          observaciones: '',
-          estado: 'vigente',
-          diasRestantes: 3,
-          estadoColor: 'proximo'
-        },
-        {
-          id: 4,
-          codigo: 'P-2025-004',
-          cliente: {
-            tipoPersona: 'juridica',
-            cedula: 'J-987654321',
-            nombreCompleto: 'Clínica Visual Integral',
-            telefono: '+584242345678',
-            email: 'info@clinicavisual.com',
-            direccion: 'Centro Médico Las Mercedes'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 2 * 24 * 60 * 60 * 1000), // Hace 2 días
-          fechaVencimiento: new Date(hoy.getTime() + 1 * 24 * 60 * 60 * 1000), // 1 día en el futuro
-          diasVencimiento: 3,
-          vendedor: '12332',
-          productos: [
-            {
-              descripcion: 'Lente Antirreflejo',
-              codigo: 'PR-000015',
-              precio: 550.00,
-              cantidad: 4,
-              descuento: 8,
-              total: 2024.00
-            }
-          ],
-          subtotal: 2200.00,
-          iva: 352.00,
-          descuentoTotal: 176.00,
-          total: 2376.00,
-          observaciones: 'Entrega urgente requerida',
-          estado: 'vigente',
-          diasRestantes: 1,
-          estadoColor: 'proximo'
-        },
-        {
-          id: 5,
-          codigo: 'P-2025-005',
-          cliente: {
-            tipoPersona: 'natural',
-            cedula: '34567890',
-            nombreCompleto: 'Carlos Eduardo Rodríguez',
-            telefono: '+584148765432',
-            email: 'carlos.rodriguez@email.com',
-            direccion: 'Residencias El Bosque'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 1 * 24 * 60 * 60 * 1000), // Hace 1 día
-          fechaVencimiento: new Date(hoy.getTime()), // Vence hoy
-          diasVencimiento: 1,
-          vendedor: '45678',
-          productos: [
-            {
-              descripcion: '758684-RETRO-0',
-              codigo: '758684-RETRO-0',
-              precio: 1108.23,
-              cantidad: 1,
-              descuento: 0,
-              total: 1108.23
-            },
-            {
-              descripcion: 'Lente Blue Filter',
-              codigo: 'PR-000038',
-              precio: 380.00,
-              cantidad: 1,
-              descuento: 0,
-              total: 380.00
-            }
-          ],
-          subtotal: 1488.23,
-          iva: 238.12,
-          descuentoTotal: 0,
-          total: 1726.35,
-          observaciones: 'Cliente nuevo',
-          estado: 'vigente',
-          diasRestantes: 0,
-          estadoColor: 'hoy'
-        }
-      ];
-
-      // Presupuestos VENCIDOS (con fechas pasadas)
-      this.presupuestosVencidos = [
-        {
-          id: 6,
-          codigo: 'P-2025-006',
-          cliente: {
-            tipoPersona: 'natural',
-            cedula: '45678901',
-            nombreCompleto: 'Ana Isabel Contreras',
-            telefono: '+584142345678',
-            email: 'ana.contreras@email.com',
-            direccion: 'Sector La Victoria'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 27 * 24 * 60 * 60 * 1000), // Hace 27 días
-          fechaVencimiento: new Date(hoy.getTime() - 13 * 24 * 60 * 60 * 1000), // Hace 13 días
-          diasVencimiento: 14,
-          vendedor: '78901',
-          productos: [
-            {
-              descripcion: 'Armazón Ray-Ban',
-              codigo: 'PR-000042',
-              precio: 320.50,
-              cantidad: 2,
-              descuento: 10,
-              total: 576.90
-            }
-          ],
-          subtotal: 641.00,
-          iva: 102.56,
-          descuentoTotal: 64.10,
-          total: 679.46,
-          observaciones: 'Presupuesto vencido hace 13 días',
-          estado: 'vencido',
-          diasRestantes: -13,
-          estadoColor: 'vencido'
-        },
-        {
-          id: 7,
-          codigo: 'P-2025-007',
-          cliente: {
-            tipoPersona: 'juridica',
-            cedula: 'J-456789123',
-            nombreCompleto: 'Centro Óptico Moderno',
-            telefono: '+584261234567',
-            email: 'ventas@opticomoderno.com',
-            direccion: 'Centro Comercial Sambil'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 22 * 24 * 60 * 60 * 1000), // Hace 22 días
-          fechaVencimiento: new Date(hoy.getTime() - 8 * 24 * 60 * 60 * 1000), // Hace 8 días
-          diasVencimiento: 14,
-          vendedor: '12332',
-          productos: [
-            {
-              descripcion: 'Lente Progresivo Essilor',
-              codigo: 'PR-000001',
-              precio: 850.00,
-              cantidad: 2,
-              descuento: 12,
-              total: 1496.00
-            },
-            {
-              descripcion: 'Lente Fotocromático',
-              codigo: 'PR-000027',
-              precio: 720.00,
-              cantidad: 3,
-              descuento: 12,
-              total: 1900.80
-            },
-            {
-              descripcion: 'Lente Antirreflejo',
-              codigo: 'PR-000015',
-              precio: 550.00,
-              cantidad: 2,
-              descuento: 12,
-              total: 968.00
-            }
-          ],
-          subtotal: 4370.00,
-          iva: 699.20,
-          descuentoTotal: 616.20,
-          total: 4453.00,
-          observaciones: 'Gran pedido corporativo - Vencido hace 8 días',
-          estado: 'vencido',
-          diasRestantes: -8,
-          estadoColor: 'vencido'
-        },
-        {
-          id: 8,
-          codigo: 'P-2025-008',
-          cliente: {
-            tipoPersona: 'natural',
-            cedula: '56789012',
-            nombreCompleto: 'José Gregorio Méndez',
-            telefono: '+584143216789',
-            email: 'jose.mendez@email.com',
-            direccion: 'Urbanización Los Samanes'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 15 * 24 * 60 * 60 * 1000), // Hace 15 días
-          fechaVencimiento: new Date(hoy.getTime() - 8 * 24 * 60 * 60 * 1000), // Hace 8 días
-          diasVencimiento: 7,
-          vendedor: '45678',
-          productos: [
-            {
-              descripcion: 'Armazón Oakley',
-              codigo: 'PR-000045',
-              precio: 450.00,
-              cantidad: 1,
-              descuento: 5,
-              total: 427.50
-            }
-          ],
-          subtotal: 450.00,
-          iva: 72.00,
-          descuentoTotal: 22.50,
-          total: 499.50,
-          observaciones: 'Vencido hace 8 días',
-          estado: 'vencido',
-          diasRestantes: -8,
-          estadoColor: 'vencido'
-        },
-        {
-          id: 9,
-          codigo: 'P-2025-009',
-          cliente: {
-            tipoPersona: 'juridica',
-            cedula: 'J-789123456',
-            nombreCompleto: 'Laboratorio Óptico Premium',
-            telefono: '+584263456789',
-            email: 'lab@opticopremium.com',
-            direccion: 'Zona Industrial La Yaguara'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 25 * 24 * 60 * 60 * 1000), // Hace 25 días
-          fechaVencimiento: new Date(hoy.getTime() - 11 * 24 * 60 * 60 * 1000), // Hace 11 días
-          diasVencimiento: 14,
-          vendedor: '78901',
-          productos: [
-            {
-              descripcion: '758684-RETRO-0',
-              codigo: '758684-RETRO-0',
-              precio: 1108.23,
-              cantidad: 5,
-              descuento: 18,
-              total: 4543.74
-            },
-            {
-              descripcion: 'Lente Blue Filter',
-              codigo: 'PR-000038',
-              precio: 380.00,
-              cantidad: 10,
-              descuento: 18,
-              total: 3116.00
-            }
-          ],
-          subtotal: 9141.15,
-          iva: 1462.58,
-          descuentoTotal: 1804.91,
-          total: 8798.82,
-          observaciones: 'Pedido mayorista - Vencido hace 11 días',
-          estado: 'vencido',
-          diasRestantes: -11,
-          estadoColor: 'vencido'
-        },
-        {
-          id: 10,
-          codigo: 'P-2025-010',
-          cliente: {
-            tipoPersona: 'natural',
-            cedula: '67890123',
-            nombreCompleto: 'Laura Valentina Sánchez',
-            telefono: '+584144567890',
-            email: 'laura.sanchez@email.com',
-            direccion: 'Residencias El Paraíso'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 12 * 24 * 60 * 60 * 1000), // Hace 12 días
-          fechaVencimiento: new Date(hoy.getTime() - 5 * 24 * 60 * 60 * 1000), // Hace 5 días
-          diasVencimiento: 7,
-          vendedor: '12332',
-          productos: [
-            {
-              descripcion: 'Lente Antirreflejo',
-              codigo: 'PR-000015',
-              precio: 550.00,
-              cantidad: 1,
-              descuento: 0,
-              total: 550.00
-            },
-            {
-              descripcion: 'Armazón Ray-Ban',
-              codigo: 'PR-000042',
-              precio: 320.50,
-              cantidad: 1,
-              descuento: 0,
-              total: 320.50
-            }
-          ],
-          subtotal: 870.50,
-          iva: 139.28,
-          descuentoTotal: 0,
-          total: 1009.78,
-          observaciones: 'Presupuesto vencido hace 5 días',
-          estado: 'vencido',
-          diasRestantes: -5,
-          estadoColor: 'vencido'
-        },
-        {
-          id: 11,
-          codigo: 'P-2025-011',
-          cliente: {
-            tipoPersona: 'natural',
-            cedula: '78901234',
-            nombreCompleto: 'Pedro Antonio Rojas',
-            telefono: '+584145678901',
-            email: 'pedro.rojas@email.com',
-            direccion: 'Urbanización Los Jardines'
-          },
-          fechaCreacion: new Date(hoy.getTime() - 10 * 24 * 60 * 60 * 1000), // Hace 10 días
-          fechaVencimiento: new Date(hoy.getTime() - 3 * 24 * 60 * 60 * 1000), // Hace 3 días
-          diasVencimiento: 7,
-          vendedor: '45678',
-          productos: [
-            {
-              descripcion: 'Lente Fotocromático',
-              codigo: 'PR-000027',
-              precio: 720.00,
-              cantidad: 2,
-              descuento: 7,
-              total: 1339.20
-            }
-          ],
-          subtotal: 1440.00,
-          iva: 230.40,
-          descuentoTotal: 100.80,
-          total: 1569.60,
-          observaciones: 'Vencido recientemente hace 3 días',
-          estado: 'vencido',
-          diasRestantes: -3,
-          estadoColor: 'vencido'
-        }
-      ];
-
-      this.aplicarPresupuestosDesdeFuente([...this.presupuestosVigentes, ...this.presupuestosVencidos]);
-    }, 500);
+    void this.cargarPresupuestosDesdeApi();
   }
 
   actualizarDiasRestantesDinamicos(): void {
@@ -1178,6 +1284,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
     // Actualizar presupuestos vigentes
     this.presupuestosVigentes.forEach(presupuesto => {
+      if (['convertido', 'archivado', 'anulado'].includes(String(presupuesto.estadoColor || presupuesto.estado || '').toLowerCase())) {
+        return;
+      }
+
       const fechaVencimiento = new Date(presupuesto.fechaVencimiento);
       fechaVencimiento.setHours(0, 0, 0, 0); // Solo fecha
 
@@ -1200,6 +1310,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
     // Actualizar presupuestos vencidos
     this.presupuestosVencidos.forEach(presupuesto => {
+      if (['convertido', 'archivado', 'anulado'].includes(String(presupuesto.estadoColor || presupuesto.estado || '').toLowerCase())) {
+        return;
+      }
+
       const fechaVencimiento = new Date(presupuesto.fechaVencimiento);
       fechaVencimiento.setHours(0, 0, 0, 0);
 
@@ -1245,6 +1359,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
         this.ivaPorcentaje = iva ?? this.ivaPorcentaje;
         this.productosDisponiblesBase = productos.filter((producto) => producto.activo !== false);
         this.reaplicarMonedaActualEnProductosDisponibles();
+        this.aplicarFiltroCatalogoProductos();
         this.productosCargando = false;
       },
       error: (error) => {
@@ -1271,11 +1386,27 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const terminoBusqueda = busqueda.toLowerCase();
-    this.productosFiltrados = this.productosDisponibles.filter(producto =>
-      producto.descripcion.toLowerCase().includes(terminoBusqueda) ||
-      producto.codigo.toLowerCase().includes(terminoBusqueda)
-    );
+    const terminoBusqueda = busqueda.toLowerCase().trim();
+    const busquedaNormalizada = this.normalizarBusqueda(busqueda);
+
+    this.productosFiltrados = this.productosDisponibles.filter((producto) => {
+      const descripcion = String(producto?.descripcion || '').toLowerCase();
+      const nombre = String(producto?.nombre || '').toLowerCase();
+      const codigo = String(producto?.codigo || '');
+      const codigoLower = codigo.toLowerCase();
+      const codigoNormalizado = this.normalizarCodigoParaBusqueda(codigo);
+      const idTexto = String(producto?.id || '').trim();
+
+      return descripcion.includes(terminoBusqueda) ||
+        nombre.includes(terminoBusqueda) ||
+        idTexto.includes(terminoBusqueda) ||
+        codigoLower.includes(terminoBusqueda) ||
+        (busquedaNormalizada.length > 0 && (
+          idTexto.includes(busquedaNormalizada) ||
+          codigoNormalizado.includes(busquedaNormalizada) ||
+          this.coincideCodigoParcial(codigo, busqueda)
+        ));
+    });
   }
 
   // Método de compatibilidad para el HTML antiguo
@@ -1284,11 +1415,27 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       return this.productosDisponibles;
     }
 
-    const busqueda = termino.toLowerCase();
-    return this.productosDisponibles.filter(producto =>
-      producto.descripcion.toLowerCase().includes(busqueda) ||
-      producto.codigo.toLowerCase().includes(busqueda)
-    );
+    const busqueda = termino.toLowerCase().trim();
+    const busquedaNormalizada = this.normalizarBusqueda(termino);
+
+    return this.productosDisponibles.filter((producto) => {
+      const descripcion = String(producto?.descripcion || '').toLowerCase();
+      const nombre = String(producto?.nombre || '').toLowerCase();
+      const codigo = String(producto?.codigo || '');
+      const codigoLower = codigo.toLowerCase();
+      const codigoNormalizado = this.normalizarCodigoParaBusqueda(codigo);
+      const idTexto = String(producto?.id || '').trim();
+
+      return descripcion.includes(busqueda) ||
+        nombre.includes(busqueda) ||
+        idTexto.includes(busqueda) ||
+        codigoLower.includes(busqueda) ||
+        (busquedaNormalizada.length > 0 && (
+          idTexto.includes(busquedaNormalizada) ||
+          codigoNormalizado.includes(busquedaNormalizada) ||
+          this.coincideCodigoParcial(codigo, termino)
+        ));
+    });
   }
 
   eliminarProducto(index: number) {
@@ -1314,8 +1461,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   // ========== MÉTODOS PARA MODALES ==========
   abrirModalNuevoPresupuesto() {
-    this.mostrarModalNuevoPresupuesto = true;
     this.inicializarNuevoPresupuesto();
+    this.mostrarModalNuevoPresupuesto = true;
     this.sincronizarEstadoBodyModal();
   }
 
@@ -1334,6 +1481,228 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   cerrarModalAgregarProducto() {
     this.mostrarModalAgregarProducto = false;
     this.busquedaProducto = '';
+  }
+
+  abrirModalCatalogoProductos(): void {
+    const abrirDesdeDetalleEditable = this.mostrarModalDetallePresupuesto && this.modoEditable && !!this.presupuestoSeleccionado;
+
+    if (abrirDesdeDetalleEditable) {
+      this.posicionScrollDetalleAntesCatalogo = this.obtenerScrollModalDetalle();
+      this.detalleModalOcultoPorCatalogo = true;
+      this.mostrarModalDetallePresupuesto = false;
+    }
+
+    this.mostrarModalCatalogoProductos = true;
+    this.terminoBusquedaCatalogoProductos = this.terminoBusqueda || '';
+    this.categoriaFiltroCatalogoProductos = 'todas';
+    this.aplicarFiltroCatalogoProductos();
+    this.sincronizarEstadoBodyModal();
+  }
+
+  cerrarModalCatalogoProductos(): void {
+    this.mostrarModalCatalogoProductos = false;
+    this.limpiarIndicadoresCatalogoReciente();
+
+    if (this.detalleModalOcultoPorCatalogo && this.presupuestoSeleccionado) {
+      this.mostrarModalDetallePresupuesto = true;
+      const posicionScroll = this.posicionScrollDetalleAntesCatalogo;
+
+      setTimeout(() => {
+        this.establecerScrollModalDetalle(posicionScroll);
+      }, 0);
+    }
+
+    this.detalleModalOcultoPorCatalogo = false;
+    this.posicionScrollDetalleAntesCatalogo = 0;
+    this.sincronizarEstadoBodyModal();
+  }
+
+  obtenerCategoriasCatalogoProductos(): string[] {
+    const categorias = this.productosDisponibles
+      .map((producto) => this.obtenerCategoriaCatalogoProducto(producto))
+      .filter((categoria) => Boolean(categoria));
+
+    return Array.from(new Set(categorias)).sort((a, b) => a.localeCompare(b));
+  }
+
+  aplicarFiltroCatalogoProductos(): void {
+    const termino = String(this.terminoBusquedaCatalogoProductos || '').trim().toLowerCase();
+    const terminoNormalizado = this.normalizarBusqueda(termino);
+    const categoriaFiltro = String(this.categoriaFiltroCatalogoProductos || 'todas').trim().toLowerCase();
+
+    this.productosCatalogoFiltrados = this.productosDisponibles.filter((producto) => {
+      const categoriaProducto = this.obtenerCategoriaCatalogoProducto(producto).toLowerCase();
+      const categoriaValida = categoriaFiltro === 'todas' || categoriaProducto === categoriaFiltro;
+      if (!categoriaValida) {
+        return false;
+      }
+
+      if (!termino) {
+        return true;
+      }
+
+      const descripcion = String(producto?.descripcion || '').toLowerCase();
+      const nombre = String(producto?.nombre || '').toLowerCase();
+      const codigo = String(producto?.codigo || '');
+      const codigoLower = codigo.toLowerCase();
+      const codigoNormalizado = this.normalizarCodigoParaBusqueda(codigo);
+      const idTexto = String(producto?.id || '').trim();
+
+      return descripcion.includes(termino)
+        || nombre.includes(termino)
+        || idTexto.includes(termino)
+        || codigoLower.includes(termino)
+        || (terminoNormalizado.length > 0 && (
+          idTexto.includes(terminoNormalizado)
+          || codigoNormalizado.includes(terminoNormalizado)
+          || this.coincideCodigoParcial(codigo, termino)
+        ));
+    });
+  }
+
+  agregarProductoDesdeCatalogo(producto: any): void {
+    const estaEditandoDetalle = this.modoEditable
+      && !!this.presupuestoSeleccionado
+      && (this.mostrarModalDetallePresupuesto || this.detalleModalOcultoPorCatalogo);
+
+    if (estaEditandoDetalle) {
+      this.agregarProductoDetalle(producto);
+    } else {
+      this.agregarProducto(producto);
+    }
+
+    this.marcarProductoRecienAgregadoCatalogo(producto?.id);
+    this.aplicarFiltroCatalogoProductos();
+  }
+
+  obtenerCantidadProductoEnContextoCatalogo(productoId: unknown): number {
+    const claveProducto = this.obtenerClaveProductoCatalogo(productoId);
+    if (!claveProducto) {
+      return 0;
+    }
+
+    const productosContexto = this.obtenerProductosContextoCatalogo();
+
+    return productosContexto.reduce((total: number, producto: any) => {
+      if (this.obtenerClaveProductoCatalogo(producto?.id) !== claveProducto) {
+        return total;
+      }
+
+      return total + Number(producto?.cantidad || 1);
+    }, 0);
+  }
+
+  esProductoRecienAgregadoEnCatalogo(productoId: unknown): boolean {
+    const claveProducto = this.obtenerClaveProductoCatalogo(productoId);
+    return Boolean(claveProducto && this.productosCatalogoRecienAgregados.has(claveProducto));
+  }
+
+  private obtenerProductosContextoCatalogo(): any[] {
+    const estaEditandoDetalle = this.modoEditable
+      && !!this.presupuestoSeleccionado
+      && (this.mostrarModalDetallePresupuesto || this.detalleModalOcultoPorCatalogo);
+
+    if (estaEditandoDetalle) {
+      return Array.isArray(this.presupuestoSeleccionado?.productos)
+        ? this.presupuestoSeleccionado.productos
+        : [];
+    }
+
+    return Array.isArray(this.nuevoPresupuesto?.productos)
+      ? this.nuevoPresupuesto.productos
+      : [];
+  }
+
+  private marcarProductoRecienAgregadoCatalogo(productoId: unknown): void {
+    const claveProducto = this.obtenerClaveProductoCatalogo(productoId);
+    if (!claveProducto) {
+      return;
+    }
+
+    this.productosCatalogoRecienAgregados.add(claveProducto);
+
+    const timeoutPrevio = this.timeoutIndicadoresCatalogo.get(claveProducto);
+    if (timeoutPrevio) {
+      clearTimeout(timeoutPrevio);
+    }
+
+    const timeoutNuevo = setTimeout(() => {
+      this.productosCatalogoRecienAgregados.delete(claveProducto);
+      this.timeoutIndicadoresCatalogo.delete(claveProducto);
+      this.cdr.detectChanges();
+    }, 1800);
+
+    this.timeoutIndicadoresCatalogo.set(claveProducto, timeoutNuevo);
+  }
+
+  private limpiarIndicadoresCatalogoReciente(): void {
+    this.timeoutIndicadoresCatalogo.forEach((timeoutId) => clearTimeout(timeoutId));
+    this.timeoutIndicadoresCatalogo.clear();
+    this.productosCatalogoRecienAgregados.clear();
+  }
+
+  private obtenerClaveProductoCatalogo(productoId: unknown): string {
+    if (productoId === null || productoId === undefined) {
+      return '';
+    }
+
+    return String(productoId).trim();
+  }
+
+  async agregarConsultaMedica(): Promise<void> {
+    if (this.nuevoPresupuesto.productos.some((producto: any) => this.esLineaConsulta(producto))) {
+      this.snackBar.open('La consulta medica ya fue agregada al presupuesto', 'Cerrar', {
+        duration: 2500,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    this.cargandoConsultaMedica = true;
+
+    try {
+      const montoSugerido = await this.obtenerMontoConsultaSugerido();
+      this.nuevoPresupuesto.productos.push(this.crearLineaConsultaPresupuesto(montoSugerido));
+      this.calcularTotales();
+      this.snackBar.open('Consulta medica agregada al presupuesto', 'Cerrar', {
+        duration: 2500,
+        panelClass: ['snackbar-success']
+      });
+    } finally {
+      this.cargandoConsultaMedica = false;
+    }
+  }
+
+  async agregarConsultaMedicaDetalle(): Promise<void> {
+    if (!this.presupuestoSeleccionado) {
+      return;
+    }
+
+    if (this.presupuestoSeleccionado.productos.some((producto: any) => this.esLineaConsulta(producto))) {
+      this.snackBar.open('Este presupuesto ya tiene una consulta medica agregada', 'Cerrar', {
+        duration: 2500,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    this.cargandoConsultaMedica = true;
+
+    try {
+      const montoSugerido = await this.obtenerMontoConsultaSugerido();
+      this.presupuestoSeleccionado.productos.push(this.crearLineaConsultaPresupuesto(montoSugerido));
+      this.calcularTotalesDetalle();
+      this.snackBar.open('Consulta medica agregada al presupuesto', 'Cerrar', {
+        duration: 2500,
+        panelClass: ['snackbar-success']
+      });
+    } finally {
+      this.cargandoConsultaMedica = false;
+    }
+  }
+
+  private obtenerCategoriaCatalogoProducto(producto: any): string {
+    return String(this.obtenerCategoriaProductoPresupuesto(producto) || 'Sin categoria').trim() || 'Sin categoria';
   }
 
   confirmarEliminarPresupuesto(presupuesto: any) {
@@ -1436,21 +1805,20 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     }, 0);
   }
 
-  eliminarPresupuesto() {
+  async eliminarPresupuesto() {
     if (!this.presupuestoAEliminar) return;
 
-    if (this.tabActiva === 'vigentes') {
-      this.presupuestosVigentes = this.presupuestosVigentes.filter(p => p.id !== this.presupuestoAEliminar.id);
-    } else {
-      this.presupuestosVencidos = this.presupuestosVencidos.filter(p => p.id !== this.presupuestoAEliminar.id);
+    try {
+      await lastValueFrom(this.presupuestoService.eliminarPresupuesto(Number(this.presupuestoAEliminar.id)));
+      this.cerrarModalEliminar();
+      await this.cargarPresupuestosDesdeApi(false);
+      this.snackBar.open('Presupuesto eliminado correctamente', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+    } catch (error) {
+      console.error('Error eliminando presupuesto:', error);
     }
-
-    this.aplicarPresupuestosDesdeFuente(this.obtenerTodosLosPresupuestos());
-    this.cerrarModalEliminar();
-    this.snackBar.open('Presupuesto eliminado correctamente', 'Cerrar', {
-      duration: 3000,
-      panelClass: ['snackbar-success']
-    });
   }
 
   // ========== UTILIDADES ==========
@@ -1467,7 +1835,35 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.nuevoPresupuesto.fechaVencimiento = fecha;
   }
 
-  generarPresupuesto() {
+  puedeGenerarPresupuesto(): boolean {
+    const cliente = this.nuevoPresupuesto?.cliente || {};
+    const cedula = String(cliente?.cedula || '').trim();
+    const nombre = String(cliente?.nombreCompleto || '').trim();
+    const tieneProductos = this.presupuestoTieneProductos(this.nuevoPresupuesto);
+    const formulaValida = !this.esFormulaExternaActivaNuevo() || this.esFormulaExternaCompletaNuevo();
+
+    return Boolean(cedula && nombre && tieneProductos && formulaValida);
+  }
+
+  async generarPresupuesto() {
+    this.sincronizarClienteFormularioConPresupuesto();
+
+    if (!this.puedeGenerarPresupuesto()) {
+      if (!this.nuevoPresupuesto?.cliente?.cedula || !this.nuevoPresupuesto?.cliente?.nombreCompleto) {
+        this.snackBar.open('Complete los datos del cliente', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-warning']
+        });
+        return;
+      }
+
+      this.snackBar.open('Agregue al menos un producto', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
     if (!this.nuevoPresupuesto.cliente.cedula || !this.nuevoPresupuesto.cliente.nombreCompleto) {
       this.snackBar.open('Complete los datos del cliente', 'Cerrar', {
         duration: 3000,
@@ -1476,23 +1872,36 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.nuevoPresupuesto.productos.length === 0) {
-      this.snackBar.open('Agregue al menos un producto', 'Cerrar', {
+    if (!this.presupuestoTieneProductos(this.nuevoPresupuesto)) {
+      this.snackBar.open('Agregue al menos una opción con productos', 'Cerrar', {
         duration: 3000,
         panelClass: ['snackbar-warning']
       });
       return;
     }
 
-    const presupuestoNuevo = this.crearSnapshotPresupuestoNuevo();
-    this.presupuestosVigentes.push(presupuestoNuevo);
-    this.aplicarPresupuestosDesdeFuente(this.obtenerTodosLosPresupuestos());
-    this.cerrarModalNuevoPresupuesto();
+    if (this.esFormulaExternaActivaNuevo() && !this.esFormulaExternaCompletaNuevo()) {
+      this.snackBar.open('Complete la refracción final de fórmula externa para continuar', 'Cerrar', {
+        duration: 3500,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
 
-    this.snackBar.open(`Presupuesto ${presupuestoNuevo.codigo} generado exitosamente`, 'Cerrar', {
-      duration: 4000,
-      panelClass: ['snackbar-success']
-    });
+    try {
+      const presupuestoNuevo = await lastValueFrom(
+        this.presupuestoService.crearPresupuesto(this.construirPayloadPresupuesto(this.nuevoPresupuesto))
+      );
+      await this.cargarPresupuestosDesdeApi(false);
+      this.cerrarModalNuevoPresupuesto();
+
+      this.snackBar.open(`Presupuesto ${presupuestoNuevo.codigo} generado exitosamente`, 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-success']
+      });
+    } catch (error) {
+      console.error('Error creando presupuesto:', error);
+    }
   }
 
   getEstadoTexto(estadoColor: string): string {
@@ -1500,7 +1909,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       'vigente': 'Vigente',
       'proximo': 'Próximo a vencer',
       'hoy': 'Vence hoy',
-      'vencido': 'Vencido'
+      'vencido': 'Vencido',
+      'convertido': 'Convertido',
+      'archivado': 'Archivado',
+      'anulado': 'Anulado'
     };
     return estados[estadoColor] || 'Vigente';
   }
@@ -1690,22 +2102,20 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   normalizarCodigoParaBusqueda(codigo: string): string {
     if (!codigo) return '';
 
-    // Remover caracteres especiales, guiones, espacios
-    return codigo.toLowerCase()
-      .replace(/[^a-z0-9]/g, '')  // Remover todo excepto letras y números
-      .replace(/p/g, '')          // Remover la P inicial común
-      .trim();
+    const limpio = codigo.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+
+    // Remover prefijo PR al inicio sin afectar letras internas
+    return limpio.replace(/^pr/, '');
   }
 
   // Método auxiliar para normalizar búsqueda del usuario
   normalizarBusqueda(busqueda: string): string {
     if (!busqueda) return '';
 
-    // Remover caracteres especiales, guiones, espacios
-    return busqueda.toLowerCase()
-      .replace(/[^a-z0-9]/g, '')  // Remover todo excepto letras y números
-      .replace(/p/g, '')          // Remover la P inicial si la incluyó
-      .trim();
+    const limpio = busqueda.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+
+    // Remover prefijo PR al inicio si el usuario lo incluye
+    return limpio.replace(/^pr/, '');
   }
 
   // Método para verificar coincidencia parcial del código
@@ -1788,7 +2198,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       const coincideVendedor = presupuesto.vendedor?.toLowerCase().includes(busqueda);
 
       // Buscar en productos (descripción o código)
-      const coincideProductos = presupuesto.productos?.some((producto: any) => {
+      const coincideProductos = this.obtenerProductosBusquedaPresupuesto(presupuesto).some((producto: any) => {
         return producto.descripcion?.toLowerCase().includes(busqueda) ||
           producto.codigo?.toLowerCase().includes(busqueda);
       });
@@ -1805,7 +2215,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       const coincideNombre = presupuesto.cliente?.nombre?.toLowerCase().includes(busqueda);
       const coincideApellido = presupuesto.cliente?.apellido?.toLowerCase().includes(busqueda);
       const coincideVendedor = presupuesto.vendedor?.toLowerCase().includes(busqueda);
-      const coincideProductos = presupuesto.productos?.some((producto: any) => {
+      const coincideProductos = this.obtenerProductosBusquedaPresupuesto(presupuesto).some((producto: any) => {
         return producto.descripcion?.toLowerCase().includes(busqueda) ||
           producto.codigo?.toLowerCase().includes(busqueda);
       });
@@ -1836,6 +2246,34 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     }
   }
 
+  abrirMenuAccionesDetalle(): void {
+    if (this.timeoutCerrarMenuDetalle) {
+      clearTimeout(this.timeoutCerrarMenuDetalle);
+    }
+
+    this.mostrarMenuAccionesDetalle = true;
+  }
+
+  cerrarMenuAccionesDetalle(): void {
+    this.timeoutCerrarMenuDetalle = setTimeout(() => {
+      this.mostrarMenuAccionesDetalle = false;
+    }, 250);
+  }
+
+  mantenerMenuAccionesDetalleAbierto(): void {
+    if (this.timeoutCerrarMenuDetalle) {
+      clearTimeout(this.timeoutCerrarMenuDetalle);
+    }
+  }
+
+  cerrarMenuAccionesDetalleInmediato(): void {
+    this.mostrarMenuAccionesDetalle = false;
+
+    if (this.timeoutCerrarMenuDetalle) {
+      clearTimeout(this.timeoutCerrarMenuDetalle);
+    }
+  }
+
   seleccionarOpcionExportar(tipo: 'vigentes' | 'vencidos' | 'todos'): void {
     this.exportarExcel(tipo);
     this.mostrarMenuExportar = false;
@@ -1854,6 +2292,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     }
 
     this.presupuestoParaConvertir = JSON.parse(JSON.stringify(presupuesto));
+    this.asegurarOpcionesPresupuesto(this.presupuestoParaConvertir);
+    this.sincronizarOpcionActivaConversion(this.presupuestoParaConvertir.opcionPrincipalId);
     this.mostrarModalConversionPresupuesto = true;
     this.sincronizarEstadoBodyModal();
     this.cdr.detectChanges();
@@ -1862,25 +2302,37 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   cerrarModalConversionPresupuesto(): void {
     this.mostrarModalConversionPresupuesto = false;
     this.presupuestoParaConvertir = null;
+    this.opcionActivaConversionId = '';
     this.sincronizarEstadoBodyModal();
   }
 
-  confirmarConversionPresupuesto(): void {
+  async confirmarConversionPresupuesto(): Promise<void> {
     if (!this.presupuestoParaConvertir) {
       return;
     }
 
     const presupuesto = this.presupuestoParaConvertir;
-    this.cerrarModalConversionPresupuesto();
 
-    const borradorVenta = this.mapearPresupuestoParaVenta(presupuesto);
-    sessionStorage.setItem(PRESUPUESTO_VENTA_STORAGE_KEY, JSON.stringify(borradorVenta));
+    try {
+      const presupuestoConvertido = await lastValueFrom(
+        this.presupuestoService.actualizarPresupuesto(
+          Number(presupuesto.id),
+          this.construirPayloadPresupuesto(presupuesto)
+        )
+      );
 
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { vista: 'generacion-de-ventas' },
-      queryParamsHandling: 'merge'
-    }).then((navegacionOk) => {
+      const borradorVenta = this.mapearPresupuestoParaVenta(presupuestoConvertido);
+      sessionStorage.removeItem(HISTORIA_VENTA_HANDOFF_STORAGE_KEY);
+      sessionStorage.setItem(PRESUPUESTO_VENTA_STORAGE_KEY, JSON.stringify(borradorVenta));
+      this.cerrarModalConversionPresupuesto();
+      await this.cargarPresupuestosDesdeApi(false, false);
+
+      const navegacionOk = await this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { vista: 'generacion-de-ventas' },
+        queryParamsHandling: 'merge'
+      });
+
       if (!navegacionOk) {
         sessionStorage.removeItem(PRESUPUESTO_VENTA_STORAGE_KEY);
         this.snackBar.open('No se pudo abrir el módulo de ventas', 'Cerrar', {
@@ -1890,11 +2342,13 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this.snackBar.open(`Presupuesto ${presupuesto.codigo} cargado en ventas para continuar`, 'Cerrar', {
+      this.snackBar.open(`Presupuesto ${presupuestoConvertido.codigo} cargado en ventas para continuar`, 'Cerrar', {
         duration: 4500,
         panelClass: ['snackbar-success']
       });
-    });
+    } catch (error) {
+      console.error('Error convirtiendo presupuesto:', error);
+    }
   }
 
   renovarPresupuesto(presupuesto: any) {
@@ -1909,32 +2363,29 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.sincronizarEstadoBodyModal();
   }
 
-  confirmarRenovacionPresupuesto(): void {
+  async confirmarRenovacionPresupuesto(): Promise<void> {
     if (!this.presupuestoParaRenovar) {
       return;
     }
 
     const presupuesto = this.presupuestoParaRenovar;
-    this.cerrarModalRenovarPresupuesto();
+    try {
+      const renovado = await lastValueFrom(this.presupuestoService.renovarPresupuesto(Number(presupuesto.id), 7));
+      this.cerrarModalRenovarPresupuesto();
+      await this.cargarPresupuestosDesdeApi(false);
 
-    this.presupuestosVencidos = this.presupuestosVencidos.filter(p => p.id !== presupuesto.id);
-    presupuesto.fechaVencimiento = new Date(new Date().setDate(new Date().getDate() + 7));
-    presupuesto.diasRestantes = 7;
-    presupuesto.diasVencimiento = 7;
-    presupuesto.estado = 'vigente';
-    presupuesto.estadoColor = 'vigente';
-    this.presupuestosVigentes.push(presupuesto);
+      if (this.presupuestoSeleccionado?.id === renovado.id) {
+        this.presupuestoSeleccionado = JSON.parse(JSON.stringify(renovado));
+        this.diasVencimientoSeleccionado = renovado.diasVencimiento || 7;
+      }
 
-    if (this.presupuestoSeleccionado?.id === presupuesto.id) {
-      this.presupuestoSeleccionado = JSON.parse(JSON.stringify(presupuesto));
-      this.diasVencimientoSeleccionado = presupuesto.diasVencimiento || 7;
+      this.snackBar.open(`Presupuesto ${renovado.codigo} renovado por 7 días`, 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-success']
+      });
+    } catch (error) {
+      console.error('Error renovando presupuesto:', error);
     }
-
-    this.aplicarPresupuestosDesdeFuente(this.obtenerTodosLosPresupuestos());
-    this.snackBar.open(`Presupuesto ${presupuesto.codigo} renovado por 7 días`, 'Cerrar', {
-      duration: 4000,
-      panelClass: ['snackbar-success']
-    });
   }
 
   getFechaRenovacionPresupuesto(presupuesto: any): Date | null {
@@ -1955,233 +2406,277 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   // Agregar estos métodos al componente
 
   actualizarProductoDetalle(index: number) {
-    const producto = this.presupuestoSeleccionado!.productos[index];
-    producto.total = producto.cantidad * producto.precio * (1 - (producto.descuento || 0) / 100);
+    if (!this.presupuestoSeleccionado) return;
+
+    const producto = this.presupuestoSeleccionado.productos[index];
+    if (!producto) return;
+
+    this.normalizarLineaPresupuesto(producto);
     this.calcularTotalesDetalle();
   }
 
   eliminarProductoDetalle(index: number) {
-    this.presupuestoSeleccionado!.productos.splice(index, 1);
+    if (!this.presupuestoSeleccionado) return;
+
+    this.presupuestoSeleccionado.productos.splice(index, 1);
     this.calcularTotalesDetalle();
+    this.filtrarProductosDetalle();
   }
 
   abrirModalAgregarProductoDetalle() {
-    // Implementar lógica para agregar producto en edición
+    this.terminoBusquedaDetalleProducto = '';
+    this.productosDetalleFiltrados = [];
+  }
+
+  filtrarProductosDetalle(): void {
+    const termino = String(this.terminoBusquedaDetalleProducto || '').trim();
+
+    if (!termino) {
+      this.productosDetalleFiltrados = [];
+      return;
+    }
+
+    const busqueda = termino.toLowerCase();
+    const busquedaNormalizada = this.normalizarBusqueda(termino);
+
+    this.productosDetalleFiltrados = this.productosDisponibles.filter((producto) => {
+      const descripcion = String(producto?.descripcion || '').toLowerCase();
+      const nombre = String(producto?.nombre || '').toLowerCase();
+      const codigo = String(producto?.codigo || '');
+      const codigoLower = codigo.toLowerCase();
+      const codigoNormalizado = this.normalizarCodigoParaBusqueda(codigo);
+      const idTexto = String(producto?.id || '').trim();
+
+      return descripcion.includes(busqueda)
+        || nombre.includes(busqueda)
+        || idTexto.includes(busqueda)
+        || codigoLower.includes(busqueda)
+        || (busquedaNormalizada.length > 0 && (
+          idTexto.includes(busquedaNormalizada)
+          || codigoNormalizado.includes(busquedaNormalizada)
+          || this.coincideCodigoParcial(codigo, termino)
+        ));
+    });
+  }
+
+  agregarProductoDetalle(producto: any): void {
+    if (!this.presupuestoSeleccionado) return;
+
+    const descripcionVisible = this.obtenerDescripcionVisibleProducto(producto);
+    const productoExistente = this.presupuestoSeleccionado.productos.find((p: any) => p.id === producto.id);
+
+    if (productoExistente) {
+      productoExistente.cantidad += 1;
+      productoExistente.total = productoExistente.cantidad * productoExistente.precio * (1 - (productoExistente.descuento || 0) / 100);
+    } else {
+      this.presupuestoSeleccionado.productos.push({
+        id: producto.id,
+        productoId: producto.id,
+        nombre: producto.nombre,
+        codigo: producto.codigo,
+        descripcion: descripcionVisible,
+        precio: Number(producto.precio || 0),
+        precioUnitario: Number(producto.precio || 0),
+        precioOriginal: producto.precioOriginal ?? producto.precio,
+        moneda: producto.moneda ?? this.monedaSistema,
+        monedaOriginal: producto.monedaOriginal ?? producto.moneda ?? this.monedaSistema,
+        tasaConversion: producto.tasaConversion ?? 1,
+        aplicaIva: producto.aplicaIva !== false,
+        categoria: producto.categoria,
+        cristalConfig: producto.cristalConfig,
+        cantidad: 1,
+        descuento: 0,
+        descuentoPorcentaje: 0,
+        total: Number(producto.precio || 0)
+      });
+    }
+
+    this.calcularTotalesDetalle();
+    this.terminoBusquedaDetalleProducto = '';
+    this.productosDetalleFiltrados = [];
+  }
+
+  modificarCantidadDetalle(index: number, cambio: number): void {
+    if (!this.presupuestoSeleccionado) return;
+
+    const producto = this.presupuestoSeleccionado.productos[index];
+    if (!producto) return;
+
+    const nuevaCantidad = Number(producto.cantidad || 1) + cambio;
+    if (nuevaCantidad < 1) {
+      this.eliminarProductoDetalle(index);
+      return;
+    }
+
+    producto.cantidad = nuevaCantidad;
+    this.actualizarProductoDetalle(index);
   }
 
   calcularTotalesDetalle() {
     if (!this.presupuestoSeleccionado) return;
 
-    this.presupuestoSeleccionado.subtotal = this.presupuestoSeleccionado.productos.reduce((sum: number, producto: any) =>
-      sum + producto.total, 0);
+    const opcion = this.obtenerOpcionPresupuesto(this.presupuestoSeleccionado, this.opcionActivaDetalleId);
+    if (!opcion) {
+      return;
+    }
 
-    this.presupuestoSeleccionado.iva = this.presupuestoSeleccionado.subtotal * this.getIvaFactor();
-    this.presupuestoSeleccionado.total = this.presupuestoSeleccionado.subtotal + this.presupuestoSeleccionado.iva;
+    this.recalcularTotalesPresupuesto(opcion as any);
+    this.sincronizarPresupuestoDesdeOpcion(this.presupuestoSeleccionado, opcion);
   }
 
   async imprimirPresupuesto(presupuesto: any) {
-    console.log('🖨️ Imprimiendo presupuesto:', presupuesto);
-
     this.sincronizarContextoUsuario();
 
     if (!this.empleadosDisponibles.length) {
       await this.cargarAsesores();
     }
 
-    const datosSede = this.obtenerDatosSedeImpresion();
-    const nombreAsesor = this.obtenerNombreAsesor(presupuesto?.vendedor);
+    const presupuestoImpresion = this.normalizarPresupuestoPersistido(
+      JSON.parse(JSON.stringify(presupuesto || {}))
+    );
 
-    // Calcular descuento total si no existe
-    if (!presupuesto.descuentoTotal) {
-      presupuesto.descuentoTotal = this.calcularDescuentoTotalPresupuestoParaImpresion(presupuesto);
+    const datosSede = this.obtenerDatosSedeImpresion();
+    const nombreAsesor = this.obtenerNombreAsesor(presupuestoImpresion?.vendedor);
+    const opcionesImpresion = this.asegurarOpcionesPresupuesto(presupuestoImpresion);
+    const opcionPrincipal = this.obtenerOpcionPresupuesto(presupuestoImpresion, presupuestoImpresion?.opcionPrincipalId);
+    const tieneMultiplesOpciones = opcionesImpresion.length > 1;
+    const tituloPresupuestoImpresion = [
+      String(presupuestoImpresion?.codigo || '').trim(),
+      String(presupuestoImpresion?.cliente?.nombreCompleto || '').trim()
+    ].filter(Boolean).join(' - ');
+
+    if (!presupuestoImpresion.descuentoTotal) {
+      presupuestoImpresion.descuentoTotal = this.calcularDescuentoTotalPresupuestoParaImpresion(presupuestoImpresion);
     }
 
-    // Calcular subtotal neto
-    const subtotalNeto = presupuesto.subtotal - presupuesto.descuentoTotal;
-    const referenciaBsTotal = this.debeMostrarReferenciaBs()
-      ? this.formatMoneda(this.obtenerReferenciaBs(presupuesto.total), 'VES')
+    const resumenOpcionesHtml = tieneMultiplesOpciones
+      ? opcionesImpresion.map((opcion: OpcionPresupuesto, index: number) =>
+        this.construirTarjetaResumenImpresionOpcionPresupuesto(opcion, index, presupuestoImpresion?.opcionPrincipalId)
+      ).join('')
+      : '';
+    const seccionesOpcionesHtml = opcionesImpresion.map((opcion: OpcionPresupuesto, index: number) =>
+      this.construirSeccionImpresionOpcionPresupuesto(
+        opcion,
+        index,
+        presupuestoImpresion?.opcionPrincipalId,
+        opcionesImpresion.length
+      )
+    ).join('');
+
+    const fechaActual = new Date();
+    const fechaEmision = fechaActual.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const horaEmision = fechaActual.toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const fechaVencimiento = new Date(presupuestoImpresion.fechaVencimiento).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
+    const estadoTexto = this.getEstadoTexto(presupuestoImpresion.estadoColor);
+    const diasInfo = presupuestoImpresion.diasRestantes >= 0
+      ? `${presupuestoImpresion.diasRestantes} días restantes`
+      : `Vencido hace ${Math.abs(presupuestoImpresion.diasRestantes)} días`;
+
+    const contactoSede = [
+      datosSede.telefono && datosSede.telefono !== 'Sin teléfono' ? `Tel: ${this.escaparHtml(datosSede.telefono)}` : '',
+      datosSede.email && datosSede.email !== 'Sin correo' ? `Email: ${this.escaparHtml(datosSede.email)}` : ''
+    ].filter(Boolean).join(' | ');
+
+    const direccionSede = datosSede.direccion && datosSede.direccion !== 'Dirección no disponible'
+      ? this.escaparHtml(datosSede.direccion)
       : '';
 
-    // Formatear fechas
-    const fechaActual = new Date().toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-
-    const fechaVencimiento = new Date(presupuesto.fechaVencimiento).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-
-    // Calcular porcentaje de descuento
-    const porcentajeDescuento = presupuesto.subtotal > 0 ?
-      Math.round((presupuesto.descuentoTotal / presupuesto.subtotal) * 10000) / 100 : 0;
-
-    // Estado del presupuesto
-    const estadoTexto = this.getEstadoTexto(presupuesto.estadoColor);
-    const diasInfo = presupuesto.diasRestantes >= 0 ?
-      `${presupuesto.diasRestantes} días restantes` :
-      `Vencido hace ${Math.abs(presupuesto.diasRestantes)} días`;
-
-    // Crear contenido HTML para impresión compacta
     const contenidoHTML = `
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Presupuesto ${presupuesto.codigo}</title>
+      <title>${this.escaparHtml(tituloPresupuestoImpresion || String(presupuestoImpresion.codigo || 'Presupuesto'))}</title>
         <meta charset="UTF-8">
         <style>
-            /* ===== ESTILOS BASE COMPACTOS ===== */
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-            
+            * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 font-size: 11px;
                 line-height: 1.3;
-                color: #333;
-                background: #ffffff;
+                color: #1f2937;
+                background: #f8fafc;
                 padding: 10mm 8mm;
             }
-            
-            /* ===== ESTILOS DE IMPRESIÓN ===== */
             @media print {
-                @page {
-                    margin: 10mm 8mm;
-                    size: A4 portrait;
-                }
-                
-                body {
-                    padding: 0;
-                }
-                
-                .no-print {
-                    display: none !important;
-                }
-                
-                /* Mantener todo en una página */
-                .presupuesto-container {
-                    max-height: 277mm; /* A4 height - margins */
-                    overflow: hidden;
-                }
+                @page { margin: 10mm 8mm; size: A4 portrait; }
+                body { padding: 0; }
             }
-            
-            /* ===== CONTAINER PRINCIPAL COMPACTO ===== */
             .presupuesto-container {
                 max-width: 190mm;
                 margin: 0 auto;
+                background: #ffffff;
+                border: 1px solid #dbe4f0;
+                border-radius: 10px;
+                box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+                padding: 10px 12px;
             }
-            
-            /* ===== ENCABEZADO COMPACTO ===== */
             .header-compact {
                 display: grid;
                 grid-template-columns: 1fr auto;
                 gap: 15px;
                 margin-bottom: 12px;
                 padding-bottom: 10px;
-                border-bottom: 2px solid #2c5aa0;
+                border-bottom: 2px solid #1f4e79;
             }
-            
-            .empresa-info-compact {
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-            }
-            
             .empresa-nombre-compact {
                 font-size: 16px;
                 font-weight: 700;
-                color: #2c5aa0;
+                color: #1f4e79;
                 margin-bottom: 2px;
-                letter-spacing: 0.5px;
             }
-            
-            .empresa-datos-compact {
-                font-size: 9px;
-                color: #666;
-                line-height: 1.3;
-            }
-            
+            .empresa-datos-compact { font-size: 9px; color: #666; line-height: 1.3; }
             .logo-mini {
-                width: 60px;
-                height: 60px;
-                background: linear-gradient(135deg, #2c5aa0, #3498db);
-                border-radius: 6px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                font-weight: bold;
-                font-size: 20px;
+                width: 60px; height: 60px;
+                background: linear-gradient(135deg, #1f4e79, #2f6ea3);
+                border-radius: 50%;
+                display: flex; align-items: center; justify-content: center;
+                color: #fff; font-weight: bold; font-size: 20px;
             }
-            
-            /* ===== TÍTULO Y DATOS PRINCIPALES ===== */
             .titulo-principal {
                 text-align: center;
                 margin: 10px 0 15px 0;
                 padding: 8px;
-                background: linear-gradient(135deg, #2c5aa0, #3498db);
+                background: linear-gradient(135deg, #1f4e79, #2f6ea3);
                 color: white;
                 border-radius: 6px;
             }
-            
-            .titulo-principal h1 {
-                font-size: 16px;
-                font-weight: 700;
-                letter-spacing: 0.5px;
-            }
-            
-            /* ===== METADATOS COMPACTOS ===== */
+            .titulo-principal h1 { font-size: 16px; font-weight: 700; }
             .metadata-grid {
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
                 gap: 8px;
                 margin-bottom: 12px;
             }
-            
             .metadata-card {
-                background: #f8f9fa;
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
+                background: #f8fbff;
+                border: 1px solid #d9e8f7;
+                border-radius: 8px;
                 padding: 6px 8px;
                 text-align: center;
             }
-            
             .metadata-label {
-                font-size: 8px;
-                color: #6c757d;
-                font-weight: 600;
-                text-transform: uppercase;
-                margin-bottom: 2px;
-                display: block;
+                font-size: 8px; color: #6c757d; font-weight: 600;
+                text-transform: uppercase; margin-bottom: 2px; display: block;
             }
-            
-            .metadata-valor {
-                font-size: 10px;
-                font-weight: 600;
-                color: #2c5aa0;
-            }
-            
-            .estado-badge {
-                display: inline-block;
-                padding: 2px 6px;
-                border-radius: 10px;
-                font-size: 8px;
-                font-weight: 600;
-                text-transform: uppercase;
-            }
-            
+            .metadata-valor { font-size: 10px; font-weight: 600; color: #1f4e79; }
+            .estado-badge { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 8px; font-weight: 600; }
             .estado-vigente { background: #d4edda; color: #155724; }
             .estado-proximo { background: #fff3cd; color: #856404; }
             .estado-hoy { background: #cce5ff; color: #004085; }
             .estado-vencido { background: #f8d7da; color: #721c24; }
-            
-            /* ===== CLIENTE COMPACTO ===== */
             .cliente-compact {
                 background: #f8f9fa;
                 border-radius: 6px;
@@ -2189,315 +2684,236 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
                 margin-bottom: 12px;
                 border: 1px solid #dee2e6;
             }
-            
             .cliente-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 8px;
-                padding-bottom: 6px;
-                border-bottom: 1px solid #dee2e6;
+                display: flex; justify-content: space-between; align-items: center;
+                margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #dee2e6;
             }
-            
-            .cliente-header h3 {
-                font-size: 11px;
-                font-weight: 600;
-                color: #2c5aa0;
-                margin: 0;
+            .cliente-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 10px; }
+            .cliente-item { display: flex; align-items: flex-start; }
+            .cliente-label { font-weight: 600; color: #495057; min-width: 70px; margin-right: 5px; }
+            .cliente-valor { color: #212529; flex: 1; }
+            .comparativo-section {
+              margin-bottom: 12px;
             }
-            
-            .cliente-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 6px;
-                font-size: 10px;
+            .comparativo-section h3 {
+              font-size: 10px;
+              color: #1f4e79;
+              margin-bottom: 6px;
             }
-            
-            .cliente-item {
-                display: flex;
-                align-items: flex-start;
+            .opciones-comparativo-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+              gap: 8px;
             }
-            
-            .cliente-label {
-                font-weight: 600;
-                color: #495057;
-                min-width: 70px;
-                margin-right: 5px;
+            .opcion-resumen-card {
+              background: #f8fbff;
+              border: 1px solid #d9e8f7;
+              border-radius: 8px;
+              padding: 8px;
             }
-            
-            .cliente-valor {
-                color: #212529;
-                flex: 1;
+            .opcion-resumen-card--principal {
+              background: #ebf4ff;
+              border-color: #1f4e79;
             }
-            
-            /* ===== TABLA COMPACTA ===== */
+            .opcion-resumen-card__header {
+              display: flex;
+              align-items: flex-start;
+              justify-content: space-between;
+              gap: 8px;
+              margin-bottom: 4px;
+            }
+            .opcion-resumen-card__title {
+              font-size: 10px;
+              font-weight: 700;
+              color: #1f4e79;
+            }
+            .opcion-resumen-card__meta {
+              font-size: 8px;
+              color: #64748b;
+            }
+            .opcion-resumen-card__total {
+              margin-top: 6px;
+              text-align: right;
+              font-size: 11px;
+              font-weight: 700;
+              color: #0f172a;
+            }
+            .opcion-badge {
+              display: inline-flex;
+              align-items: center;
+              padding: 2px 6px;
+              border-radius: 999px;
+              background: #1f4e79;
+              color: #fff;
+              font-size: 8px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.03em;
+            }
+            .opcion-seccion {
+              background: #ffffff;
+              border: 1px solid #dbe4f0;
+              border-radius: 8px;
+              padding: 10px;
+              margin-bottom: 10px;
+            }
+            .opcion-seccion__header {
+              display: flex;
+              align-items: flex-start;
+              justify-content: space-between;
+              gap: 10px;
+              margin-bottom: 8px;
+            }
+            .opcion-seccion__titulo {
+              font-size: 12px;
+              font-weight: 700;
+              color: #1f4e79;
+            }
+            .opcion-seccion__subtitulo {
+              font-size: 9px;
+              color: #64748b;
+              margin-top: 2px;
+            }
+            .resumen-compacto--opcion {
+              margin-bottom: 0;
+            }
             .tabla-compacta {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 12px;
-                font-size: 9px;
+                width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9px;
             }
-            
-            .tabla-compacta thead {
-                background: #2c5aa0;
-                color: white;
-            }
-            
+            .tabla-compacta thead { background: #1f4e79; color: white; }
             .tabla-compacta th {
-                padding: 6px 4px;
-                font-weight: 600;
-                text-align: center;
-                font-size: 9px;
-                border: none;
+                padding: 6px 4px; font-weight: 600; text-align: center; font-size: 9px;
             }
-            
             .tabla-compacta td {
-                padding: 5px 4px;
-                text-align: center;
-                border-bottom: 1px solid #e9ecef;
-                vertical-align: middle;
+                padding: 5px 4px; text-align: center; border-bottom: 1px solid #e9ecef; vertical-align: middle;
             }
-            
-            .tabla-compacta tbody tr:nth-child(even) {
-                background-color: #f8f9fa;
+            .tabla-compacta tbody tr:nth-child(even) { background-color: #f8f9fa; }
+            .tabla-compacta .descripcion { text-align: left; font-size: 9.5px; max-width: 120px; }
+            .tabla-compacta .precio, .tabla-compacta .total { text-align: center; min-width: 60px; font-weight: 600; }
+            .tabla-compacta tbody tr.fila-consulta {
+              background: linear-gradient(90deg, #eff6ff, #f8fbff) !important;
             }
-            
-            .tabla-compacta .descripcion {
-                text-align: left;
-                font-size: 9.5px;
-                max-width: 120px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
+            .tabla-compacta tbody tr.fila-consulta td {
+              border-bottom: 1px solid #bfdbfe;
             }
-            
-            .tabla-compacta .cantidad {
-                font-family: 'Courier New', monospace;
-                font-weight: 600;
+            .servicio-badge {
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+              margin-top: 4px;
+              padding: 2px 6px;
+              border-radius: 999px;
+              background: #dbeafe;
+              color: #1d4ed8;
+              font-size: 8px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.04em;
             }
-            
-            .tabla-compacta .precio, 
-            .tabla-compacta .total {
-                font-family: 'Courier New', monospace;
-                font-weight: 600;
-                text-align: right;
-                min-width: 60px;
+            .servicio-badge::before {
+              content: '';
+              width: 6px;
+              height: 6px;
+              border-radius: 999px;
+              background: #2563eb;
+              display: inline-block;
             }
-            
-            /* ===== RESUMEN FINANCIERO COMPACTO ===== */
-            .resumen-compacto {
-                display: grid;
-                grid-template-columns: 2fr 1fr;
-                gap: 15px;
-                margin-bottom: 12px;
+            .codigo-servicio {
+              color: #1d4ed8;
+              font-weight: 700;
             }
-            
+            .resumen-compacto { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 12px; }
             .totales-compactos {
-                background: #f8f9fa;
-                border-radius: 6px;
-                padding: 10px;
-                border: 1px solid #dee2e6;
+                background: #f8f9fa; border-radius: 6px; padding: 10px; border: 1px solid #dee2e6;
             }
-            
-            .total-line {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 4px 0;
-            }
-            
-            .total-line:not(:last-child) {
-                border-bottom: 1px dashed #dee2e6;
-            }
-            
-            .total-label {
-                font-size: 10px;
-                color: #495057;
-            }
-            
-            .total-valor {
-                font-family: 'Courier New', monospace;
-                font-weight: 600;
-                font-size: 10px;
-            }
-            
+            .total-line { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+            .total-line:not(:last-child) { border-bottom: 1px dashed #dee2e6; }
+            .total-label { font-size: 10px; color: #495057; }
+            .total-valor { font-weight: 600; font-size: 10px; }
             .total-final {
-                background: #e7f1ff;
-                border-radius: 4px;
-                padding: 6px 8px;
-                margin-top: 6px;
-                border-left: 3px solid #2c5aa0;
+                background: #ebf4ff; border-radius: 4px; padding: 6px 8px; margin-top: 6px; border-left: 3px solid #1f4e79;
             }
-            
-            .total-final .total-label {
-                font-weight: 700;
-                font-size: 11px;
-                color: #2c5aa0;
-            }
-            
-            .total-final .total-valor {
-                font-weight: 800;
-                font-size: 12px;
-                color: #2c5aa0;
-            }
-            
+            .total-final .total-label,
+            .total-final .total-valor { color: #1f4e79; font-weight: 700; }
             .info-lateral {
-                background: #fff9db;
-                border: 1px solid #ffeaa7;
-                border-radius: 6px;
-                padding: 10px;
+                background: #fff9db; border: 1px solid #ffeaa7; border-radius: 6px; padding: 10px;
             }
-            
             .info-lateral h4 {
-                font-size: 10px;
-                color: #856404;
-                margin-bottom: 6px;
-                padding-bottom: 4px;
-                border-bottom: 1px solid #ffeaa7;
+                font-size: 10px; color: #856404; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #ffeaa7;
             }
-            
-            .info-item {
-                font-size: 9px;
-                margin-bottom: 4px;
+            .info-item { font-size: 9px; margin-bottom: 4px; }
+            .info-item--consulta {
+              background: #eff6ff;
+              border: 1px solid #bfdbfe;
+              border-radius: 6px;
+              padding: 6px;
+              color: #1e3a8a;
             }
-            
-            .info-item strong {
-                color: #495057;
-                display: inline-block;
-                min-width: 70px;
-            }
-            
-            /* ===== OBSERVACIONES Y FIRMA COMPACTAS ===== */
-            .observaciones-compactas {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 12px;
-                margin-bottom: 15px;
-            }
-            
             .obs-section {
-                background: #f1f5f9;
-                border-radius: 6px;
-                padding: 8px;
-                border: 1px solid #dee2e6;
+                background: #f1f5f9; border-radius: 6px; padding: 8px; border: 1px solid #dee2e6; margin-bottom: 10px;
             }
-            
-            .obs-section h4 {
-                font-size: 10px;
-                color: #2c5aa0;
-                margin-bottom: 6px;
-                padding-bottom: 4px;
-                border-bottom: 1px solid #dee2e6;
+            .obs-section h4 { font-size: 10px; color: #1f4e79; margin-bottom: 6px; }
+            .obs-content { font-size: 9px; color: #495057; line-height: 1.3; }
+            .resumen-impresion-simple {
+              display: grid;
+              grid-template-columns: repeat(4, minmax(0, 1fr));
+              gap: 8px;
+              margin-bottom: 12px;
             }
-            
-            .obs-content {
-                font-size: 9px;
-                color: #495057;
-                line-height: 1.3;
-                min-height: 30px;
+            .resumen-impresion-simple__item {
+              background: #f8fbff;
+              border: 1px solid #d9e8f7;
+              border-radius: 8px;
+              padding: 8px;
             }
-            
-            .firma-line {
-                width: 80%;
-                height: 1px;
-                background: #333;
-                margin: 20px auto 5px;
+            .resumen-impresion-simple__label {
+              display: block;
+              font-size: 8px;
+              font-weight: 700;
+              color: #6c757d;
+              text-transform: uppercase;
+              margin-bottom: 4px;
             }
-            
-            .firma-text {
-                font-size: 8px;
-                color: #6c757d;
-                text-align: center;
+            .resumen-impresion-simple__value {
+              font-size: 10px;
+              font-weight: 700;
+              color: #1f4e79;
             }
-            
-            /* ===== TÉRMINOS Y PIE DE PÁGINA ===== */
-            .terminos-compactos {
-                background: #f8f9fa;
-                border-radius: 6px;
-                padding: 8px;
-                margin-bottom: 10px;
-                border: 1px solid #dee2e6;
-            }
-            
-            .terminos-compactos h4 {
-                font-size: 10px;
-                color: #495057;
-                margin-bottom: 4px;
-            }
-            
-            .terminos-lista {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 4px;
-                font-size: 7.5px;
-                color: #6c757d;
-                line-height: 1.2;
-            }
-            
-            .terminos-lista li {
-                margin-bottom: 2px;
-            }
-            
             .footer-compacto {
                 text-align: center;
-                font-size: 7px;
-                color: #6c757d;
-                padding-top: 6px;
-                border-top: 1px solid #dee2e6;
-                line-height: 1.2;
+                font-size: 8px;
+                color: #4b5563;
+                padding: 8px;
+                border-top: 1px solid #dbe2ea;
+                background: #f8fbff;
+                border-radius: 8px;
+                line-height: 1.35;
             }
-            
-            /* ===== RESPONSIVE PARA PANTALLA ===== */
-            @media screen and (max-width: 768px) {
-                body {
-                    padding: 5mm;
-                }
-                
-                .metadata-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-                
-                .cliente-grid {
-                    grid-template-columns: 1fr;
-                }
-                
-                .resumen-compacto,
-                .observaciones-compactas {
-                    grid-template-columns: 1fr;
-                    gap: 8px;
-                }
-                
-                .terminos-lista {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-            }
+            .footer-brand { font-size: 9px; font-weight: 700; color: #1f4e79; margin-bottom: 3px; }
         </style>
     </head>
     <body>
         <div class="presupuesto-container">
-            <!-- ENCABEZADO COMPACTO -->
             <div class="header-compact">
-                <div class="empresa-info-compact">
-                <div class="empresa-nombre-compact">${this.escaparHtml(datosSede.nombreOptica)}</div>
+                <div>
+                    <div class="empresa-nombre-compact">${this.escaparHtml(datosSede.nombreOptica)}</div>
                     <div class="empresa-datos-compact">
-                  ${datosSede.rif ? `RIF: ${this.escaparHtml(datosSede.rif)}<br>` : ''}
-                  ${this.escaparHtml(datosSede.direccion)}<br>
-                  📞 ${this.escaparHtml(datosSede.telefono)} | ✉️ ${this.escaparHtml(datosSede.email)}
+                        ${datosSede.rif ? `RIF: ${this.escaparHtml(datosSede.rif)}<br>` : ''}
+                        ${this.escaparHtml(datosSede.direccion)}<br>
+                        ${this.escaparHtml(datosSede.telefono)} | ${this.escaparHtml(datosSede.email)}
                     </div>
                 </div>
-              <div class="logo-mini">${this.escaparHtml(datosSede.iniciales)}</div>
+                <div class="logo-mini">${this.escaparHtml(datosSede.iniciales)}</div>
             </div>
-            
-            <!-- TÍTULO PRINCIPAL -->
+
             <div class="titulo-principal">
-                <h1>PRESUPUESTO N° ${presupuesto.codigo}</h1>
+              <h1>${this.escaparHtml(tituloPresupuestoImpresion || String(presupuestoImpresion.codigo || ''))}</h1>
             </div>
-            
-            <!-- METADATOS RÁPIDOS -->
+
             <div class="metadata-grid">
                 <div class="metadata-card">
                     <span class="metadata-label">EMISIÓN</span>
-                    <span class="metadata-valor">${fechaActual}</span>
+                    <span class="metadata-valor">${fechaEmision} ${horaEmision}</span>
                 </div>
                 <div class="metadata-card">
                     <span class="metadata-label">VENCIMIENTO</span>
@@ -2505,177 +2921,86 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
                 </div>
                 <div class="metadata-card">
                     <span class="metadata-label">VENDEDOR</span>
-                  <span class="metadata-valor">${this.escaparHtml(nombreAsesor)}</span>
+                    <span class="metadata-valor">${this.escaparHtml(nombreAsesor)}</span>
                 </div>
                 <div class="metadata-card">
                     <span class="metadata-label">ESTADO</span>
-                    <span class="metadata-valor">
-                        <span class="estado-badge estado-${presupuesto.estadoColor}">${estadoTexto}</span>
-                    </span>
+                  <span class="metadata-valor"><span class="estado-badge estado-${presupuestoImpresion.estadoColor}">${estadoTexto}</span></span>
                 </div>
             </div>
-            
-            <!-- CLIENTE COMPACTO -->
+
             <div class="cliente-compact">
                 <div class="cliente-header">
                     <h3>CLIENTE</h3>
                     <div style="font-size: 9px; color: #6c757d;">${diasInfo}</div>
                 </div>
                 <div class="cliente-grid">
-                    <div class="cliente-item">
-                        <span class="cliente-label">Nombre:</span>
-                      <span class="cliente-valor">${this.escaparHtml(presupuesto.cliente.nombreCompleto)}</span>
-                    </div>
-                    <div class="cliente-item">
-                        <span class="cliente-label">${presupuesto.cliente.tipoPersona === 'juridica' ? 'RIF:' : 'Cédula:'}</span>
-                      <span class="cliente-valor">${this.escaparHtml(presupuesto.cliente.cedula)}</span>
-                    </div>
-                    <div class="cliente-item">
-                        <span class="cliente-label">Teléfono:</span>
-                      <span class="cliente-valor">${this.escaparHtml(presupuesto.cliente.telefono || 'N/A')}</span>
-                    </div>
-                    <div class="cliente-item">
-                        <span class="cliente-label">Email:</span>
-                      <span class="cliente-valor">${this.escaparHtml(presupuesto.cliente.email || 'N/A')}</span>
-                    </div>
+                  <div class="cliente-item"><span class="cliente-label">Nombre:</span><span class="cliente-valor">${this.escaparHtml(presupuestoImpresion.cliente.nombreCompleto)}</span></div>
+                  <div class="cliente-item"><span class="cliente-label">${presupuestoImpresion.cliente.tipoPersona === 'juridica' ? 'RIF:' : 'Cédula:'}</span><span class="cliente-valor">${this.escaparHtml(presupuestoImpresion.cliente.cedula)}</span></div>
+                  <div class="cliente-item"><span class="cliente-label">Teléfono:</span><span class="cliente-valor">${this.escaparHtml(presupuestoImpresion.cliente.telefono || 'N/A')}</span></div>
+                  <div class="cliente-item"><span class="cliente-label">Email:</span><span class="cliente-valor">${this.escaparHtml(presupuestoImpresion.cliente.email || 'N/A')}</span></div>
                 </div>
             </div>
-            
-            <!-- TABLA DE PRODUCTOS COMPACTA -->
-            <table class="tabla-compacta">
-                <thead>
-                    <tr>
-                        <th width="5%">#</th>
-                        <th width="40%">DESCRIPCIÓN</th>
-                        <th width="10%">CÓDIGO</th>
-                        <th width="15%">PRECIO UNIT.</th>
-                        <th width="8%">CANT.</th>
-                        <th width="10%">DTO %</th>
-                        <th width="12%">TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${presupuesto.productos.map((p: any, i: number) => `
-                    <tr>
-                        <td>${i + 1}</td>
-                      <td class="descripcion" title="${this.escaparHtml(p.descripcion)}">${this.escaparHtml(p.descripcion)}</td>
-                      <td>${this.escaparHtml(p.codigo || '-')}</td>
-                        <td class="precio">${this.formatMoneda(p.precio)}</td>
-                        <td class="cantidad">${p.cantidad}</td>
-                        <td>${p.descuento > 0 ? p.descuento + '%' : '-'}</td>
-                        <td class="total">${this.formatMoneda(p.total)}</td>
-                    </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            
-            <!-- RESUMEN FINANCIERO COMPACTO -->
-            <div class="resumen-compacto">
-                <div class="totales-compactos">
-                    <div class="total-line">
-                        <span class="total-label">Subtotal:</span>
-                        <span class="total-valor">${this.formatMoneda(presupuesto.subtotal)}</span>
-                    </div>
-                    ${presupuesto.descuentoTotal > 0 ? `
-                    <div class="total-line">
-                        <span class="total-label">Descuento (${porcentajeDescuento}%):</span>
-                        <span class="total-valor" style="color: #dc3545;">- ${this.formatMoneda(presupuesto.descuentoTotal)}</span>
-                    </div>
-                    <div class="total-line">
-                        <span class="total-label">Subtotal Neto:</span>
-                        <span class="total-valor">${this.formatMoneda(subtotalNeto)}</span>
-                    </div>
-                    ` : ''}
-                    <div class="total-line">
-                      <span class="total-label">${this.getEtiquetaIva()}:</span>
-                        <span class="total-valor">${this.formatMoneda(presupuesto.iva)}</span>
-                    </div>
-                    <div class="total-final total-line">
-                        <span class="total-label">TOTAL A PAGAR:</span>
-                        <span class="total-valor">${this.formatMoneda(presupuesto.total)}</span>
-                    </div>
-                    ${referenciaBsTotal ? `
-                    <div class="total-line">
-                      <span class="total-label">REF. EN BS:</span>
-                      <span class="total-valor">${referenciaBsTotal}</span>
-                    </div>
-                    ` : ''}
+
+            <div class="resumen-impresion-simple">
+                <div class="resumen-impresion-simple__item">
+                    <span class="resumen-impresion-simple__label">Vendedor</span>
+                    <span class="resumen-impresion-simple__value">${this.escaparHtml(nombreAsesor)}</span>
                 </div>
-                
-                <div class="info-lateral">
-                    <h4>INFORMACIÓN</h4>
-                    <div class="info-item">
-                        <strong>Validez:</strong> ${presupuesto.diasVencimiento || 7} días
-                    </div>
-                    <div class="info-item">
-                        <strong>Productos:</strong> ${presupuesto.productos.length}
-                    </div>
-                    <div class="info-item">
-                      <strong>Incluye IVA :</strong> ${this.ivaPorcentaje}%
-                    </div>
+                <div class="resumen-impresion-simple__item">
+                    <span class="resumen-impresion-simple__label">Validez</span>
+                    <span class="resumen-impresion-simple__value">${presupuestoImpresion.diasVencimiento || 7} días</span>
+                </div>
+                <div class="resumen-impresion-simple__item">
+                    <span class="resumen-impresion-simple__label">Opciones</span>
+                    <span class="resumen-impresion-simple__value">${opcionesImpresion.length}</span>
+                </div>
+                <div class="resumen-impresion-simple__item">
+                    <span class="resumen-impresion-simple__label">Opción principal</span>
+                    <span class="resumen-impresion-simple__value">${this.escaparHtml(opcionPrincipal?.nombre || 'N/A')}</span>
                 </div>
             </div>
-            
-            <!-- OBSERVACIONES Y FIRMA COMPACTAS -->
-            <div class="observaciones-compactas">
-                <div class="obs-section">
-                    <h4>OBSERVACIONES</h4>
-                    <div class="obs-content">
-                    ${this.escaparHtml(presupuesto.observaciones || 'Sin observaciones adicionales.')}
-                    </div>
+
+              ${tieneMultiplesOpciones ? `<div class="comparativo-section">
+                <h3>Opciones para comparar</h3>
+                <div class="opciones-comparativo-grid">
+                  ${resumenOpcionesHtml}
                 </div>
-                
-                <div class="obs-section">
-                    <h4>ACEPTACIÓN</h4>
-                    <div class="firma-line"></div>
-                    <div class="firma-text">Firma del Cliente</div>
-                    <div class="firma-text" style="font-size: 7px; margin-top: 2px;">
-                        Fecha: ${fechaActual}
-                    </div>
-                </div>
+              </div>` : ''}
+
+              ${seccionesOpcionesHtml}
+
+            <div class="obs-section">
+                <h4>OBSERVACIONES</h4>
+                <div class="obs-content">${this.escaparHtml(presupuestoImpresion.observaciones || 'Sin observaciones adicionales.')}</div>
             </div>
-                        
-            <!-- PIE DE PÁGINA COMPACTO -->
+
             <div class="footer-compacto">
-            <br><br>
-                NEW VISION LENS 2020 • Calle Confecio CC Candelaria Plaza PB Local PB<br>
-                📞 022.365.394.2 • ✉️ newvisionlens2020@email.com • 📍 Barquisimeto, Lara<br>
+                <div class="footer-brand">${this.escaparHtml(datosSede.nombreOptica)}</div>
+                ${contactoSede ? `<div>${contactoSede}</div>` : ''}
+                ${direccionSede ? `<div>${direccionSede}</div>` : ''}
             </div>
         </div>
-        
         <script>
-            // Imprimir automáticamente con retardo para que cargue el CSS
             window.onload = function() {
-                setTimeout(function() {
-                    window.print();
-                }, 300);
+            document.title = ${JSON.stringify(tituloPresupuestoImpresion || String(presupuestoImpresion.codigo || 'Presupuesto'))};
+                setTimeout(function() { window.print(); }, 300);
             };
-            
-            // Cerrar ventana después de imprimir
             window.onafterprint = function() {
-                setTimeout(function() {
-                    window.close();
-                }, 800);
-            };
-            
-            // Para vista previa en pantalla
-            window.onbeforeprint = function() {
-                console.log('Iniciando impresión del presupuesto compacto...');
+                setTimeout(function() { window.close(); }, 800);
             };
         </script>
     </body>
     </html>
     `;
 
-    // Abrir ventana de impresión
-    const ventanaImpresion = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+    const ventanaImpresion = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
 
     if (ventanaImpresion) {
       ventanaImpresion.document.write(contenidoHTML);
       ventanaImpresion.document.close();
 
-      // Notificación
-      this.snackBar.open(`Imprimiendo presupuesto ${presupuesto.codigo} (formato compacto)`, 'Cerrar', {
+      this.snackBar.open(`Abriendo vista de impresión ${presupuestoImpresion.codigo}`, 'Cerrar', {
         duration: 2000,
         panelClass: ['snackbar-info']
       });
@@ -2697,12 +3022,149 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   // Método auxiliar para calcular descuento total para impresión
   calcularDescuentoTotalPresupuestoParaImpresion(presupuesto: any): number {
-    if (!presupuesto || !presupuesto.productos) return 0;
+    return this.calcularDescuentoTotalProductosParaImpresion(presupuesto?.productos || []);
+  }
 
-    return presupuesto.productos.reduce((total: number, producto: any) => {
-      const subtotalProducto = producto.precio * producto.cantidad;
-      return total + (subtotalProducto * (producto.descuento / 100));
+  private calcularDescuentoTotalProductosParaImpresion(productos: any[]): number {
+    if (!Array.isArray(productos)) {
+      return 0;
+    }
+
+    return productos.reduce((total: number, producto: any) => {
+      const precio = Number(producto?.precio ?? producto?.precioUnitario ?? 0);
+      const cantidad = Number(producto?.cantidad || 1);
+      const descuento = Number(producto?.descuento ?? producto?.descuentoPorcentaje ?? 0);
+      return total + ((precio * cantidad) * (descuento / 100));
     }, 0);
+  }
+
+  private construirTarjetaResumenImpresionOpcionPresupuesto(opcion: OpcionPresupuesto, index: number, opcionPrincipalId?: string): string {
+    const productos = Array.isArray(opcion?.productos) ? opcion.productos : [];
+    const productosSinConsulta = productos.filter((producto: any) => !this.esLineaConsulta(producto));
+    const lineasConsulta = productos.filter((producto: any) => this.esLineaConsulta(producto));
+    const esPrincipal = opcion?.id === opcionPrincipalId;
+    const subtotal = Number(opcion?.subtotal || 0);
+    const iva = Number(opcion?.iva || 0);
+
+    return `
+      <div class="opcion-resumen-card ${esPrincipal ? 'opcion-resumen-card--principal' : ''}">
+          <div class="opcion-resumen-card__header">
+              <span class="opcion-resumen-card__title">${this.escaparHtml(opcion?.nombre || `Opción ${index + 1}`)}</span>
+              ${esPrincipal ? '<span class="opcion-badge">Principal</span>' : ''}
+          </div>
+          <div class="opcion-resumen-card__meta">
+              ${productosSinConsulta.length} producto(s)${lineasConsulta.length > 0 ? ` + ${lineasConsulta.length} servicio(s)` : ''}
+          </div>
+          <div class="opcion-resumen-card__meta">Subtotal: ${this.formatMoneda(subtotal)}</div>
+          <div class="opcion-resumen-card__meta">${this.getEtiquetaIva()}: ${this.formatMoneda(iva)}</div>
+          <div class="opcion-resumen-card__total">${this.formatMoneda(opcion?.total || 0)}</div>
+      </div>
+    `;
+  }
+
+  private construirSeccionImpresionOpcionPresupuesto(opcion: OpcionPresupuesto, index: number, opcionPrincipalId?: string, totalOpciones: number = 1): string {
+    const productos = Array.isArray(opcion?.productos) ? opcion.productos : [];
+    const productosSinConsulta = productos.filter((producto: any) => !this.esLineaConsulta(producto));
+    const lineasConsulta = productos.filter((producto: any) => this.esLineaConsulta(producto));
+    const totalConsulta = lineasConsulta.reduce((sum: number, producto: any) => sum + Number(producto?.total || 0), 0);
+    const totalProductos = productosSinConsulta.reduce((sum: number, producto: any) => sum + Number(producto?.total || 0), 0);
+    const descuentoTotal = Number(opcion?.descuentoTotal || this.calcularDescuentoTotalProductosParaImpresion(productos));
+    const subtotal = Number(opcion?.subtotal || 0);
+    const subtotalNeto = subtotal - descuentoTotal;
+    const porcentajeDescuento = subtotal > 0
+      ? Math.round((descuentoTotal / subtotal) * 10000) / 100
+      : 0;
+    const total = Number(opcion?.total || 0);
+    const referenciaBsTotal = this.debeMostrarReferenciaBs()
+      ? this.formatMoneda(this.obtenerReferenciaBs(total), 'VES')
+      : '';
+    const filasProductosHtml = productos.map((producto: any, productoIndex: number) =>
+      this.construirFilaImpresionPresupuesto(producto, productoIndex)
+    ).join('');
+    const esPrincipal = opcion?.id === opcionPrincipalId;
+    const observaciones = String(opcion?.observaciones || '').trim();
+    const mostrarCabecera = totalOpciones > 1 || !!observaciones || !!opcion?.nombre;
+    const tituloOpcion = totalOpciones > 1
+      ? this.escaparHtml(opcion?.nombre || `Opción ${index + 1}`)
+      : 'Detalle del presupuesto';
+    const subtitulo = totalOpciones > 1
+      ? `${productos.length} ítem(s) cotizados${observaciones ? ` • ${this.escaparHtml(observaciones)}` : ''}`
+      : `${productos.length} ítem(s) cotizados${observaciones ? ` • ${this.escaparHtml(observaciones)}` : ''}`;
+
+    return `
+      <div class="opcion-seccion">
+          ${mostrarCabecera ? `<div class="opcion-seccion__header">
+              <div>
+                  <div class="opcion-seccion__titulo">${tituloOpcion}</div>
+                  <div class="opcion-seccion__subtitulo">${subtitulo}</div>
+              </div>
+              ${esPrincipal ? '<span class="opcion-badge">Principal</span>' : ''}
+          </div>` : ''}
+
+          <table class="tabla-compacta">
+              <thead>
+                  <tr>
+                      <th>#</th>
+                      <th>DESCRIPCIÓN</th>
+                      <th>CÓDIGO</th>
+                      <th>PRECIO UNIT.</th>
+                      <th>CANT.</th>
+                      <th>DTO %</th>
+                      <th>TOTAL</th>
+                  </tr>
+              </thead>
+              <tbody>
+                ${filasProductosHtml}
+              </tbody>
+          </table>
+
+          <div class="resumen-compacto resumen-compacto--opcion">
+              <div class="totales-compactos">
+                  <div class="total-line"><span class="total-label">Subtotal:</span><span class="total-valor">${this.formatMoneda(subtotal)}</span></div>
+                  ${descuentoTotal > 0 ? `
+                  <div class="total-line"><span class="total-label">Descuento (${porcentajeDescuento}%):</span><span class="total-valor">- ${this.formatMoneda(descuentoTotal)}</span></div>
+                  <div class="total-line"><span class="total-label">Subtotal Neto:</span><span class="total-valor">${this.formatMoneda(subtotalNeto)}</span></div>
+                  ` : ''}
+                  <div class="total-line"><span class="total-label">${this.getEtiquetaIva()}:</span><span class="total-valor">${this.formatMoneda(opcion?.iva || 0)}</span></div>
+                  <div class="total-final total-line"><span class="total-label">TOTAL:</span><span class="total-valor">${this.formatMoneda(total)}</span></div>
+                  ${referenciaBsTotal ? `<div class="total-line"><span class="total-label">REF. EN BS:</span><span class="total-valor">${referenciaBsTotal}</span></div>` : ''}
+              </div>
+              <div class="info-lateral">
+                  <h4>RESUMEN</h4>
+                  <div class="info-item"><strong>Productos:</strong> ${productosSinConsulta.length}</div>
+                  ${lineasConsulta.length > 0 ? `<div class="info-item info-item--consulta"><strong>Servicio:</strong> ${lineasConsulta.length} consulta${lineasConsulta.length > 1 ? 's' : ''}<br><strong>Monto:</strong> ${this.formatMoneda(totalConsulta)}</div>` : ''}
+                  <div class="info-item"><strong>Total productos:</strong> ${this.formatMoneda(totalProductos)}</div>
+              </div>
+          </div>
+      </div>
+    `;
+  }
+
+  private construirFilaImpresionPresupuesto(producto: any, index: number): string {
+    const esConsulta = this.esLineaConsulta(producto);
+    const descripcion = this.escaparHtml(esConsulta ? 'Consulta medica' : (producto?.descripcion || 'Sin descripcion'));
+    const codigo = this.escaparHtml(producto?.codigo || '-');
+    const badgeServicio = esConsulta
+      ? ''
+      : '';
+    const codigoHtml = esConsulta
+      ? '<span class="codigo-servicio">Servicio</span>'
+      : codigo;
+    const descuentoHtml = esConsulta
+      ? 'No aplica'
+      : (producto?.descuento > 0 ? `${producto.descuento}%` : '-');
+
+    return `
+      <tr class="${esConsulta ? 'fila-consulta' : ''}">
+          <td>${index + 1}</td>
+          <td class="descripcion">${descripcion}${badgeServicio}</td>
+          <td>${codigoHtml}</td>
+          <td class="precio">${this.formatMoneda(producto?.precio)}</td>
+          <td>${producto?.cantidad || 1}</td>
+          <td>${descuentoHtml}</td>
+          <td class="total">${this.formatMoneda(producto?.total)}</td>
+      </tr>
+    `;
   }
 
   // Método para formatear fecha (ya existe, pero lo incluyo por referencia)
@@ -2843,6 +3305,16 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   agregarProducto(producto: any) {
+    if (this.debeBloquearSeleccionProductosPorFormulaExterna()) {
+      this.snackBar.open('Complete la refracción final de fórmula externa antes de agregar productos', 'Cerrar', {
+        duration: 3500,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    const descripcionVisible = this.obtenerDescripcionVisibleProducto(producto);
+
     // Verificar si el producto ya existe en la lista
     const productoExistente = this.nuevoPresupuesto.productos.find((p: any) => p.id === producto.id);
 
@@ -2854,15 +3326,22 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       // Si no existe, agregar nuevo producto
       const productoAgregar = {
         id: producto.id,
+        productoId: producto.id,
+        nombre: producto.nombre,
         codigo: producto.codigo,
-        descripcion: producto.descripcion,
+        descripcion: descripcionVisible,
         precio: producto.precio,
+        precioUnitario: producto.precio,
         precioOriginal: producto.precioOriginal ?? producto.precio,
         moneda: producto.moneda ?? this.monedaSistema,
         monedaOriginal: producto.monedaOriginal ?? producto.moneda ?? this.monedaSistema,
         tasaConversion: producto.tasaConversion ?? 1,
+        aplicaIva: producto.aplicaIva !== false,
+        categoria: producto.categoria,
+        cristalConfig: producto.cristalConfig,
         cantidad: 1,
         descuento: 0,
+        descuentoPorcentaje: 0,
         total: producto.precio
       };
 
@@ -2874,7 +3353,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.productosFiltrados = [];
 
     // Mostrar mensaje de confirmación
-    this.snackBar.open(`${producto.descripcion} agregado al presupuesto`, 'Cerrar', {
+    this.snackBar.open(`${descripcionVisible} agregado al presupuesto`, 'Cerrar', {
       duration: 2000,
       panelClass: ['snackbar-success']
     });
@@ -2890,15 +3369,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   actualizarProducto(index: number) {
     const producto = this.nuevoPresupuesto.productos[index];
 
-    // Validar valores
-    if (producto.cantidad < 1) producto.cantidad = 1;
-    if (producto.descuento < 0) producto.descuento = 0;
-    if (producto.descuento > 100) producto.descuento = 100;
-
-    // Calcular total
-    const subtotal = producto.precio * producto.cantidad;
-    const descuentoValor = subtotal * (producto.descuento / 100);
-    producto.total = subtotal - descuentoValor;
+    this.normalizarLineaPresupuesto(producto);
 
     this.calcularTotales();
   }
@@ -2918,15 +3389,124 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   calcularTotales() {
-    this.nuevoPresupuesto.subtotal = this.nuevoPresupuesto.productos
-      .reduce((sum, producto) => sum + (producto.precio * producto.cantidad), 0);
+    const opcion = this.obtenerOpcionPresupuesto(this.nuevoPresupuesto, this.opcionActivaNuevoId);
+    if (!opcion) {
+      return;
+    }
 
-    this.nuevoPresupuesto.descuentoTotal = this.nuevoPresupuesto.productos
-      .reduce((sum, producto) => sum + (producto.precio * producto.cantidad * (producto.descuento / 100)), 0);
+    this.recalcularTotalesPresupuesto(opcion as any);
+    this.sincronizarPresupuestoDesdeOpcion(this.nuevoPresupuesto, opcion);
+  }
 
-    const baseImponible = this.nuevoPresupuesto.subtotal - this.nuevoPresupuesto.descuentoTotal;
-    this.nuevoPresupuesto.iva = baseImponible * this.getIvaFactor();
-    this.nuevoPresupuesto.total = baseImponible + this.nuevoPresupuesto.iva;
+  esLineaConsulta(producto: any): boolean {
+    const tipoItem = normalizarTextoClasificacion(producto?.tipoItem);
+    const codigo = String(producto?.codigo || '').trim().toUpperCase();
+    const categoria = normalizarTextoClasificacion(this.obtenerCategoriaProductoPresupuesto(producto));
+
+    return Boolean(
+      this.normalizarBanderaBooleana(producto?.esConsulta)
+      || tipoItem === 'servicio_consulta'
+      || codigo === 'CONSULTA-MEDICA'
+      || categoria === 'consulta'
+    );
+  }
+
+  tieneConsultaEnNuevoPresupuesto(): boolean {
+    return Array.isArray(this.nuevoPresupuesto?.productos)
+      && this.nuevoPresupuesto.productos.some((producto: any) => this.esLineaConsulta(producto));
+  }
+
+  tieneConsultaEnDetalle(): boolean {
+    return Array.isArray(this.presupuestoSeleccionado?.productos)
+      && this.presupuestoSeleccionado.productos.some((producto: any) => this.esLineaConsulta(producto));
+  }
+
+  lineaAplicaIva(producto: any): boolean {
+    if (this.esLineaConsulta(producto)) {
+      return false;
+    }
+
+    return producto?.aplicaIva !== false;
+  }
+
+  private normalizarLineaPresupuesto(producto: any): void {
+    if (!producto) {
+      return;
+    }
+
+    producto.precio = Math.max(0, Number(producto.precio || 0));
+    producto.cantidad = Math.max(1, Number(producto.cantidad || 1));
+    producto.descuento = Math.max(0, Math.min(100, Number(producto.descuento || 0)));
+
+    if (this.esLineaConsulta(producto)) {
+      producto.cantidad = 1;
+      producto.descuento = 0;
+      producto.aplicaIva = false;
+      producto.tipoItem = 'servicio_consulta';
+      producto.esConsulta = true;
+    }
+
+    const subtotal = producto.precio * producto.cantidad;
+    const descuentoValor = subtotal * (producto.descuento / 100);
+    producto.total = subtotal - descuentoValor;
+  }
+
+  private recalcularTotalesPresupuesto(presupuesto: any): void {
+    const productos = Array.isArray(presupuesto?.productos) ? presupuesto.productos : [];
+
+    presupuesto.subtotal = productos
+      .reduce((sum: number, producto: any) => sum + (Number(producto.precio || 0) * Number(producto.cantidad || 1)), 0);
+
+    presupuesto.descuentoTotal = productos
+      .reduce((sum: number, producto: any) => sum + (Number(producto.precio || 0) * Number(producto.cantidad || 1) * (Number(producto.descuento || 0) / 100)), 0);
+
+    const baseImponible = productos.reduce((sum: number, producto: any) => {
+      if (!this.lineaAplicaIva(producto)) {
+        return sum;
+      }
+
+      return sum + Number(producto.total || 0);
+    }, 0);
+
+    presupuesto.iva = baseImponible * this.getIvaFactor();
+    presupuesto.total = (presupuesto.subtotal - presupuesto.descuentoTotal) + presupuesto.iva;
+  }
+
+  private async obtenerMontoConsultaSugerido(): Promise<number> {
+    try {
+      const response = await lastValueFrom(this.generarVentaService.getCostosConsulta('0'));
+      const totalConsulta = Number.parseFloat(response?.totalConsulta || '0');
+      return Number.isFinite(totalConsulta) && totalConsulta > 0 ? totalConsulta : 40;
+    } catch {
+      return 40;
+    }
+  }
+
+  private crearLineaConsultaPresupuesto(monto: number): any {
+    const precio = Math.max(0, Number(monto || 0));
+
+    return {
+      id: null,
+      productoId: null,
+      nombre: 'Consulta medica',
+      codigo: 'CONSULTA-MEDICA',
+      descripcion: 'Consulta medica',
+      precio,
+      precioUnitario: precio,
+      precioOriginal: precio,
+      moneda: this.monedaSistema,
+      monedaOriginal: this.monedaSistema,
+      tasaConversion: 1,
+      categoria: 'consulta',
+      cristalConfig: null,
+      cantidad: 1,
+      descuento: 0,
+      descuentoPorcentaje: 0,
+      total: precio,
+      aplicaIva: false,
+      tipoItem: 'servicio_consulta',
+      esConsulta: true
+    };
   }
 
   getEtiquetaIva(): string {
@@ -2941,6 +3521,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     if (!this.productosDisponiblesBase.length) {
       this.productosDisponibles = [];
       this.productosFiltrados = [];
+      this.productosCatalogoFiltrados = [];
       return;
     }
 
@@ -2949,6 +3530,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
     if (this.terminoBusqueda) {
       this.filtrarProductos();
+    }
+
+    if (this.mostrarModalCatalogoProductos) {
+      this.aplicarFiltroCatalogoProductos();
     }
   }
 
@@ -2981,6 +3566,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
       return {
         ...producto,
+        descripcion: this.obtenerDescripcionVisibleProducto(producto),
         precio: productoConvertido.precio,
         precioOriginal: productoConvertido.precioOriginal ?? producto.precioOriginal ?? producto.precio,
         moneda: productoConvertido.moneda,
@@ -2991,16 +3577,39 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     });
   }
 
+  private obtenerDescripcionVisibleProducto(producto: any): string {
+    if (!producto) {
+      return 'Producto';
+    }
+
+    const categoria = normalizarTextoClasificacion(this.obtenerCategoriaProductoPresupuesto(producto));
+    const cristalConfig = this.obtenerCristalConfigPresupuesto(producto);
+    const esCristal = categoria === 'cristales' || Boolean(cristalConfig);
+    const nombreVisible = String(producto?.nombre || producto?.producto?.nombre || '').trim();
+
+    if (!esCristal) {
+      return nombreVisible || String(producto?.descripcion || 'Producto').trim();
+    }
+
+    const descripcionCristal = parseDescripcionProductoCristal(producto?.descripcion);
+    const tipoCristal = String(cristalConfig?.tipoCristal || descripcionCristal.crystalConfig?.tipoCristal || '').trim();
+    const descripcionUsuario = String(descripcionCristal.descripcionUsuario || '').trim();
+
+    return nombreVisible || tipoCristal || descripcionUsuario || 'Cristal';
+  }
+
   private mapearProductoDisponible(producto: Producto): any {
     return {
       id: producto.id,
+      nombre: producto.nombre,
       codigo: producto.codigo,
-      descripcion: producto.descripcion || producto.nombre,
+      descripcion: this.obtenerDescripcionVisibleProducto(producto),
       precio: producto.precio,
       precioOriginal: producto.precioOriginal ?? producto.precio,
       moneda: this.normalizarCodigoMoneda(producto.moneda),
       monedaOriginal: this.normalizarCodigoMoneda(producto.monedaOriginal || producto.moneda),
       categoria: producto.categoria,
+      cristalConfig: producto.cristalConfig,
       stock: producto.stock,
       aplicaIva: producto.aplicaIva,
       tasaConversion: producto.tasaConversion ?? 1
@@ -3024,8 +3633,13 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   // En el método verDetallePresupuesto, agregar:
   verDetallePresupuesto(presupuesto: any) {
     this.presupuestoSeleccionado = JSON.parse(JSON.stringify(presupuesto)); // Copia profunda
+    this.presupuestoSeleccionado.formulaExterna = this.normalizarFormulaExternaPersistida(this.presupuestoSeleccionado?.formulaExterna);
+    this.asegurarOpcionesPresupuesto(this.presupuestoSeleccionado);
+    this.sincronizarOpcionActivaDetalle(this.presupuestoSeleccionado.opcionPrincipalId);
     this.modoEditable = false; // Siempre empieza en modo vista
     this.diasVencimientoSeleccionado = presupuesto.diasVencimiento || 7;
+    this.terminoBusquedaDetalleProducto = '';
+    this.productosDetalleFiltrados = [];
     this.mostrarModalDetallePresupuesto = true;
     this.sincronizarEstadoBodyModal();
   }
@@ -3117,12 +3731,25 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   cerrarModalDetalle(): void {
     this.mostrarModalDetallePresupuesto = false;
     this.presupuestoSeleccionado = null;
+    this.opcionActivaDetalleId = '';
+    this.terminoBusquedaDetalleProducto = '';
+    this.productosDetalleFiltrados = [];
+    this.cerrarMenuAccionesDetalleInmediato();
     this.resetearEstadoEdicion();
     this.sincronizarEstadoBodyModal();
   }
 
   puedeConvertirPresupuesto(presupuesto: any): boolean {
     if (!presupuesto) {
+      return false;
+    }
+
+    if (this.tieneVentaRegistrada(presupuesto)) {
+      return false;
+    }
+
+    const estado = String(presupuesto.estadoColor || presupuesto.estado || '').toLowerCase();
+    if (['archivado', 'anulado'].includes(estado)) {
       return false;
     }
 
@@ -3155,7 +3782,46 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     }
 
     const codigo = presupuesto?.codigo || 'este presupuesto';
+    if (this.tieneVentaRegistrada(presupuesto)) {
+      return `${codigo} ya fue convertido en venta.`;
+    }
+
+    const estado = String(presupuesto?.estadoColor || presupuesto?.estado || '').toLowerCase();
+    if (estado === 'archivado') {
+      return `${codigo} está archivado y no puede convertirse en venta.`;
+    }
+    if (estado === 'anulado') {
+      return `${codigo} está anulado y no puede convertirse en venta.`;
+    }
     return `${codigo} está vencido y no puede convertirse en venta.`;
+  }
+
+  esVentaGenerada(presupuesto: any): boolean {
+    return this.tieneVentaRegistrada(presupuesto);
+  }
+
+  private tieneVentaRegistrada(presupuesto: any): boolean {
+    if (!presupuesto) {
+      return false;
+    }
+
+    const posiblesIds = [
+      presupuesto?.ventaId,
+      presupuesto?.venta_id,
+      presupuesto?.idVenta,
+      presupuesto?.id_venta,
+      presupuesto?.venta?.id,
+      presupuesto?.ventaRelacionada?.id
+    ];
+
+    return posiblesIds.some((valor) => {
+      if (valor === null || valor === undefined) {
+        return false;
+      }
+
+      const texto = String(valor).trim().toLowerCase();
+      return texto.length > 0 && texto !== '0' && texto !== 'null' && texto !== 'undefined';
+    });
   }
 
   private sincronizarEstadoBodyModal(): void {
@@ -3163,97 +3829,406 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       || this.mostrarModalDetallePresupuesto
       || this.mostrarModalEliminar
       || this.mostrarModalConversionPresupuesto
-      || this.mostrarModalRenovarPresupuesto;
+      || this.mostrarModalRenovarPresupuesto
+      || this.mostrarModalCatalogoProductos;
 
     document.body.classList.toggle('modal-open', hayModalAbierto);
   }
 
+  private obtenerScrollModalDetalle(): number {
+    const contenedor = document.querySelector('.modal-detalle-presupuesto .scrollable-modal') as HTMLElement | null;
+    return contenedor?.scrollTop || 0;
+  }
+
+  private establecerScrollModalDetalle(posicion: number): void {
+    const contenedor = document.querySelector('.modal-detalle-presupuesto .scrollable-modal') as HTMLElement | null;
+
+    if (contenedor) {
+      contenedor.scrollTop = Math.max(0, posicion || 0);
+    }
+  }
+
   private mapearPresupuestoParaVenta(presupuesto: any): PresupuestoVentaDraft {
+    const opcionActiva = this.obtenerOpcionPresupuesto(
+      presupuesto,
+      presupuesto?.opcionPrincipalId || this.opcionActivaConversionId || this.opcionActivaDetalleId
+    );
+    const productosPresupuesto = Array.isArray(opcionActiva?.productos)
+      ? opcionActiva.productos
+      : (Array.isArray(presupuesto?.productos) ? presupuesto.productos : []);
+    const lineasPresupuesto = this.construirLineasPresupuestoVenta(productosPresupuesto);
+    const tieneLineaConsulta = lineasPresupuesto.some((linea) => linea.esConsulta === true);
+    const lineasProducto = lineasPresupuesto.filter((linea) => linea.esConsulta !== true);
+    const tieneLineasProducto = lineasProducto.length > 0;
+    const tieneCategoriaCristal = lineasProducto.some((linea) => this.esCategoriaCristalPresupuesto(linea));
+
+    const tipoVentaDerivada: 'solo_productos' | 'consulta_productos' | 'solo_consulta' =
+      tieneLineaConsulta && !tieneLineasProducto
+        ? 'solo_consulta'
+        : (tieneCategoriaCristal || (tieneLineaConsulta && tieneLineasProducto))
+          ? 'consulta_productos'
+          : 'solo_productos';
+
+    const requiereSoporteClinico = tipoVentaDerivada !== 'solo_productos';
+
+    const historiaId = presupuesto?.historiaMedicaId
+      ?? presupuesto?.historia_medica_id
+      ?? presupuesto?.historiaId
+      ?? presupuesto?.historia?.id;
+    const historiaNumero = presupuesto?.historiaNumero
+      ?? presupuesto?.historia?.nHistoria
+      ?? presupuesto?.historia?.numero;
+    const pacienteKey = presupuesto?.cliente?.key
+      ?? presupuesto?.cliente?.pacienteKey
+      ?? presupuesto?.cliente?.paciente_id
+      ?? presupuesto?.cliente?.pacienteId;
+
     return {
       origen: {
         id: presupuesto.id,
         codigo: presupuesto.codigo,
         fechaVencimiento: presupuesto.fechaVencimiento ? new Date(presupuesto.fechaVencimiento).toISOString() : undefined,
-        total: presupuesto.total ?? 0
+        total: opcionActiva?.total ?? presupuesto.total ?? 0
+      },
+      tipoVenta: tipoVentaDerivada,
+      estadoValidacionClinica: requiereSoporteClinico ? 'pendiente' : 'no_requerida',
+      requiereSoporteClinico,
+      historia: {
+        id: historiaId,
+        numero: historiaNumero,
+        pacienteKey: pacienteKey ? String(pacienteKey) : undefined,
+        pacienteId: presupuesto?.cliente?.pacienteId ?? presupuesto?.cliente?.paciente_id,
+        especialistaTipo: presupuesto?.historia?.datosConsulta?.especialista?.tipo
       },
       cliente: {
         tipoPersona: presupuesto?.cliente?.tipoPersona === 'juridica' ? 'juridica' : 'natural',
         nombreCompleto: presupuesto?.cliente?.nombreCompleto || '',
         cedula: presupuesto?.cliente?.cedula || '',
         telefono: presupuesto?.cliente?.telefono || '',
-        email: presupuesto?.cliente?.email || ''
+        email: presupuesto?.cliente?.email || '',
+        pacienteKey: pacienteKey ? String(pacienteKey) : undefined,
+        pacienteId: presupuesto?.cliente?.pacienteId ?? presupuesto?.cliente?.paciente_id
       },
       observaciones: presupuesto?.observaciones || '',
-      productos: (presupuesto?.productos || []).map((producto: any) => ({
-        id: producto?.id,
-        codigo: producto?.codigo,
-        descripcion: producto?.descripcion || producto?.nombre || 'Producto',
-        cantidad: Number(producto?.cantidad || 1),
-        precioUnitario: Number(producto?.precio || 0),
-        descuento: Number(producto?.descuento || 0),
-        totalLinea: Number(producto?.total || 0)
-      }))
+      productos: lineasPresupuesto
     };
   }
 
+  private construirLineasPresupuestoVenta(productos: any[]): PresupuestoVentaDraft['productos'] {
+    return (productos || []).map((producto: any, index: number) => {
+      const esConsulta = this.esLineaConsulta(producto);
+      const esCristalFormulado = this.esCristalFormuladoEnPresupuesto(producto);
+      const categoriaOriginal = this.obtenerCategoriaProductoPresupuesto(producto);
+      const categoria = normalizarTextoClasificacion(categoriaOriginal);
+      const cristalConfig = this.obtenerCristalConfigPresupuesto(producto);
+      const descripcion = this.obtenerDescripcionVisibleProducto(producto);
+      const nombre = normalizarTextoClasificacion(producto?.nombre || producto?.producto?.nombre);
+      const descripcionNormalizada = normalizarTextoClasificacion(descripcion);
+      const material = normalizarTextoClasificacion(producto?.material || cristalConfig?.material);
+      const codigo = normalizarTextoClasificacion(producto?.codigo);
+      const subtipo = normalizarTextoClasificacion(cristalConfig?.tipoCristal || producto?.tipoLenteContacto || '');
+      const textoPlano = [categoria, nombre, descripcionNormalizada, material, codigo]
+        .filter(Boolean)
+        .join(' | ');
+
+      const clasificacionInferida = esConsulta
+        ? {
+          tipoItem: 'servicio_consulta' as const,
+          requiereFormula: false,
+          requierePaciente: true,
+          requiereHistoriaMedica: true,
+          permiteFormulaExterna: false,
+          requiereItemPadre: false,
+          requiereProcesoTecnico: false,
+          esClasificacionConfiable: true
+        }
+        : resolverClasificacionMaestra(textoPlano, categoria, subtipo);
+
+      const clasificacion = {
+        ...clasificacionInferida,
+        tipoItem: (!esConsulta && esCristalFormulado && clasificacionInferida.tipoItem === 'inventariable')
+          ? 'base_formulado' as const
+          : clasificacionInferida.tipoItem,
+        requiereFormula: esConsulta ? false : (clasificacionInferida.requiereFormula || esCristalFormulado),
+        requierePaciente: esConsulta
+          ? true
+          : (clasificacionInferida.requierePaciente || esCristalFormulado),
+        permiteFormulaExterna: esConsulta
+          ? false
+          : (clasificacionInferida.permiteFormulaExterna || esCristalFormulado)
+      };
+
+      return {
+        lineaKey: `presupuesto-linea-${index + 1}-${String(producto?.id ?? producto?.codigo ?? 'sin-id')}`,
+        id: producto?.id,
+        codigo: producto?.codigo,
+        descripcion,
+        categoria: categoriaOriginal,
+        material: producto?.material || cristalConfig?.material,
+        cantidad: Number(producto?.cantidad || 1),
+        precioUnitario: Number(producto?.precio || 0),
+        descuento: Number(producto?.descuento || 0),
+        totalLinea: Number(producto?.total || 0),
+        tipoItem: clasificacion.tipoItem,
+        esConsulta,
+        requiereFormula: clasificacion.requiereFormula,
+        requierePaciente: clasificacion.requierePaciente,
+        requiereHistoriaMedica: clasificacion.requiereHistoriaMedica,
+        permiteFormulaExterna: clasificacion.permiteFormulaExterna,
+        requiereItemPadre: clasificacion.requiereItemPadre,
+        requiereProcesoTecnico: clasificacion.requiereProcesoTecnico,
+        origenClasificacion: 'inferido',
+        esClasificacionConfiable: clasificacion.esClasificacionConfiable,
+        configuracionTecnica: null
+      };
+    });
+  }
+
+  private esCristalFormuladoEnPresupuesto(producto: any): boolean {
+    const categoria = normalizarTextoClasificacion(this.obtenerCategoriaProductoPresupuesto(producto));
+    const cristalConfig = this.obtenerCristalConfigPresupuesto(producto);
+    const tipoCristal = normalizarTextoClasificacion(cristalConfig?.tipoCristal || producto?.tipoLenteContacto || '');
+    const tieneCristalConfig = Boolean(cristalConfig);
+    const esCristal = categoria === 'cristales' || tieneCristalConfig;
+
+    if (!esCristal) {
+      return false;
+    }
+
+    if (tipoCristal.includes('plano')) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private esCategoriaCristalPresupuesto(producto: any): boolean {
+    const categoria = normalizarTextoClasificacion(this.obtenerCategoriaProductoPresupuesto(producto));
+    return categoria === 'cristales' || categoria === 'cristal' || Boolean(this.obtenerCristalConfigPresupuesto(producto));
+  }
+
+  private obtenerCategoriaProductoPresupuesto(producto: any): string {
+    return String(
+      producto?.categoria
+      || producto?.producto?.categoria
+      || producto?.configuracionTecnica?.categoria
+      || producto?.cristalConfig?.categoria
+      || producto?.configuracionTecnica?.cristalConfig?.categoria
+      || ''
+    ).trim();
+  }
+
+  private obtenerCristalConfigPresupuesto(producto: any): any {
+    return producto?.cristalConfig || producto?.configuracionTecnica?.cristalConfig || null;
+  }
+
+  private normalizarBanderaBooleana(valor: unknown): boolean {
+    if (typeof valor === 'boolean') {
+      return valor;
+    }
+
+    if (typeof valor === 'number') {
+      return valor === 1;
+    }
+
+    if (typeof valor === 'string') {
+      const texto = valor.trim().toLowerCase();
+
+      if (['true', '1', 'si', 'sí', 'yes'].includes(texto)) {
+        return true;
+      }
+
+      if (['false', '0', 'no', 'null', 'undefined', ''].includes(texto)) {
+        return false;
+      }
+    }
+
+    return Boolean(valor);
+  }
+
+  onCambioFormulaExternaNuevo(activa: boolean): void {
+    this.asegurarFormulaExternaEnPresupuesto(this.nuevoPresupuesto);
+    this.nuevoPresupuesto.formulaExterna.activa = Boolean(activa);
+  }
+
+  esFormulaExternaActivaNuevo(): boolean {
+    return this.normalizarBanderaBooleana(this.nuevoPresupuesto?.formulaExterna?.activa);
+  }
+
+  esFormulaExternaCompletaNuevo(): boolean {
+    return this.esFormulaExternaCompletaPresupuesto(this.nuevoPresupuesto);
+  }
+
+  debeBloquearSeleccionProductosPorFormulaExterna(): boolean {
+    return this.esFormulaExternaActivaNuevo() && !this.esFormulaExternaCompletaNuevo();
+  }
+
+  onCambioFormulaExternaDetalle(activa: boolean): void {
+    this.asegurarFormulaExternaEnPresupuesto(this.presupuestoSeleccionado);
+    this.presupuestoSeleccionado.formulaExterna.activa = Boolean(activa);
+  }
+
+  esFormulaExternaActivaDetalle(): boolean {
+    return this.normalizarBanderaBooleana(this.presupuestoSeleccionado?.formulaExterna?.activa);
+  }
+
+  esFormulaExternaCompletaDetalle(): boolean {
+    return this.esFormulaExternaCompletaPresupuesto(this.presupuestoSeleccionado);
+  }
+
+  debeBloquearSeleccionProductosPorFormulaExternaDetalle(): boolean {
+    return this.esFormulaExternaActivaDetalle() && !this.esFormulaExternaCompletaDetalle();
+  }
+
+  getMensajeFormulaExternaIncompleta(): string {
+    return 'Para fórmula externa, completa refracción final (OD/OI: esfera, cilindro y eje) antes de agregar productos.';
+  }
+
+  private crearRefraccionFinalVacia(): any {
+    return {
+      od: { esfera: null, cilindro: null, eje: null, adicion: null, alt: null, dp: null },
+      oi: { esfera: null, cilindro: null, eje: null, adicion: null, alt: null, dp: null }
+    };
+  }
+
+  private normalizarFormulaExternaPersistida(formulaExterna: any): any {
+    const refraccion = formulaExterna?.refraccionFinal || {};
+    const normalizarValor = (valor: unknown): string | null => {
+      const texto = String(valor ?? '').trim();
+      return texto.length > 0 ? texto : null;
+    };
+
+    return {
+      activa: this.normalizarBanderaBooleana(formulaExterna?.activa),
+      refraccionFinal: {
+        od: {
+          esfera: normalizarValor(refraccion?.od?.esfera),
+          cilindro: normalizarValor(refraccion?.od?.cilindro),
+          eje: normalizarValor(refraccion?.od?.eje),
+          adicion: normalizarValor(refraccion?.od?.adicion),
+          alt: normalizarValor(refraccion?.od?.alt),
+          dp: normalizarValor(refraccion?.od?.dp)
+        },
+        oi: {
+          esfera: normalizarValor(refraccion?.oi?.esfera),
+          cilindro: normalizarValor(refraccion?.oi?.cilindro),
+          eje: normalizarValor(refraccion?.oi?.eje),
+          adicion: normalizarValor(refraccion?.oi?.adicion),
+          alt: normalizarValor(refraccion?.oi?.alt),
+          dp: normalizarValor(refraccion?.oi?.dp)
+        }
+      }
+    };
+  }
+
+  private tieneValorFormula(valor: unknown): boolean {
+    return String(valor ?? '').trim().length > 0;
+  }
+
+  private asegurarFormulaExternaEnPresupuesto(presupuesto: any): void {
+    if (!presupuesto) {
+      return;
+    }
+
+    if (!presupuesto.formulaExterna) {
+      presupuesto.formulaExterna = {
+        activa: false,
+        refraccionFinal: this.crearRefraccionFinalVacia()
+      };
+    }
+
+    if (!presupuesto.formulaExterna.refraccionFinal) {
+      presupuesto.formulaExterna.refraccionFinal = this.crearRefraccionFinalVacia();
+    }
+  }
+
+  private esFormulaExternaCompletaPresupuesto(presupuesto: any): boolean {
+    const refraccion = presupuesto?.formulaExterna?.refraccionFinal;
+    if (!refraccion) {
+      return false;
+    }
+
+    return this.tieneValorFormula(refraccion?.od?.esfera)
+      && this.tieneValorFormula(refraccion?.od?.cilindro)
+      && this.tieneValorFormula(refraccion?.od?.eje)
+      && this.tieneValorFormula(refraccion?.oi?.esfera)
+      && this.tieneValorFormula(refraccion?.oi?.cilindro)
+      && this.tieneValorFormula(refraccion?.oi?.eje);
+  }
+
+  private construirObservacionesConFormulaExterna(presupuesto: any): string {
+    const observacionesBase = String(presupuesto?.observaciones || '').trim();
+
+    if (!this.normalizarBanderaBooleana(presupuesto?.formulaExterna?.activa)) {
+      return observacionesBase;
+    }
+
+    const refraccion = presupuesto?.formulaExterna?.refraccionFinal;
+    const odEsf = String(refraccion?.od?.esfera || '').trim();
+    const odCil = String(refraccion?.od?.cilindro || '').trim();
+    const odEje = String(refraccion?.od?.eje || '').trim();
+    const odAdd = String(refraccion?.od?.adicion || '').trim();
+    const odAlt = String(refraccion?.od?.alt || '').trim();
+    const odDp = String(refraccion?.od?.dp || '').trim();
+    const oiEsf = String(refraccion?.oi?.esfera || '').trim();
+    const oiCil = String(refraccion?.oi?.cilindro || '').trim();
+    const oiEje = String(refraccion?.oi?.eje || '').trim();
+    const oiAdd = String(refraccion?.oi?.adicion || '').trim();
+    const oiAlt = String(refraccion?.oi?.alt || '').trim();
+    const oiDp = String(refraccion?.oi?.dp || '').trim();
+
+    const resumenFormula = [
+      'FORMULA_EXTERNA',
+      `OD(${odEsf}/${odCil}x${odEje}${odAdd ? ` ADD ${odAdd}` : ''}${odAlt ? ` ALT ${odAlt}` : ''}${odDp ? ` DP ${odDp}` : ''})`,
+      `OI(${oiEsf}/${oiCil}x${oiEje}${oiAdd ? ` ADD ${oiAdd}` : ''}${oiAlt ? ` ALT ${oiAlt}` : ''}${oiDp ? ` DP ${oiDp}` : ''})`
+    ].filter(Boolean).join(' | ');
+
+    if (!observacionesBase) {
+      return resumenFormula;
+    }
+
+    if (observacionesBase.includes('FORMULA_EXTERNA')) {
+      return observacionesBase;
+    }
+
+    return `${observacionesBase} | ${resumenFormula}`;
+  }
+
   // Método para guardar cambios del presupuesto
-  guardarCambiosPresupuesto(): void {
+  async guardarCambiosPresupuesto(): Promise<void> {
     if (!this.presupuestoSeleccionado) return;
+
+    if (this.esFormulaExternaActivaDetalle() && !this.esFormulaExternaCompletaDetalle()) {
+      this.snackBar.open(this.getMensajeFormulaExternaIncompleta(), 'Cerrar', {
+        duration: 3500,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
 
     // Actualizar días de vencimiento según la selección actual
     if (this.modoEditable) {
       this.presupuestoSeleccionado.diasVencimiento = this.diasVencimientoSeleccionado;
     }
 
-    // Buscar y actualizar el presupuesto en la lista correspondiente
-    let listaPresupuestos: any[];
-    let indice: number;
+    try {
+      const actualizado = await lastValueFrom(
+        this.presupuestoService.actualizarPresupuesto(
+          Number(this.presupuestoSeleccionado.id),
+          this.construirPayloadPresupuesto(this.presupuestoSeleccionado)
+        )
+      );
 
-    // Determinar en qué lista está el presupuesto
-    if (this.presupuestoSeleccionado.estadoColor === 'vencido') {
-      listaPresupuestos = this.presupuestosVencidos;
-    } else {
-      listaPresupuestos = this.presupuestosVigentes;
-    }
-
-    indice = listaPresupuestos.findIndex(p => p.id === this.presupuestoSeleccionado.id);
-
-    if (indice !== -1) {
-      // Si cambió de estado, moverlo a la lista correspondiente
-      const presupuestoOriginal = listaPresupuestos[indice];
-
-      if (presupuestoOriginal.estadoColor !== this.presupuestoSeleccionado.estadoColor) {
-        // Remover de la lista actual
-        listaPresupuestos.splice(indice, 1);
-
-        // Agregar a la nueva lista
-        if (this.presupuestoSeleccionado.estadoColor === 'vencido') {
-          this.presupuestosVencidos.push(this.presupuestoSeleccionado);
-        } else {
-          this.presupuestosVigentes.push(this.presupuestoSeleccionado);
-        }
-      } else {
-        // Actualizar en la misma lista
-        listaPresupuestos[indice] = { ...this.presupuestoSeleccionado };
-      }
-
-      // Recalcular estadísticas
-      this.aplicarPresupuestosDesdeFuente(this.obtenerTodosLosPresupuestos());
-
-      // Mostrar mensaje de éxito
+      await this.cargarPresupuestosDesdeApi(false);
       this.snackBar.open('Presupuesto actualizado correctamente', 'Cerrar', {
         duration: 3000,
         panelClass: ['snackbar-success']
       });
 
-      // Cerrar modal
+      this.presupuestoSeleccionado = JSON.parse(JSON.stringify(actualizado));
       this.cerrarModalDetalle();
-    } else {
-      // Si no se encuentra, mostrar error
-      this.snackBar.open('Error: No se encontró el presupuesto', 'Cerrar', {
-        duration: 3000,
-        panelClass: ['snackbar-error']
-      });
+    } catch (error) {
+      console.error('Error actualizando presupuesto:', error);
     }
   }
 
