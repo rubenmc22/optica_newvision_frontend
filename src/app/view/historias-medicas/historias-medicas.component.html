@@ -936,39 +936,6 @@
               </div>
               </div>
 
-              <div class="formula-externa-nota-global" *ngIf="esMedicoExternoSeleccionado()">
-                <div class="nota-header">
-                  <i class="bi bi-info-circle-fill"></i>
-                  <strong>📋 Registro de Fórmula Externa</strong>
-                </div>
-                <div class="nota-body">
-                  <p>Active esta opción cuando el paciente acuda con una <strong>fórmula externa</strong> (prescripción
-                    de otro médico).</p>
-                  <div class="nota-casos">
-                    <div class="caso">
-                      <i class="bi bi-file-text"></i>
-                      <div>
-                        <strong>🔹 Solo registro:</strong> Seleccione <strong>MÉDICO EXTERNO</strong> y complete los
-                        datos del médico referido.
-                      </div>
-                    </div>
-                    <div class="caso">
-                      <i class="bi bi-arrow-repeat"></i>
-                      <div>
-                        <strong>🔹 Rectificación:</strong> Si el paciente requiere <strong>ajuste de la
-                          fórmula</strong>, debe seleccionar un especialista interno (Oftalmólogo u Optometrista) y
-                        realizar una nueva consulta.
-                      </div>
-                    </div>
-                  </div>
-                  <div class="nota-ejemplo">
-                    <i class="bi bi-lightbulb"></i>
-                    <span><strong>Ejemplo:</strong> Paciente trae fórmula del Dr. Juan Pérez. Si solo registramos la
-                      fórmula → seleccionar MÉDICO EXTERNO. Si necesita ajuste → seleccionar especialista interno y
-                      realizar nueva consulta.</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -1001,73 +968,106 @@
             <div class="section-content">
               <!-- CAMPOS PARA FÓRMULA EXTERNA (DENTRO DEL CONTENT) -->
               <div class="formula-externa-fields" *ngIf="historiaForm.get('esFormulaExterna')?.value">
-                <!-- Grid de campos -->
-                <div class="formula-externa-grid">
-                  <div class="formula-externa-grid-item">
-                    <div class="form-group-moderno">
-                      <label class="form-label-moderno">
-                        <i class="bi bi-person-badge me-2"></i>
-                        Médico Oftalmólogo Referido <span class="required">*</span>
-                      </label>
-                      <input type="text" class="form-control-moderno" formControlName="medicoReferido"
-                        placeholder="Nombre del médico que emitió la fórmula...">
-                      <small class="form-text text-muted">
-                        <i class="bi bi-info-circle"></i>
-                        Nombre del especialista externo que realizó la fórmula
-                      </small>
-                      <div class="form-error"
-                        *ngIf="historiaForm.get('medicoReferido')?.invalid && historiaForm.get('medicoReferido')?.touched">
-                        <i class="bi bi-exclamation-circle"></i> Este campo es requerido para fórmula externa
+                <div class="formula-externa-shell">
+                  <div class="formula-externa-hero">
+                    <div class="formula-externa-hero__main">
+                        <div class="formula-externa-hero__eyebrow">Formulario clínico</div>
+                      <h6 class="formula-externa-hero__title">Formulación externa</h6>
+                      <p class="formula-externa-hero__description">
+                          Registre el origen de la fórmula y, si existe presupuesto previo, cárguelo para precargar la
+                          refracción final y las recomendaciones.
+                      </p>
+                    </div>
+
+                    <div class="formula-externa-hero__status">
+                      <div class="formula-externa-status-pill formula-externa-status-pill--mode">
+                        <i class="bi" [ngClass]="historiaForm.get('medico')?.value?.id === 'EXTERNO' ? 'bi-box-arrow-up-right' : 'bi-arrow-repeat'"></i>
+                        {{ historiaForm.get('medico')?.value?.id === 'EXTERNO' ? 'Registro externo' : 'Rectificación' }}
+                      </div>
+                      <div class="formula-externa-status-pill formula-externa-status-pill--cost"
+                        [class.formula-externa-status-pill--warning]="esOftalmologoSeleccionado() && historiaForm.get('medico')?.value?.id !== 'EXTERNO'"
+                        [class.formula-externa-status-pill--info]="!esOftalmologoSeleccionado() || historiaForm.get('medico')?.value?.id === 'EXTERNO'">
+                        <i class="bi" [ngClass]="esOftalmologoSeleccionado() && historiaForm.get('medico')?.value?.id !== 'EXTERNO' ? 'bi-cash-coin' : 'bi-stars'"></i>
+                        {{ esOftalmologoSeleccionado() && historiaForm.get('medico')?.value?.id !== 'EXTERNO' ? 'Con costo de consulta' : 'Sin costo clínico' }}
                       </div>
                     </div>
                   </div>
 
-                  <div class="formula-externa-grid-item">
-                    <div class="form-group-moderno">
-                      <label class="form-label-moderno">
-                        <i class="bi bi-geo-alt me-2"></i>
-                        Lugar del Consultorio <span class="required">*</span>
-                      </label>
-                      <input type="text" class="form-control-moderno" formControlName="lugarConsultorio"
-                        placeholder="Ciudad, clínica o consultorio...">
-                      <small class="form-text text-muted">
-                        <i class="bi bi-info-circle"></i>
-                        Ubicación donde se realizó la consulta externa
-                      </small>
-                      <div class="form-error"
-                        *ngIf="historiaForm.get('lugarConsultorio')?.invalid && historiaForm.get('lugarConsultorio')?.touched">
-                        <i class="bi bi-exclamation-circle"></i> Este campo es requerido para fórmula externa
+                  <div class="formula-externa-grid">
+                    <div class="formula-externa-grid-item">
+                      <div class="formula-externa-card formula-externa-card--doctor">
+                        <div class="formula-externa-card__header">
+                          <span class="formula-externa-card__icon"><i class="bi bi-person-badge"></i></span>
+                          <div>
+                            <strong>Médico referido</strong>
+                            <small>Especialista que emitió la fórmula original</small>
+                          </div>
+                        </div>
+
+                        <div class="form-group-moderno">
+                          <label class="form-label-moderno">
+                            Nombre del médico <span class="required">*</span>
+                          </label>
+                          <input type="text" class="form-control-moderno" formControlName="medicoReferido"
+                            placeholder="Nombre del médico que emitió la fórmula...">
+                          <div class="form-error"
+                            *ngIf="historiaForm.get('medicoReferido')?.invalid && historiaForm.get('medicoReferido')?.touched">
+                            <i class="bi bi-exclamation-circle"></i> Este campo es requerido para fórmula externa
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="formula-externa-grid-item">
+                      <div class="formula-externa-card formula-externa-card--location">
+                        <div class="formula-externa-card__header">
+                          <span class="formula-externa-card__icon"><i class="bi bi-geo-alt"></i></span>
+                          <div>
+                            <strong>Origen de la atención</strong>
+                            <small>Ciudad, clínica o consultorio donde se emitió la fórmula</small>
+                          </div>
+                        </div>
+
+                        <div class="form-group-moderno">
+                          <label class="form-label-moderno">
+                            Lugar del consultorio <span class="required">*</span>
+                          </label>
+                          <input type="text" class="form-control-moderno" formControlName="lugarConsultorio"
+                            placeholder="Ciudad, clínica o consultorio...">
+                          <div class="form-error"
+                            *ngIf="historiaForm.get('lugarConsultorio')?.invalid && historiaForm.get('lugarConsultorio')?.touched">
+                            <i class="bi bi-exclamation-circle"></i> Este campo es requerido para fórmula externa
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <!-- Mensaje informativo según el caso -->
-                <div class="formula-externa-info"
-                  *ngIf="historiaForm.get('medico')?.value && historiaForm.get('medico')?.value?.id !== 'EXTERNO'">
-                  <i class="bi bi-arrow-repeat"></i>
-                  <span>
-                    <strong>Rectificación de fórmula externa:</strong>
-                    El especialista {{ getNombreMedicoSeleccionado() }}
-                    verificará y ajustará la fórmula del Dr. {{ historiaForm.get('medicoReferido')?.value || 'externo'
-                    }}.
-                    <span *ngIf="esOftalmologoSeleccionado()" class="badge bg-warning text-dark ms-2">
-                      <i class="bi bi-cash"></i> Generará costo de consulta
-                    </span>
-                    <span *ngIf="esOptometristaSeleccionado()" class="badge bg-info text-dark ms-2">
-                      <i class="bi bi-gift"></i> Sin costo
-                    </span>
-                  </span>
-                </div>
+                  <div class="formula-externa-import-actions">
+                    <div class="formula-externa-import-copy">
+                      <div class="formula-externa-import-copy__eyebrow">Importación inteligente</div>
+                      <strong>Presupuesto previo del paciente</strong>
+                      <small>
+                        Cargue el presupuesto para precargar refracción final y recomendaciones de forma automática.
+                      </small>
+                      <span class="recomendaciones-header-copy__budget"
+                        *ngIf="presupuestoImportadoEnHistoriaCodigo as presupuestoCodigo">
+                        <i class="bi bi-check2-circle"></i>
+                        Presupuesto aplicado: {{ presupuestoCodigo }}
+                        <span *ngIf="getResumenImportacionPresupuestoHistoria() as resumenImportacion">
+                          · {{ resumenImportacion }}
+                        </span>
+                      </span>
+                    </div>
 
-                <div class="formula-externa-info"
-                  *ngIf="!historiaForm.get('medico')?.value || historiaForm.get('medico')?.value?.id === 'EXTERNO'">
-                  <i class="bi bi-box-arrow-up-right"></i>
-                  <span>
-                    <strong>Fórmula externa pura:</strong>
-                    Solo se registrará la fórmula del Dr. {{ historiaForm.get('medicoReferido')?.value || 'externo' }}.
-                    <span class="badge bg-secondary text-white ms-2">Sin costo</span>
-                  </span>
+                    <button class="btn-agregar-recomendacion btn-cargar-presupuesto" type="button"
+                      (click)="importarRecomendacionesDesdePresupuestoPorCedula()"
+                      [disabled]="cargandoPresupuestoPorCedula || !puedeImportarPresupuestoPorCedula()"
+                      title="Buscar presupuesto por cédula del paciente">
+                      <i class="bi bi-search"></i>
+                      {{ cargandoPresupuestoPorCedula ? 'Buscando presupuesto...' : 'Cargar desde presupuesto por cédula' }}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1618,12 +1618,20 @@
               <div class="section-icon">
                 <i class="bi bi-chat-square-text"></i>
               </div>
-              <div class="section-title-content">
-                <h6 class="section-title">Recomendaciones/Indicaciones</h6>
-                <button class="btn-agregar-recomendacion" type="button" (click)="agregarRecomendacion()">
-                  <i class="bi bi-plus-circle"></i>
-                  Añadir recomendación
-                </button>
+              <div class="section-title-content section-title-content--recomendaciones">
+                <div class="recomendaciones-header-copy">
+                  <h6 class="section-title">Recomendaciones/Indicaciones</h6>
+                  <small class="recomendaciones-header-copy__hint">
+                    Complete aquí las recomendaciones finales para la historia y ajuste los productos si hace falta.
+                  </small>
+                </div>
+
+                <div class="recomendaciones-header-actions">
+                  <button class="btn-agregar-recomendacion" type="button" (click)="agregarRecomendacion()">
+                    <i class="bi bi-plus-circle"></i>
+                    Añadir recomendación
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1632,8 +1640,16 @@
                 <div *ngFor="let grupo of recomendaciones.controls; let i = index" [formGroupName]="i"
                   class="recomendacion-card">
                   <div class="recomendacion-header">
-                    <i class="bi bi-eyeglasses"></i>
-                    <span>Recomendación #{{ i + 1 }}</span>
+                    <div class="recomendacion-header__left">
+                      <span class="recomendacion-header__badge">
+                        <i class="bi bi-eyeglasses"></i>
+                        Recomendación #{{ i + 1 }}
+                      </span>
+                      <div class="recomendacion-header__title-group" *ngIf="getMetaRecomendacionImportada(i) as metaImportada">
+                        <strong>{{ metaImportada.nombre }}</strong>
+                        <small>{{ metaImportada.detalle }}</small>
+                      </div>
+                    </div>
                     <button class="btn-eliminar-recomendacion" type="button" (click)="eliminarRecomendacion(i)"
                       *ngIf="recomendaciones.length > 1">
                       <i class="bi bi-trash"></i>

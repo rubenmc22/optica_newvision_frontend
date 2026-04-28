@@ -92,6 +92,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     private readonly historiaVentaHandoffStorageKey = HISTORIA_VENTA_HANDOFF_STORAGE_KEY;
     private paymentCatalogSubscription?: Subscription;
     private historiaVentaHandoffPendiente: HistoriaVentaHandoff | null = null;
+    private historiaPresupuestoPendienteId: string | null = null;
 
     @ViewChild('productoSelect', { static: false }) productoSelect!: NgSelectComponent;
     @ViewChild('selectorPaciente', { static: false }) selectorPaciente!: NgSelectComponent;
@@ -471,12 +472,20 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.tasasPorId = Object.fromEntries(tasas.map(t => [t.id, t.valor]));
 
             this.actualizarProductosConDetalle();
-            if (this.historiaVentaHandoffPendiente) {
+            const presupuestoCargado = this.cargarPresupuestoPendienteSiExiste();
+            if (presupuestoCargado) {
+                this.limpiarHistoriaVentaHandoffSilencioso();
+            } else if (this.historiaVentaHandoffPendiente) {
                 this.cargarVentaDesdeHistoriaPendienteSiExiste();
-            } else {
-                this.cargarPresupuestoPendienteSiExiste();
             }
             this.completarTarea();
+        }, () => {
+            this.swalService.showError(
+                'Error de carga inicial',
+                'No se pudo cargar la información para generar la venta. Intenta nuevamente.'
+            );
+            this.completarTarea();
+            this.loader.forceHide();
         });
     }
 
@@ -551,10 +560,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
     }
 
-    private cargarPresupuestoPendienteSiExiste(): void {
+    private cargarPresupuestoPendienteSiExiste(): boolean {
         const draftRaw = sessionStorage.getItem(this.presupuestoVentaStorageKey);
         if (!draftRaw) {
-            return;
+            return false;
         }
 
         let draft: PresupuestoVentaDraft | null = null;
@@ -563,20 +572,31 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             draft = JSON.parse(draftRaw) as PresupuestoVentaDraft;
         } catch {
             sessionStorage.removeItem(this.presupuestoVentaStorageKey);
-            return;
+            return false;
         }
 
         if (!draft || !Array.isArray(draft.productos) || draft.productos.length === 0) {
             sessionStorage.removeItem(this.presupuestoVentaStorageKey);
-            return;
+            return false;
         }
 
         this.aplicarPresupuestoComoVentaEditable(draft);
         sessionStorage.removeItem(this.presupuestoVentaStorageKey);
+        return true;
+    }
+
+    private limpiarHistoriaVentaHandoffSilencioso(): void {
+        this.historiaVentaHandoffPendiente = null;
+        sessionStorage.removeItem(this.historiaVentaHandoffStorageKey);
     }
 
     private aplicarPresupuestoComoVentaEditable(draft: PresupuestoVentaDraft): void {
-        this.seleccionarTipoVenta('solo_productos');
+        const tipoVentaDerivada: 'solo_consulta' | 'consulta_productos' | 'solo_productos' =
+            draft.tipoVenta === 'consulta_productos' || draft.tipoVenta === 'solo_consulta'
+                ? draft.tipoVenta
+                : 'solo_productos';
+
+        this.seleccionarTipoVenta(tipoVentaDerivada);
         this.presupuestoOrigenVenta = draft.origen;
 
         this.clienteSinPaciente = {
@@ -596,7 +616,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         let productosCargados = 0;
         let productosOmitidos = 0;
 
-        draft.productos.forEach((productoDraft) => {
+        const lineasConsulta = draft.productos.filter((linea) => this.esLineaConsultaDraft(linea));
+        const lineasProducto = draft.productos.filter((linea) => !this.esLineaConsultaDraft(linea));
+
+        lineasProducto.forEach((productoDraft) => {
             const productoCatalogo = this.buscarProductoParaPresupuesto(productoDraft);
 
             if (!productoCatalogo) {
@@ -627,10 +650,34 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             productosCargados++;
         });
 
+        if (lineasConsulta.length > 0) {
+            const montoConsultaDraft = lineasConsulta.reduce((sum, linea) => {
+                const totalLinea = Number(linea.totalLinea || 0);
+                if (totalLinea > 0) {
+                    return sum + totalLinea;
+                }
+
+                const cantidad = Math.max(1, Number(linea.cantidad || 1));
+                const precio = Number(linea.precioUnitario || 0);
+                const descuento = Math.max(0, Number(linea.descuento || 0));
+                const subtotal = precio * cantidad;
+                return sum + (subtotal * (1 - (descuento / 100)));
+            }, 0);
+
+            const montoConsultaNormalizado = this.redondear(Math.max(0, montoConsultaDraft));
+            this.montoConsulta = montoConsultaNormalizado;
+            this.montoConsultaOriginal = montoConsultaNormalizado;
+            this.pagoMedico = montoConsultaNormalizado;
+            this.pagoOptica = 0;
+            this.consultaEnCarrito = true;
+        }
+
         this.actualizarProductosConDetalle();
         this.cdr.detectChanges();
 
-        if (productosCargados === 0) {
+        this.aplicarContextoClinicoPresupuesto(draft, tipoVentaDerivada);
+
+        if (productosCargados === 0 && lineasConsulta.length === 0) {
             this.presupuestoOrigenVenta = null;
             this.snackBar.open(`No se pudieron cargar los productos del presupuesto ${draft.origen.codigo} en ventas`, 'Cerrar', {
                 duration: 5000,
@@ -639,14 +686,85 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
+        const partesMensaje: string[] = [];
+        if (productosCargados > 0) {
+            partesMensaje.push(`${productosCargados} producto(s)`);
+        }
+        if (lineasConsulta.length > 0) {
+            partesMensaje.push(`${lineasConsulta.length} consulta(s)`);
+        }
+
+        const detalleCarga = partesMensaje.length > 0 ? partesMensaje.join(' y ') : 'líneas del presupuesto';
         const mensaje = productosOmitidos > 0
-            ? `Presupuesto ${draft.origen.codigo} cargado con ${productosCargados} productos. ${productosOmitidos} no se encontraron en inventario.`
-            : `Presupuesto ${draft.origen.codigo} cargado en ventas. Puedes ajustar cliente, productos y pago antes de guardar.`;
+            ? `Presupuesto ${draft.origen.codigo} cargado con ${detalleCarga}. ${productosOmitidos} producto(s) no se encontraron en inventario.`
+            : `Presupuesto ${draft.origen.codigo} cargado en ventas con ${detalleCarga}. Puedes ajustar cliente, productos y pago antes de guardar.`;
 
         this.snackBar.open(mensaje, 'Cerrar', {
             duration: 5000,
             panelClass: ['snackbar-info']
         });
+    }
+
+    private aplicarContextoClinicoPresupuesto(
+        draft: PresupuestoVentaDraft,
+        tipoVentaDerivada: 'solo_productos' | 'consulta_productos' | 'solo_consulta'
+    ): void {
+        if (!this.esTipoVentaConHistoria(tipoVentaDerivada)) {
+            this.historiaPresupuestoPendienteId = null;
+            return;
+        }
+
+        const paciente = this.buscarPacienteParaDraftPresupuesto(draft);
+        if (!paciente) {
+            this.snackBar.open(
+                'El presupuesto requiere historia clinica. Selecciona un paciente para continuar con consulta + productos.',
+                'Cerrar',
+                {
+                    duration: 5000,
+                    panelClass: ['snackbar-warning']
+                }
+            );
+            return;
+        }
+
+        this.historiaPresupuestoPendienteId = draft.historia?.id !== undefined && draft.historia?.id !== null
+            ? String(draft.historia.id)
+            : null;
+
+        this.seleccionarPaciente(paciente);
+    }
+
+    private buscarPacienteParaDraftPresupuesto(draft: PresupuestoVentaDraft): Paciente | null {
+        const pacienteKey = draft.historia?.pacienteKey || draft.cliente?.pacienteKey;
+        const pacienteId = draft.historia?.pacienteId ?? draft.cliente?.pacienteId;
+        const cedula = (draft.cliente?.cedula || '').trim().toLowerCase();
+
+        return this.todosLosPacientes.find((item) => {
+            const coincideKey = !!pacienteKey && String(item.key || '') === String(pacienteKey);
+            const coincideId = pacienteId !== undefined && pacienteId !== null && String(item.id || '') === String(pacienteId);
+            const cedulaPaciente = String(item.informacionPersonal?.cedula || '').trim().toLowerCase();
+            const coincideCedula = !!cedula && cedulaPaciente === cedula;
+            return coincideKey || coincideId || coincideCedula;
+        }) || null;
+    }
+
+    private aplicarHistoriaPresupuestoPendienteSiExiste(): void {
+        if (!this.historiaPresupuestoPendienteId || this.historiasMedicas.length === 0) {
+            return;
+        }
+
+        const historia = this.historiasMedicas.find((item) => String(item.id || '') === this.historiaPresupuestoPendienteId);
+        this.historiaPresupuestoPendienteId = null;
+
+        if (!historia) {
+            this.snackBar.open('Se cargo el paciente del presupuesto, pero no se encontro la historia vinculada.', 'Cerrar', {
+                duration: 4500,
+                panelClass: ['snackbar-warning']
+            });
+            return;
+        }
+
+        this.seleccionarHistoria(historia);
     }
 
     private buscarProductoParaPresupuesto(productoDraft: PresupuestoVentaDraft['productos'][number]): Producto | undefined {
@@ -655,6 +773,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const coincideCodigo = !!productoDraft.codigo && producto.codigo === productoDraft.codigo;
             return coincideId || coincideCodigo;
         });
+    }
+
+    private esLineaConsultaDraft(linea: PresupuestoVentaDraft['productos'][number]): boolean {
+        const codigo = String(linea?.codigo || '').trim().toUpperCase();
+        return linea?.esConsulta === true
+            || linea?.tipoItem === 'servicio_consulta'
+            || codigo === 'CONSULTA-MEDICA'
+            || codigo === 'SERVICIO';
     }
 
     private resetearCarga(): void {
@@ -718,7 +844,20 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.historiaService.getHistoriasPorPaciente(pacienteKey).pipe(take(1)).subscribe({
             next: (historiales: any[]) => {
                 if (!historiales || historiales.length === 0) {
-                    // ... código existente ...
+                    this.historiasMedicas = [];
+                    this.historiaSeleccionadaId = null;
+                    this.historiaMedica = null;
+                    this.historiaMedicaSeleccionada = null;
+                    this.historiaPresupuestoPendienteId = null;
+                    this.snackBar.open(
+                        'El paciente no tiene historias medicas disponibles. Puedes continuar y crear una nueva consulta.',
+                        'Cerrar',
+                        {
+                            duration: 4500,
+                            panelClass: ['snackbar-warning']
+                        }
+                    );
+                    this.completarTarea();
                     return;
                 }
 
@@ -804,6 +943,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 });
 
                 this.aplicarHistoriaVentaHandoffSiExiste();
+                this.aplicarHistoriaPresupuestoPendienteSiExiste();
                 this.completarTarea();
             },
             error: (error) => {

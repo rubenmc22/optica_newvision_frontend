@@ -6282,7 +6282,22 @@
         font-weight: 500;
         display: flex;
         align-items: center;
-        background: var(--degradado-color) !important;
+        background: linear-gradient(135deg, #2f6f9d 0%, #3f8ec3 100%) !important;
+        border: none !important;
+        color: #ffffff !important;
+
+        &:hover:not(:disabled) {
+            box-shadow: 0 8px 20px rgba(47, 111, 157, 0.32);
+            transform: translateY(-1px);
+        }
+
+        &:disabled {
+            background: #9fb7cb !important;
+            color: #f3f6f9 !important;
+            box-shadow: none;
+            transform: none;
+            opacity: 1;
+        }
 
         .btn-detalle__label--mobile {
             display: none;

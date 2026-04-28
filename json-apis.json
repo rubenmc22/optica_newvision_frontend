@@ -251,6 +251,170 @@
         "montoOriginal": 60
     }
 }
+
+// =========================
+// PRESUPUESTOS - CRUD API
+// =========================
+
+// GET /api/presupuestos-get
+// Lista todos los presupuestos de la sede activa.
+// El response devuelve opcionPrincipalId, opciones[], formulaExterna y productos[] como espejo de la opcion principal.
+
+// GET /api/presupuestos-get/:id
+// Obtiene el detalle de un presupuesto con el mismo shape usado por el frontend.
+
+// POST /api/presupuestos-add
+{
+    "cliente": {
+        "tipoPersona": "natural",
+        "cedula": "24367965",
+        "nombreCompleto": "Ruben Dario Martinez Castro",
+        "telefono": "04123920817",
+        "email": "rubemm@gmail.com",
+        "direccion": "Guatire, Miranda"
+    },
+    "fechaCreacion": "2026-04-27T10:00:00.000Z",
+    "fechaVencimiento": "2026-05-04T10:00:00.000Z",
+    "diasVencimiento": 7,
+    "vendedor": "Ruben Martinez",
+    "observaciones": "Paciente solicita comparar monturas con dos progresivos.",
+    "estado": "vigente",
+    "ivaPorcentaje": 16,
+    "formulaExterna": {
+        "activa": true,
+        "refraccionFinal": {
+            "od": {
+                "esfera": "+0.25",
+                "cilindro": "-0.50",
+                "eje": "4",
+                "adicion": "+1.25",
+                "alt": "10",
+                "dp": "10"
+            },
+            "oi": {
+                "esfera": "+0.25",
+                "cilindro": "-0.25",
+                "eje": "3",
+                "adicion": "+1.25",
+                "alt": "20",
+                "dp": "20"
+            }
+        }
+    },
+    "opcionPrincipalId": "opcion-2",
+    "opciones": [
+        {
+            "id": "opcion-1",
+            "nombre": "Opcion 1",
+            "observaciones": "Montura demo con progresivo digital intermedio.",
+            "esPrincipal": false,
+            "subtotal": 93.1,
+            "descuentoTotal": 0,
+            "iva": 14.9,
+            "total": 108,
+            "productos": [
+                {
+                    "productoId": 40,
+                    "codigo": "PR-000040",
+                    "descripcion": "Progresivo digital intermedio CR-39",
+                    "precioUnitario": 43.1,
+                    "cantidad": 1,
+                    "descuentoPorcentaje": 0,
+                    "moneda": "USD",
+                    "precioOriginal": 43.1,
+                    "monedaOriginal": "USD",
+                    "tasaConversion": 1
+                },
+                {
+                    "productoId": 36,
+                    "codigo": "PR-000036",
+                    "descripcion": "Monturas New Vision Demo Demo_Ejecutivo Acetato",
+                    "precioUnitario": 50,
+                    "cantidad": 1,
+                    "descuentoPorcentaje": 0,
+                    "moneda": "USD",
+                    "precioOriginal": 50,
+                    "monedaOriginal": "USD",
+                    "tasaConversion": 1
+                }
+            ]
+        },
+        {
+            "id": "opcion-2",
+            "nombre": "Opcion 2",
+            "observaciones": "Mantiene la montura y cambia a progresivo premium.",
+            "esPrincipal": true,
+            "subtotal": 150,
+            "descuentoTotal": 0,
+            "iva": 24,
+            "total": 174,
+            "productos": [
+                {
+                    "productoId": 48,
+                    "codigo": "PR-000048",
+                    "descripcion": "Progresivo premium",
+                    "precioUnitario": 100,
+                    "cantidad": 1,
+                    "descuentoPorcentaje": 0,
+                    "moneda": "USD",
+                    "precioOriginal": 100,
+                    "monedaOriginal": "USD",
+                    "tasaConversion": 1
+                },
+                {
+                    "productoId": 36,
+                    "codigo": "PR-000036",
+                    "descripcion": "Monturas New Vision Demo Demo_Ejecutivo Acetato",
+                    "precioUnitario": 50,
+                    "cantidad": 1,
+                    "descuentoPorcentaje": 0,
+                    "moneda": "USD",
+                    "precioOriginal": 50,
+                    "monedaOriginal": "USD",
+                    "tasaConversion": 1
+                }
+            ]
+        }
+    ],
+    "productos": [
+        {
+            "productoId": 48,
+            "codigo": "PR-000048",
+            "descripcion": "Progresivo premium",
+            "precioUnitario": 100,
+            "cantidad": 1,
+            "descuentoPorcentaje": 0,
+            "moneda": "USD",
+            "precioOriginal": 100,
+            "monedaOriginal": "USD",
+            "tasaConversion": 1
+        },
+        {
+            "productoId": 36,
+            "codigo": "PR-000036",
+            "descripcion": "Monturas New Vision Demo Demo_Ejecutivo Acetato",
+            "precioUnitario": 50,
+            "cantidad": 1,
+            "descuentoPorcentaje": 0,
+            "moneda": "USD",
+            "precioOriginal": 50,
+            "monedaOriginal": "USD",
+            "tasaConversion": 1
+        }
+    ]
+}
+
+// PUT /api/presupuestos-update/:id
+// Usa el mismo payload de crear presupuesto.
+// El backend recalcula subtotal, descuento, IVA y total por opcion, guarda opciones[] en JSON y persiste productos[] solo para la opcion principal.
+
+// PUT /api/presupuestos-renovar/:id
+{
+    "dias": 7
+}
+
+// DELETE /api/presupuestos-delete/:id
+// Elimina logicamente el presupuesto.
 // [version nueva con metodos de pago]
 //Crear venta - de contado
 {
@@ -2655,6 +2819,8 @@ INVENTARIO - APIS DE PRODUCTOS
 // - marca en cristales es opcional
 // - presentacion en cristales es obligatoria solo cuando en frontend se usa selector con opciones precargadas
 // - add/update siguen usando multipart/form-data, pero los campos de negocio por categoria viajan serializados dentro de su *Config
+// - para categorias no cristal el nombre comercial se genera automaticamente con formato tipo lista de precios: CATEGORIA MARCA MODELO MATERIAL (solo con los campos que apliquen)
+// - ejemplos esperados de nombre automatico: MONTURAS CARRERA 8847 ACETATO, ESTUCHES RAYBAN HARDCASE CUERO, ACCESORIOS ZEISS CORDON MICROFIBRA
 
 // GET /producto-get
 {

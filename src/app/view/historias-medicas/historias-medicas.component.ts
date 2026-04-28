@@ -47,6 +47,8 @@ import { UserStateService } from '../../core/services/userState/user-state-servi
 import { EmpleadosService } from './../../core/services/empleados/empleados.service';
 import { ProductoService } from '../productos/producto.service';
 import { Producto } from '../productos/producto.model';
+import { PresupuestoService } from '../ventas/presupuesto/presupuesto.service';
+import { OpcionPresupuesto, Presupuesto, ProductoPresupuesto } from '../ventas/presupuesto/presupuesto.interfaz';
 import {
   HISTORIA_VENTA_HANDOFF_STORAGE_KEY,
   HistoriaVentaHandoff
@@ -54,6 +56,14 @@ import {
 
 interface ProductoRecomendableOption extends Producto {
   disabled: boolean;
+}
+
+interface OpcionPresupuestoImportableHistoria {
+  nombre: string;
+  detalle: string;
+  esPrincipal: boolean;
+  productos: Producto[];
+  observaciones: string;
 }
 
 
@@ -142,6 +152,10 @@ export class HistoriasMedicasComponent implements OnInit {
   mostrarMedidasProgresivo: boolean[] = [];
   mostrarTipoLentesContacto: boolean[] = [];
   mostrarMaterialPersonalizado: boolean[] = [];
+  cargandoPresupuestoPorCedula = false;
+  autoAgregarRecomendacionesDesdePresupuesto = false;
+  presupuestoImportadoEnHistoriaCodigo: string | null = null;
+  recomendacionesImportadasDesdePresupuestoMeta: OpcionPresupuestoImportableHistoria[] = [];
   private readonly controlesNgSelectHistoria: string[] = [
     'medico',
     'tipoCristalActual',
@@ -180,6 +194,7 @@ export class HistoriasMedicasComponent implements OnInit {
     private snackBar: MatSnackBar,
     private empleadosService: EmpleadosService,
     private productoService: ProductoService,
+    private presupuestoService: PresupuestoService,
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
@@ -500,6 +515,7 @@ export class HistoriasMedicasComponent implements OnInit {
   crearHistoriaNueva(): void {
     this.historiaEnEdicion = this.generarHistoria('crear');
     this.modoEdicion = false;
+    this.resetearImportacionPresupuestoHistoria();
     this.onMotivoChange([]);
 
     // Resetear arrays de visibilidad a estado inicial
@@ -633,6 +649,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
   private precargarHistoriaSeleccionada(): void {
     this.modoEdicion = true;
+    this.resetearImportacionPresupuestoHistoria();
     this.historiaForm.reset();
 
     const h = this.historiaEnEdicion!;
@@ -913,6 +930,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.historiaForm.reset();
     this.resetearCamposSelectDeHistoria();
+    this.resetearImportacionPresupuestoHistoria();
     this.historiaForm.patchValue({ paciente: pacienteInicial }, { emitEvent: false });
     this.recomendaciones.clear();
 
@@ -1229,7 +1247,12 @@ export class HistoriasMedicasComponent implements OnInit {
           }
 
           if (result.isDenied && paciente) {
-            this.iniciarGeneracionVentaDesdeHistoria(paciente, historiaCreada, 'consulta_productos');
+            this.iniciarGeneracionVentaDesdeHistoria(
+              paciente,
+              historiaCreada,
+              'consulta_productos',
+              this.autoAgregarRecomendacionesDesdePresupuesto
+            );
             return;
           }
 
@@ -1286,7 +1309,8 @@ export class HistoriasMedicasComponent implements OnInit {
   private iniciarGeneracionVentaDesdeHistoria(
     paciente: Paciente,
     historia: HistoriaMedica,
-    tipoVenta: 'solo_consulta' | 'consulta_productos'
+    tipoVenta: 'solo_consulta' | 'consulta_productos',
+    autoAgregarRecomendaciones: boolean = false
   ): void {
     const handoff: HistoriaVentaHandoff = {
       origen: 'historia-medica',
@@ -1295,7 +1319,7 @@ export class HistoriasMedicasComponent implements OnInit {
       historiaId: String(historia.id || ''),
       historiaNumero: String(historia.nHistoria || '').trim() || undefined,
       tipoVenta,
-      autoAgregarRecomendaciones: false
+      autoAgregarRecomendaciones: tipoVenta === 'consulta_productos' && autoAgregarRecomendaciones
     };
 
     try {
@@ -1709,6 +1733,13 @@ export class HistoriasMedicasComponent implements OnInit {
 
   agregarRecomendacion(): void {
     this.recomendaciones.push(this.crearRecomendacion());
+    this.recomendacionesImportadasDesdePresupuestoMeta.push({
+      nombre: '',
+      detalle: '',
+      esPrincipal: false,
+      productos: [],
+      observaciones: ''
+    });
 
     // Añadir entradas en los arrays de visibilidad
     this.mostrarMedidasProgresivo.push(false);
@@ -1721,6 +1752,447 @@ export class HistoriasMedicasComponent implements OnInit {
 
     // Forzar detección de cambios
     this.cdr.detectChanges();
+  }
+
+  private resetearImportacionPresupuestoHistoria(): void {
+    this.autoAgregarRecomendacionesDesdePresupuesto = false;
+    this.presupuestoImportadoEnHistoriaCodigo = null;
+    this.recomendacionesImportadasDesdePresupuestoMeta = [];
+  }
+
+  puedeImportarPresupuestoPorCedula(): boolean {
+    return !!this.obtenerCedulaPacienteParaPresupuesto();
+  }
+
+  importarRecomendacionesDesdePresupuestoPorCedula(): void {
+    const cedula = this.obtenerCedulaPacienteParaPresupuesto();
+    if (!cedula) {
+      this.snackBar.open('Seleccione un paciente con cédula para buscar su presupuesto.', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    this.cargandoPresupuestoPorCedula = true;
+
+    this.presupuestoService.getPresupuestos().subscribe({
+      next: async (presupuestos) => {
+        this.cargandoPresupuestoPorCedula = false;
+
+        const presupuestosPorCedula = this.filtrarPresupuestosPorCedula(presupuestos, cedula);
+        if (presupuestosPorCedula.length === 0) {
+          this.snackBar.open('No se encontraron presupuestos para la cédula del paciente.', 'Cerrar', {
+            duration: 4500,
+            panelClass: ['snackbar-warning']
+          });
+          return;
+        }
+
+        const presupuestoSeleccionado = await this.resolverPresupuestoParaImportacion(presupuestosPorCedula);
+        if (!presupuestoSeleccionado) {
+          return;
+        }
+
+        const opcionesImportables = this.extraerOpcionesPresupuestoImportables(presupuestoSeleccionado);
+        const totalProductosImportables = opcionesImportables.reduce((total, opcion) => total + opcion.productos.length, 0);
+
+        if (opcionesImportables.length === 0) {
+          this.snackBar.open(
+            `Se encontró el presupuesto ${presupuestoSeleccionado.codigo}, pero no hay productos disponibles en inventario para importarlo.`,
+            'Cerrar',
+            {
+              duration: 5500,
+              panelClass: ['snackbar-warning']
+            }
+          );
+          return;
+        }
+
+        this.aplicarContextoFormulaExternaDesdePresupuesto(presupuestoSeleccionado);
+        this.aplicarOpcionesPresupuestoEnRecomendaciones(presupuestoSeleccionado, opcionesImportables);
+
+        this.snackBar.open(
+          `Presupuesto ${presupuestoSeleccionado.codigo} importado: ${opcionesImportables.length} opción(es) convertidas en recomendaciones con ${totalProductosImportables} producto(s) en total.`,
+          'Cerrar',
+          {
+            duration: 5500,
+            panelClass: ['snackbar-success']
+          }
+        );
+      },
+      error: () => {
+        this.cargandoPresupuestoPorCedula = false;
+        this.snackBar.open('No se pudieron consultar los presupuestos por cédula.', 'Cerrar', {
+          duration: 4500,
+          panelClass: ['snackbar-error']
+        });
+      }
+    });
+  }
+
+  private async resolverPresupuestoParaImportacion(presupuestos: Presupuesto[]): Promise<Presupuesto | null> {
+    const ordenados = [...presupuestos].sort((a, b) => {
+      const aArchivado = String(a?.estado || '').trim().toLowerCase() === 'archivado';
+      const bArchivado = String(b?.estado || '').trim().toLowerCase() === 'archivado';
+
+      if (aArchivado !== bArchivado) {
+        return Number(aArchivado) - Number(bArchivado);
+      }
+
+      return this.obtenerTimestampPresupuesto(b) - this.obtenerTimestampPresupuesto(a);
+    });
+
+    if (ordenados.length === 1) {
+      return ordenados[0];
+    }
+
+    const inputOptions = ordenados.reduce((acc, presupuesto, index) => {
+      acc[String(index)] = this.getEtiquetaPresupuestoParaSelector(presupuesto);
+      return acc;
+    }, {} as Record<string, string>);
+
+    const seleccion = await this.swalService.showInfo(
+      'Seleccionar presupuesto',
+      `Se encontraron ${ordenados.length} presupuestos para esta cédula. Elija cuál desea cargar en recomendaciones.`,
+      {
+        customClass: {
+          actions: 'swal-modern-actions swal-modern-actions--presupuesto-select'
+        },
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Cargar presupuesto',
+        input: 'select',
+        inputOptions,
+        inputValue: '0',
+        inputPlaceholder: 'Seleccione un presupuesto',
+        allowOutsideClick: false
+      }
+    );
+
+    if (!seleccion?.isConfirmed) {
+      this.snackBar.open('Importación de presupuesto cancelada.', 'Cerrar', {
+        duration: 2500,
+        panelClass: ['snackbar-info']
+      });
+      return null;
+    }
+
+    const indexSeleccionado = Number(seleccion.value);
+    if (!Number.isFinite(indexSeleccionado) || !ordenados[indexSeleccionado]) {
+      return ordenados[0];
+    }
+
+    return ordenados[indexSeleccionado];
+  }
+
+  private getEtiquetaPresupuestoParaSelector(presupuesto: Presupuesto): string {
+    const codigo = String(presupuesto?.codigo || 'Sin codigo').trim();
+    const fecha = this.getFechaPresupuestoParaSelector(presupuesto);
+    const estado = this.getEstadoPresupuestoParaSelector(presupuesto);
+    const total = this.getTotalPresupuestoParaSelector(presupuesto);
+    const opciones = this.getCantidadOpcionesPresupuestoParaImportacion(presupuesto);
+
+    return `${codigo} · ${fecha} · ${estado} · ${total} · ${opciones} opción(es)`;
+  }
+
+  private getFechaPresupuestoParaSelector(presupuesto: Presupuesto): string {
+    const fechaRaw = (presupuesto as any)?.fechaCreacion || (presupuesto as any)?.created_at;
+    if (!fechaRaw) {
+      return 'Sin fecha';
+    }
+
+    return this.formatearFecha(fechaRaw as string);
+  }
+
+  private getEstadoPresupuestoParaSelector(presupuesto: Presupuesto): string {
+    const estado = String((presupuesto as any)?.estadoColor || presupuesto?.estado || '').trim().toLowerCase();
+    const mapaEstados: Record<string, string> = {
+      vigente: 'Vigente',
+      proximo: 'Proximo a vencer',
+      hoy: 'Vence hoy',
+      vencido: 'Vencido',
+      archivado: 'Archivado',
+      anulado: 'Anulado',
+      convertido: 'Convertido'
+    };
+
+    return mapaEstados[estado] || 'Estado no definido';
+  }
+
+  private getTotalPresupuestoParaSelector(presupuesto: Presupuesto): string {
+    const total = Number((presupuesto as any)?.total || 0);
+    return `Total: ${total.toFixed(2)}`;
+  }
+
+  private obtenerCedulaPacienteParaPresupuesto(): string {
+    const pacienteFormulario = this.historiaForm.get('paciente')?.value;
+    const cedula = pacienteFormulario?.informacionPersonal?.cedula
+      || this.pacienteParaNuevaHistoria?.informacionPersonal?.cedula
+      || this.pacienteSeleccionado?.informacionPersonal?.cedula
+      || '';
+
+    return String(cedula || '').trim();
+  }
+
+  private filtrarPresupuestosPorCedula(presupuestos: Presupuesto[], cedula: string): Presupuesto[] {
+    const cedulaObjetivo = this.normalizarTextoBusquedaPresupuesto(cedula);
+    if (!cedulaObjetivo) {
+      return [];
+    }
+
+    return (presupuestos || []).filter((presupuesto) => {
+      const cedulaPresupuesto = this.normalizarTextoBusquedaPresupuesto(presupuesto?.cliente?.cedula);
+      return !!cedulaPresupuesto && cedulaPresupuesto === cedulaObjetivo;
+    });
+  }
+
+  private obtenerTimestampPresupuesto(presupuesto: Presupuesto | null | undefined): number {
+    const fechaRaw = (presupuesto as any)?.fechaCreacion || (presupuesto as any)?.created_at || '';
+    const timestamp = new Date(fechaRaw).getTime();
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  }
+
+  private mapearLineasPresupuestoAProductosRecomendables(lineas: ProductoPresupuesto[]): Producto[] {
+    const productosMapeados: Producto[] = [];
+    const idsAgregados = new Set<string>();
+
+    lineas.forEach((linea) => {
+      if (this.esLineaConsultaPresupuesto(linea)) {
+        return;
+      }
+
+      const productoEncontrado = this.buscarProductoRecomendableDesdeLineaPresupuesto(linea);
+      const productoId = String(productoEncontrado?.id || '').trim();
+
+      if (!productoEncontrado || !productoId || idsAgregados.has(productoId)) {
+        return;
+      }
+
+      idsAgregados.add(productoId);
+      productosMapeados.push(productoEncontrado);
+    });
+
+    return productosMapeados;
+  }
+
+  private getCantidadOpcionesPresupuestoParaImportacion(presupuesto: Presupuesto | null | undefined): number {
+    return this.obtenerOpcionesPresupuestoParaHistoria(presupuesto).length;
+  }
+
+  private obtenerOpcionesPresupuestoParaHistoria(presupuesto: Presupuesto | null | undefined): OpcionPresupuesto[] {
+    if (Array.isArray(presupuesto?.opciones) && presupuesto.opciones.length > 0) {
+      const opcionPrincipalId = String(presupuesto?.opcionPrincipalId || '').trim();
+
+      return presupuesto.opciones.map((opcion, index) => ({
+        ...opcion,
+        id: String(opcion?.id || `opcion-${index + 1}`),
+        nombre: String(opcion?.nombre || `Opción ${index + 1}`).trim(),
+        productos: Array.isArray(opcion?.productos) ? opcion.productos : [],
+        esPrincipal: opcionPrincipalId ? opcion.id === opcionPrincipalId : Boolean(opcion?.esPrincipal)
+      }));
+    }
+
+    return [{
+      id: String(presupuesto?.opcionPrincipalId || 'opcion-1'),
+      nombre: 'Opción 1',
+      productos: Array.isArray(presupuesto?.productos) ? presupuesto.productos : [],
+      subtotal: Number(presupuesto?.subtotal || 0),
+      descuentoTotal: Number(presupuesto?.descuentoTotal || 0),
+      iva: Number(presupuesto?.iva || 0),
+      total: Number(presupuesto?.total || 0),
+      observaciones: String(presupuesto?.observaciones || ''),
+      esPrincipal: true
+    }];
+  }
+
+  private extraerOpcionesPresupuestoImportables(presupuesto: Presupuesto): OpcionPresupuestoImportableHistoria[] {
+    return this.obtenerOpcionesPresupuestoParaHistoria(presupuesto)
+      .map((opcion, index) => {
+        const productos = this.mapearLineasPresupuestoAProductosRecomendables(Array.isArray(opcion?.productos) ? opcion.productos : []);
+
+        return {
+          nombre: String(opcion?.nombre || `Opción ${index + 1}`).trim(),
+          detalle: `${productos.length} producto(s)${opcion?.esPrincipal ? ' · Principal' : ''}`,
+          esPrincipal: Boolean(opcion?.esPrincipal),
+          productos,
+          observaciones: String(opcion?.observaciones || '').trim()
+        };
+      })
+      .filter((opcion) => opcion.productos.length > 0);
+  }
+
+  private esLineaConsultaPresupuesto(linea: ProductoPresupuesto | null | undefined): boolean {
+    const codigo = String((linea as any)?.codigo || '').trim().toUpperCase();
+    const descripcion = String((linea as any)?.descripcion || '').trim().toLowerCase();
+
+    return codigo === 'CONSULTA-MEDICA' || descripcion.includes('consulta medica');
+  }
+
+  private buscarProductoRecomendableDesdeLineaPresupuesto(linea: ProductoPresupuesto): Producto | null {
+    const idLinea = String((linea as any)?.id || '').trim();
+    const codigoLinea = this.normalizarTextoBusquedaPresupuesto((linea as any)?.codigo);
+    const descripcionLinea = this.normalizarTextoBusquedaPresupuesto((linea as any)?.descripcion);
+
+    if (idLinea) {
+      const porId = this.productosRecomendables.find((producto) => String(producto.id || '').trim() === idLinea);
+      if (porId) {
+        return porId;
+      }
+    }
+
+    if (codigoLinea) {
+      const porCodigo = this.productosRecomendables.find((producto) =>
+        this.normalizarTextoBusquedaPresupuesto(producto.codigo) === codigoLinea
+      );
+      if (porCodigo) {
+        return porCodigo;
+      }
+    }
+
+    if (!descripcionLinea) {
+      return null;
+    }
+
+    return this.productosRecomendables.find((producto) => {
+      const nombreNormalizado = this.normalizarTextoBusquedaPresupuesto(producto.nombre);
+      const descripcionNormalizada = this.normalizarTextoBusquedaPresupuesto(producto.descripcion);
+
+      return nombreNormalizado === descripcionLinea
+        || descripcionNormalizada === descripcionLinea
+        || descripcionLinea.includes(nombreNormalizado)
+        || nombreNormalizado.includes(descripcionLinea);
+    }) || null;
+  }
+
+  private normalizarTextoBusquedaPresupuesto(valor: unknown): string {
+    return String(valor || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  private aplicarContextoFormulaExternaDesdePresupuesto(presupuesto: Presupuesto): void {
+    const medicoExterno = this.medicoTratanteConExterno.find((medico) => medico.id === 'EXTERNO') || {
+      id: 'EXTERNO',
+      nombre: '🔷 MÉDICO EXTERNO',
+      cedula: 'EXTERNO',
+      cargoId: 'externo',
+      cargoNombre: 'Médico Externo'
+    };
+    const medicoReferidoActual = String(this.historiaForm.get('medicoReferido')?.value || '');
+    const lugarConsultorioActual = String(this.historiaForm.get('lugarConsultorio')?.value || '');
+
+    this.historiaForm.patchValue({ medico: medicoExterno }, { emitEvent: false });
+    this.onMedicoChange(medicoExterno);
+
+    this.historiaForm.patchValue({
+      esFormulaExterna: true,
+      medicoReferido: medicoReferidoActual,
+      lugarConsultorio: lugarConsultorioActual
+    }, { emitEvent: false });
+
+    // Precargar refracción final si existe en el presupuesto
+    if (presupuesto.formulaExterna && typeof presupuesto.formulaExterna === 'object' && presupuesto.formulaExterna.refraccionFinal) {
+      const refraccionFinal = presupuesto.formulaExterna.refraccionFinal;
+      this.historiaForm.patchValue({
+        ref_final_esf_od: refraccionFinal?.od?.esfera ?? null,
+        ref_final_cil_od: refraccionFinal?.od?.cilindro ?? null,
+        ref_final_eje_od: this.normalizarValorEjeFormulaExterna(refraccionFinal?.od?.eje),
+        ref_final_add_od: refraccionFinal?.od?.adicion ?? null,
+        ref_final_alt_od: refraccionFinal?.od?.alt ?? '',
+        ref_final_dp_od: refraccionFinal?.od?.dp ?? '',
+        ref_final_esf_oi: refraccionFinal?.oi?.esfera ?? null,
+        ref_final_cil_oi: refraccionFinal?.oi?.cilindro ?? null,
+        ref_final_eje_oi: this.normalizarValorEjeFormulaExterna(refraccionFinal?.oi?.eje),
+        ref_final_add_oi: refraccionFinal?.oi?.adicion ?? null,
+        ref_final_alt_oi: refraccionFinal?.oi?.alt ?? '',
+        ref_final_dp_oi: refraccionFinal?.oi?.dp ?? ''
+      }, { emitEvent: false });
+      this.normalizarControlesNgSelectVacios();
+    }
+
+    this.onFormulaExternaChange();
+  }
+
+  private normalizarValorEjeFormulaExterna(valor: unknown): number | null {
+    const texto = String(valor ?? '').replace('°', '').trim();
+    if (!texto) {
+      return null;
+    }
+
+    const numero = Number(texto);
+    if (!Number.isFinite(numero) || numero < 1 || numero > 180) {
+      return null;
+    }
+
+    return numero;
+  }
+
+  private aplicarOpcionesPresupuestoEnRecomendaciones(
+    presupuesto: Presupuesto,
+    opcionesImportables: OpcionPresupuestoImportableHistoria[]
+  ): void {
+    this.recomendaciones.clear();
+    this.mostrarMedidasProgresivo = [];
+    this.mostrarTipoLentesContacto = [];
+    this.mostrarMaterialPersonalizado = [];
+    this.opcionesCategoriasRecomendablesCache = [];
+    this.productosCategoriasRecomendablesCache = [];
+    this.recomendacionesImportadasDesdePresupuestoMeta = [];
+
+    opcionesImportables.forEach((opcion, index) => {
+      const grupo = this.crearRecomendacion();
+      this.recomendaciones.push(grupo);
+      this.mostrarMedidasProgresivo.push(false);
+      this.mostrarTipoLentesContacto.push(false);
+      this.mostrarMaterialPersonalizado.push(false);
+
+      const categorias = this.getCategoriasRecomendadas(index);
+      categorias.clear();
+
+      opcion.productos.forEach((producto) => {
+        const categoriaNormalizada = this.normalizarCategoriaRecomendable(producto.categoria) || 'accesorios';
+        categorias.push(this.crearCategoriaRecomendada({
+          categoria: categoriaNormalizada,
+          producto: this.normalizarProductoRecomendado(producto)
+        }));
+      });
+
+      grupo.patchValue({
+        observaciones: [
+          `Importado desde presupuesto ${presupuesto.codigo}`,
+          opcion.nombre,
+          opcion.esPrincipal ? 'opción principal' : '',
+          opcion.observaciones
+        ].filter(Boolean).join(' · ')
+      }, { emitEvent: false });
+
+      this.sincronizarEstadoCategoriasRecomendacion(index);
+      this.refrescarOpcionesCategoriasRecomendables(index);
+      this.refrescarProductosCategoriasRecomendables(index);
+      this.onProductoCategoriaChange(index);
+      this.recomendacionesImportadasDesdePresupuestoMeta.push(opcion);
+    });
+
+    this.autoAgregarRecomendacionesDesdePresupuesto = true;
+    this.presupuestoImportadoEnHistoriaCodigo = String(presupuesto.codigo || '').trim() || null;
+    this.cdr.detectChanges();
+  }
+
+  getResumenImportacionPresupuestoHistoria(): string | null {
+    const cantidad = this.recomendacionesImportadasDesdePresupuestoMeta.length;
+
+    if (cantidad <= 0) {
+      return null;
+    }
+
+    return cantidad === 1 ? '1 opción importada' : `${cantidad} opciones importadas`;
+  }
+
+  getMetaRecomendacionImportada(index: number): OpcionPresupuestoImportableHistoria | null {
+    const meta = this.recomendacionesImportadasDesdePresupuestoMeta[index];
+    return meta?.nombre ? meta : null;
   }
 
   agregarCategoriaRecomendada(index: number): void {
@@ -1740,6 +2212,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
   eliminarRecomendacion(index: number): void {
     this.recomendaciones.removeAt(index);
+    this.recomendacionesImportadasDesdePresupuestoMeta.splice(index, 1);
 
     this.mostrarMedidasProgresivo.splice(index, 1);
     this.mostrarTipoLentesContacto.splice(index, 1);
@@ -2956,6 +3429,7 @@ export class HistoriasMedicasComponent implements OnInit {
   limpiarModal(): void {
     this.historiaEnEdicion = null;
     this.modoEdicion = false;
+    this.resetearImportacionPresupuestoHistoria();
 
     // Resetear el formulario completo
     this.historiaForm.reset();
