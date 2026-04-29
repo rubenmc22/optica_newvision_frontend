@@ -2,6 +2,17 @@ export interface Presupuesto {
     id?: number;
     codigo: string;
     cliente: Cliente;
+    historiaMedicaId?: string | number | null;
+    historiaNumero?: string | null;
+    pacienteKeyOrigen?: string | null;
+    pacienteIdOrigen?: string | null;
+    historia?: {
+        id?: string | number | null;
+        numero?: string | null;
+        pacienteKey?: string | null;
+        pacienteId?: string | null;
+        especialistaTipo?: string | null;
+    };
     fechaCreacion: Date;
     fechaVencimiento: Date;
     diasVencimiento: number;
@@ -60,6 +71,8 @@ export interface Cliente {
     direccion?: string;
     razonSocial?: string;
     tipoPersona: 'natural' | 'juridica';
+    pacienteKey?: string | null;
+    pacienteId?: string | null;
 }
 
 export interface ProductoPresupuesto {

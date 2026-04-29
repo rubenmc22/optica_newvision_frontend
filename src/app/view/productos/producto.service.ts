@@ -124,7 +124,14 @@ export class ProductoService {
         estucheConfig,
         accesorioConfig
       }) || String(dto.descripcion ?? '').trim());
-    const nombreVisible = String(dto.nombre ?? '').trim() || this.construirNombreProductoDto(categoriaNormalizada, {
+    const nombreVisible = this.obtenerNombreDesdeConfig(dto, {
+      cristalConfig,
+      monturaConfig,
+      lenteContactoConfig,
+      liquidoConfig,
+      estucheConfig,
+      accesorioConfig
+    }) || this.construirNombreProductoDto(categoriaNormalizada, {
       cristalConfig,
       monturaConfig,
       lenteContactoConfig,
@@ -248,6 +255,7 @@ export class ProductoService {
       ...legacyConfig,
       ...dtoCristalConfig,
       categoria: dtoCristalConfig?.categoria ?? dto.categoria ?? 'Cristales',
+      nombre: dtoCristalConfig?.nombre ?? '',
       marca: marcaLegacy,
       tipoCristal: dtoCristalConfig?.tipoCristal ?? dtoCristalConfig?.modelo ?? dto.modelo ?? '',
       presentacion: presentacionLegacy,
@@ -263,6 +271,7 @@ export class ProductoService {
   private mapMonturaConfig(dto: ProductoDto): ProductoMonturaConfig {
     return {
       categoria: dto.monturaConfig?.categoria ?? dto.categoria ?? 'Monturas',
+      nombre: dto.monturaConfig?.nombre ?? '',
       marca: dto.monturaConfig?.marca ?? dto.marca ?? '',
       modelo: dto.monturaConfig?.modelo ?? dto.modelo ?? '',
       color: dto.monturaConfig?.color ?? dto.color ?? '',
@@ -275,6 +284,7 @@ export class ProductoService {
   private mapLenteContactoConfig(dto: ProductoDto): ProductoLenteContactoConfig {
     return {
       categoria: dto.lenteContactoConfig?.categoria ?? dto.categoria ?? 'Lentes de contacto',
+      nombre: dto.lenteContactoConfig?.nombre ?? '',
       marca: dto.lenteContactoConfig?.marca ?? dto.marca ?? '',
       tipoLenteContacto: dto.lenteContactoConfig?.tipoLenteContacto ?? dto.lenteContactoConfig?.modelo ?? dto.modelo ?? '',
       modelo: dto.lenteContactoConfig?.modelo ?? dto.lenteContactoConfig?.tipoLenteContacto ?? dto.modelo ?? '',
@@ -289,6 +299,7 @@ export class ProductoService {
   private mapLiquidoConfig(dto: ProductoDto): ProductoLiquidoConfig {
     return {
       categoria: dto.liquidoConfig?.categoria ?? dto.categoria ?? 'Líquidos',
+      nombre: dto.liquidoConfig?.nombre ?? '',
       marca: dto.liquidoConfig?.marca ?? dto.marca ?? '',
       modelo: dto.liquidoConfig?.modelo ?? dto.modelo ?? '',
       proveedor: dto.liquidoConfig?.proveedor ?? dto.proveedor ?? '',
@@ -299,6 +310,7 @@ export class ProductoService {
   private mapEstucheConfig(dto: ProductoDto): ProductoEstucheConfig {
     return {
       categoria: dto.estucheConfig?.categoria ?? dto.categoria ?? 'Estuches',
+      nombre: dto.estucheConfig?.nombre ?? '',
       marca: dto.estucheConfig?.marca ?? dto.marca ?? '',
       modelo: dto.estucheConfig?.modelo ?? dto.modelo ?? '',
       material: dto.estucheConfig?.material ?? dto.material ?? '',
@@ -310,6 +322,7 @@ export class ProductoService {
   private mapAccesorioConfig(dto: ProductoDto): ProductoAccesorioConfig {
     return {
       categoria: dto.accesorioConfig?.categoria ?? dto.categoria ?? 'Accesorios',
+      nombre: dto.accesorioConfig?.nombre ?? '',
       marca: dto.accesorioConfig?.marca ?? dto.marca ?? '',
       modelo: dto.accesorioConfig?.modelo ?? dto.modelo ?? '',
       color: dto.accesorioConfig?.color ?? dto.color ?? '',
@@ -439,6 +452,29 @@ export class ProductoService {
       ?? configs.estucheConfig?.descripcion
       ?? configs.accesorioConfig?.descripcion
       ?? dto.descripcion
+      ?? ''
+    ).trim();
+  }
+
+  private obtenerNombreDesdeConfig(
+    dto: ProductoDto,
+    configs: {
+      cristalConfig?: ProductoCristalConfig;
+      monturaConfig?: ProductoMonturaConfig;
+      lenteContactoConfig?: ProductoLenteContactoConfig;
+      liquidoConfig?: ProductoLiquidoConfig;
+      estucheConfig?: ProductoEstucheConfig;
+      accesorioConfig?: ProductoAccesorioConfig;
+    }
+  ): string {
+    return String(
+      configs.cristalConfig?.nombre
+      ?? configs.monturaConfig?.nombre
+      ?? configs.lenteContactoConfig?.nombre
+      ?? configs.liquidoConfig?.nombre
+      ?? configs.estucheConfig?.nombre
+      ?? configs.accesorioConfig?.nombre
+      ?? dto.nombre
       ?? ''
     ).trim();
   }

@@ -6,6 +6,7 @@ $shell-gap: 1rem;
 $surface-white: rgba(255, 255, 255, 0.94);
 $surface-border: rgba(148, 163, 184, 0.22);
 $surface-shadow: 0 24px 50px rgba(15, 23, 42, 0.12);
+$shell-brand-surface: linear-gradient(135deg, rgba(15, 35, 63, 0.96) 0%, rgba(37, 85, 135, 0.93) 100%);
 
 :host {
   display: block;
@@ -77,8 +78,7 @@ $surface-shadow: 0 24px 50px rgba(15, 23, 42, 0.12);
   gap: 1.1rem;
   padding: 1.1rem;
   border-radius: 28px;
-  background:
-    linear-gradient(180deg, rgba(14, 30, 54, 0.96) 0%, rgba(31, 62, 103, 0.98) 54%, rgba(53, 111, 161, 0.95) 100%);
+  background: $shell-brand-surface;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 30px 60px rgba(15, 23, 42, 0.28);
   overflow-y: auto;
@@ -362,7 +362,7 @@ $surface-shadow: 0 24px 50px rgba(15, 23, 42, 0.12);
   gap: 1rem;
   padding: 1rem 1.1rem;
   border-radius: 28px;
-  background: linear-gradient(135deg, rgba(15, 35, 63, 0.96) 0%, rgba(37, 85, 135, 0.93) 100%);
+  background: $shell-brand-surface;
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: $surface-shadow;
   backdrop-filter: blur(14px);

@@ -2,7 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@an
 import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, of, forkJoin } from 'rxjs';
+import { Observable, of, forkJoin, lastValueFrom } from 'rxjs';
 import { take, catchError } from 'rxjs/operators';
 import * as bootstrap from 'bootstrap';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -53,6 +53,14 @@ import {
   HISTORIA_VENTA_HANDOFF_STORAGE_KEY,
   HistoriaVentaHandoff
 } from '../ventas/shared/historia-venta-handoff.util';
+import { historiaPuedeCobrarConsulta } from '../ventas/shared/historia-consulta-payment.util';
+import {
+  PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY,
+  HistoriaPresupuestoHandoff,
+  HistoriaPresupuestoOpcionDraft,
+  HistoriaPresupuestoProductoDraft,
+  PresupuestoHistoriaReturnDraft
+} from '../ventas/shared/historia-presupuesto-handoff.util';
 
 interface ProductoRecomendableOption extends Producto {
   disabled: boolean;
@@ -154,6 +162,7 @@ export class HistoriasMedicasComponent implements OnInit {
   mostrarMaterialPersonalizado: boolean[] = [];
   cargandoPresupuestoPorCedula = false;
   autoAgregarRecomendacionesDesdePresupuesto = false;
+  generarPresupuestoDesdeIndicaciones = false;
   presupuestoImportadoEnHistoriaCodigo: string | null = null;
   recomendacionesImportadasDesdePresupuestoMeta: OpcionPresupuestoImportableHistoria[] = [];
   private readonly controlesNgSelectHistoria: string[] = [
@@ -1222,45 +1231,13 @@ export class HistoriasMedicasComponent implements OnInit {
     this.cargando = true;
 
     this.historiaService.createHistoria(historia).subscribe({
-      next: (respuesta) => {
+      next: async (respuesta) => {
         this.cargando = false;
         const historiaCreada = respuesta.historial_medico;
         const paciente = this.pacienteParaNuevaHistoria;
+        const opcionesPresupuesto = this.construirOpcionesPresupuestoDesdeHistoriaActual();
 
         this.cerrarModal('historiaModal');
-        this.swalService.showInfo(
-          'Historia médica registrada',
-          `La historia médica #${historiaCreada.nHistoria ?? 'sin número'} fue registrada correctamente. Seleccione cómo desea continuar con la venta de este paciente.`,
-          {
-            icon: 'success',
-            showDenyButton: !!paciente,
-            showCancelButton: !!paciente,
-            confirmButtonText: 'Cobrar solo consulta',
-            denyButtonText: 'Continuar con consulta y productos',
-            cancelButtonText: sessionStorage.getItem('desdePacientes') ? 'Volver a pacientes' : 'Cerrar',
-            allowOutsideClick: false
-          }
-        ).then((result) => {
-          if (result.isConfirmed && paciente) {
-            this.iniciarGeneracionVentaDesdeHistoria(paciente, historiaCreada, 'solo_consulta');
-            return;
-          }
-
-          if (result.isDenied && paciente) {
-            this.iniciarGeneracionVentaDesdeHistoria(
-              paciente,
-              historiaCreada,
-              'consulta_productos',
-              this.autoAgregarRecomendacionesDesdePresupuesto
-            );
-            return;
-          }
-
-          if (sessionStorage.getItem('desdePacientes')) {
-            this.limpiarEstadoRetornoPacientes();
-            this.router.navigate(['/pacientes']);
-          }
-        }).catch(() => {});
 
         if (!paciente) return;
 
@@ -1290,6 +1267,8 @@ export class HistoriasMedicasComponent implements OnInit {
         this.historiaForm.reset();
         this.resetearCamposSelectDeHistoria();
         this.modoEdicion = false;
+
+        await this.gestionarAccionesPosterioresHistoriaCreada(paciente, historiaCreada, opcionesPresupuesto);
       },
       error: (err) => {
         this.cargando = false;
@@ -1312,14 +1291,19 @@ export class HistoriasMedicasComponent implements OnInit {
     tipoVenta: 'solo_consulta' | 'consulta_productos',
     autoAgregarRecomendaciones: boolean = false
   ): void {
+    const tipoVentaFinal: 'solo_consulta' | 'consulta_productos' =
+      tipoVenta === 'solo_consulta' && !this.puedeCobrarSoloConsultaDesdeHistoria(historia)
+        ? 'consulta_productos'
+        : tipoVenta;
+
     const handoff: HistoriaVentaHandoff = {
       origen: 'historia-medica',
       pacienteKey: String(paciente.key || ''),
       pacienteId: String(paciente.id || ''),
       historiaId: String(historia.id || ''),
       historiaNumero: String(historia.nHistoria || '').trim() || undefined,
-      tipoVenta,
-      autoAgregarRecomendaciones: tipoVenta === 'consulta_productos' && autoAgregarRecomendaciones
+      tipoVenta: tipoVentaFinal,
+      autoAgregarRecomendaciones: tipoVentaFinal === 'consulta_productos' && autoAgregarRecomendaciones
     };
 
     try {
@@ -1332,6 +1316,244 @@ export class HistoriasMedicasComponent implements OnInit {
     this.router.navigate(['/ventas'], {
       queryParams: { vista: 'generacion-de-ventas' }
     });
+  }
+
+  private async gestionarAccionesPosterioresHistoriaCreada(
+    paciente: Paciente,
+    historia: HistoriaMedica,
+    opcionesPresupuesto: HistoriaPresupuestoOpcionDraft[]
+  ): Promise<void> {
+    let presupuestoGenerado: Presupuesto | null = null;
+
+    if (opcionesPresupuesto.length > 0 && this.generarPresupuestoDesdeIndicaciones) {
+      presupuestoGenerado = await this.generarPresupuestoEnSegundoPlanoDesdeHistoria(paciente, historia, opcionesPresupuesto);
+    }
+
+    await this.mostrarOpcionesContinuacionHistoriaCreada(paciente, historia, presupuestoGenerado, opcionesPresupuesto.length);
+  }
+
+  debeMostrarToggleGenerarPresupuesto(index: number): boolean {
+    return !this.modoEdicion
+      && index === this.recomendaciones.length - 1
+      && this.construirOpcionesPresupuestoDesdeHistoriaActual().length > 0;
+  }
+
+  getEtiquetaToggleGenerarPresupuesto(): string {
+    const totalOpciones = this.construirOpcionesPresupuestoDesdeHistoriaActual().length;
+    return totalOpciones === 1
+      ? 'Generar presupuesto con 1 opcion'
+      : `Generar presupuesto con ${totalOpciones} opciones`;
+  }
+
+  getMensajeToggleGenerarPresupuesto(): string {
+    const totalOpciones = this.construirOpcionesPresupuestoDesdeHistoriaActual().length;
+    return totalOpciones === 1
+      ? 'Al guardar la historia se creara automaticamente el presupuesto con la seleccion actual.'
+      : 'Al guardar la historia se creara automaticamente el presupuesto con todas las selecciones actuales.';
+  }
+
+  private async generarPresupuestoEnSegundoPlanoDesdeHistoria(
+    paciente: Paciente,
+    historia: HistoriaMedica,
+    opciones: HistoriaPresupuestoOpcionDraft[]
+  ): Promise<Presupuesto | null> {
+    try {
+      const handoff = this.construirHandoffPresupuestoDesdeHistoria(paciente, historia, opciones);
+      const payload = this.construirPayloadPresupuestoDesdeHistoria(handoff);
+      return await lastValueFrom(this.presupuestoService.crearPresupuesto(payload));
+    } catch (error) {
+      console.error('Error generando presupuesto desde historia médica:', error);
+      this.snackBar.open('No se pudo generar el presupuesto automático desde la historia médica.', 'Cerrar', {
+        duration: 4500,
+        panelClass: ['snackbar-warning']
+      });
+      return null;
+    }
+  }
+
+  private construirPayloadPresupuestoDesdeHistoria(handoff: HistoriaPresupuestoHandoff): any {
+    const fechaCreacion = new Date();
+    const fechaVencimiento = new Date(fechaCreacion);
+    fechaVencimiento.setDate(fechaVencimiento.getDate() + 7);
+
+    const opciones = handoff.opciones.map((opcion) => ({
+      id: String(opcion.id || '').trim(),
+      nombre: String(opcion.nombre || '').trim(),
+      observaciones: String(opcion.observaciones || '').trim(),
+      esPrincipal: opcion.id === handoff.opcionPrincipalId,
+      productos: (opcion.productos || []).map((producto) => ({
+        productoId: producto.productoId ? Number(producto.productoId) : Number(producto.id),
+        codigo: String(producto.codigo || '').trim(),
+        descripcion: String(producto.nombre || producto.descripcion || 'Producto').trim(),
+        precioUnitario: Number(producto.precioUnitario ?? producto.precio ?? 0),
+        cantidad: Math.max(1, Number(producto.cantidad || 1)),
+        descuentoPorcentaje: Number(producto.descuentoPorcentaje ?? producto.descuento ?? 0),
+        aplicaIva: producto.aplicaIva !== false,
+        moneda: producto.moneda || 'dolar',
+        precioOriginal: Number(producto.precioOriginal ?? producto.precioUnitario ?? producto.precio ?? 0),
+        monedaOriginal: producto.monedaOriginal || producto.moneda || 'dolar',
+        tasaConversion: Number(producto.tasaConversion ?? 1)
+      }))
+    }));
+
+    const opcionPrincipal = opciones.find((opcion) => opcion.esPrincipal) || opciones[0];
+
+    return {
+      cliente: {
+        tipoPersona: handoff.cliente.tipoPersona,
+        cedula: String(handoff.cliente.cedula || '').trim(),
+        nombreCompleto: String(handoff.cliente.nombreCompleto || '').trim(),
+        telefono: String(handoff.cliente.telefono || '').trim(),
+        email: String(handoff.cliente.email || '').trim(),
+        direccion: String(handoff.cliente.direccion || '').trim(),
+        pacienteKey: String(handoff.cliente.pacienteKey || handoff.pacienteKey || '').trim() || null,
+        pacienteId: String(handoff.cliente.pacienteId || handoff.pacienteId || '').trim() || null
+      },
+      historia: {
+        id: String(handoff.historiaId || '').trim() || null,
+        numero: String(handoff.historiaNumero || '').trim() || null,
+        pacienteKey: String(handoff.pacienteKey || '').trim() || null,
+        pacienteId: String(handoff.pacienteId || '').trim() || null
+      },
+      fechaCreacion,
+      fechaVencimiento,
+      diasVencimiento: 7,
+      observaciones: String(handoff.observaciones || '').trim(),
+      formulaExterna: handoff.formulaExterna?.activa
+        ? handoff.formulaExterna
+        : { activa: false, refraccionFinal: null },
+      origen: 'historia-medica',
+      opcionPrincipalId: opcionPrincipal?.id || '',
+      opciones,
+      productos: Array.isArray(opcionPrincipal?.productos) ? opcionPrincipal.productos : []
+    };
+  }
+
+  private async mostrarOpcionesContinuacionHistoriaCreada(
+    paciente: Paciente,
+    historia: HistoriaMedica,
+    presupuestoGenerado: Presupuesto | null,
+    cantidadOpcionesPresupuesto: number
+  ): Promise<void> {
+    const nombrePaciente = String(paciente.informacionPersonal?.nombreCompleto || 'este paciente').trim();
+    const totalOpciones = Math.max(0, Number(cantidadOpcionesPresupuesto || 0));
+    const etiquetaOpciones = totalOpciones === 1 ? '1 opción' : `${totalOpciones} opciones`;
+    const mostrarCobroSoloConsulta = this.puedeCobrarSoloConsultaDesdeHistoria(historia);
+    const result = await this.swalService.showInfo(
+      'Historia médica lista',
+      this.construirHtmlSwalHistoriaLista(historia, nombrePaciente, presupuestoGenerado, etiquetaOpciones, totalOpciones),
+      {
+        icon: 'success',
+        showDenyButton: true,
+        showCancelButton: true,
+        showConfirmButton: mostrarCobroSoloConsulta,
+        confirmButtonText: 'Ir a cobrar solo consulta',
+        denyButtonText: 'Ir a consulta + productos',
+        cancelButtonText: sessionStorage.getItem('desdePacientes') ? 'Volver a pacientes' : 'Cerrar',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        customClass: {
+          popup: 'swal-modern-popup success-popup swal-history-flow-popup swal-history-flow-popup--ready',
+          title: 'swal-modern-title swal-history-flow-title',
+          htmlContainer: 'swal-modern-content swal-history-flow-content',
+          actions: 'swal-modern-actions swal-history-flow-actions',
+          confirmButton: 'swal-modern-confirm primary-btn swal-history-btn swal-history-btn--primary',
+          denyButton: 'swal-modern-deny swal-history-btn swal-history-btn--secondary',
+          cancelButton: 'swal-modern-cancel swal-history-btn swal-history-btn--neutral'
+        }
+      }
+    );
+
+    if (result.isConfirmed) {
+      this.iniciarGeneracionVentaDesdeHistoria(paciente, historia, 'solo_consulta');
+      return;
+    }
+
+    if (result.isDenied) {
+      this.iniciarGeneracionVentaDesdeHistoria(
+        paciente,
+        historia,
+        'consulta_productos',
+        this.autoAgregarRecomendacionesDesdePresupuesto
+      );
+      return;
+    }
+
+    if (sessionStorage.getItem('desdePacientes')) {
+      this.limpiarEstadoRetornoPacientes();
+      this.router.navigate(['/pacientes']);
+    }
+  }
+
+  private construirHtmlSwalHistoriaRegistrada(
+    historia: HistoriaMedica,
+    nombrePaciente: string,
+    etiquetaOpciones: string
+  ): string {
+    const resumenOpciones = etiquetaOpciones === '1 opción'
+      ? '1 opción lista para presupuesto.'
+      : `${etiquetaOpciones} listas para presupuesto.`;
+
+    return `
+      <div class="swal-history-flow-card">
+        <p class="swal-history-flow-lead">
+          La historia <strong>#${historia.nHistoria ?? 'sin número'}</strong> de <strong>${nombrePaciente}</strong> ya quedó guardada.
+        </p>
+        <section class="swal-history-flow-panel swal-history-flow-panel--info">
+          <div class="swal-history-flow-panel__eyebrow">Presupuesto sugerido</div>
+          <div class="swal-history-flow-panel__title">${resumenOpciones}</div>
+          <div class="swal-history-flow-panel__text">Genéralo ahora y luego continúas con caja o con la venta.</div>
+        </section>
+      </div>
+    `;
+  }
+
+  private construirHtmlSwalHistoriaLista(
+    historia: HistoriaMedica,
+    nombrePaciente: string,
+    presupuestoGenerado: Presupuesto | null,
+    etiquetaOpciones: string,
+    totalOpciones: number
+  ): string {
+    const resumenPresupuesto = presupuestoGenerado?.codigo
+      ? `
+        <section class="swal-history-flow-panel swal-history-flow-panel--success">
+          <div class="swal-history-flow-panel__eyebrow">Presupuesto enlazado</div>
+          <div class="swal-history-flow-panel__title">Presupuesto ${presupuestoGenerado.codigo} generado</div>
+          <div class="swal-history-flow-panel__text">Quedó asociado a esta historia con <strong>${etiquetaOpciones}</strong> para que el paciente pueda comparar recomendaciones.</div>
+        </section>
+      `
+      : totalOpciones > 0
+        ? `
+          <section class="swal-history-flow-panel swal-history-flow-panel--pending">
+            <div class="swal-history-flow-panel__eyebrow">Presupuesto pendiente</div>
+            <div class="swal-history-flow-panel__title">La historia quedó lista para continuar</div>
+            <div class="swal-history-flow-panel__text">Más adelante puedes generar un presupuesto con <strong>${etiquetaOpciones}</strong> desde este mismo caso si el paciente lo solicita.</div>
+          </section>
+        `
+        : '';
+
+    return `
+      <div class="swal-history-flow-card">
+        <p class="swal-history-flow-lead">
+          La historia <strong>#${historia.nHistoria ?? 'sin número'}</strong> de <strong>${nombrePaciente}</strong> ya quedó registrada.
+        </p>
+        ${resumenPresupuesto}
+        <section class="swal-history-flow-panel swal-history-flow-panel--warning">
+          <div class="swal-history-flow-panel__eyebrow">Siguiente paso</div>
+          <div class="swal-history-flow-panel__text">Continúa con consulta más productos o cierra este flujo si el paciente no comprará ahora.</div>
+        </section>
+      </div>
+    `;
+  }
+
+  private esHistoriaDeOptometrista(historia: HistoriaMedica | null | undefined): boolean {
+    const tipo = String(historia?.datosConsulta?.especialista?.tipo || '').trim().toUpperCase();
+    return tipo === 'OPTOMETRISTA';
+  }
+
+  private puedeCobrarSoloConsultaDesdeHistoria(historia: HistoriaMedica | null | undefined): boolean {
+    return historiaPuedeCobrarConsulta(historia);
   }
 
   private limpiarEstadoRetornoPacientes(): void {
@@ -1396,6 +1618,11 @@ export class HistoriasMedicasComponent implements OnInit {
 
         this.actualizarPacientesPorSede();
         this.actualizarPacientesFiltrados();
+
+        if (this.restaurarRetornoDesdePresupuestoSiExiste()) {
+          this.tareaFinalizada();
+          return;
+        }
 
         let idPaciente: string | null = null;
         let actualRoute: ActivatedRoute | null = this.route;
@@ -1756,6 +1983,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
   private resetearImportacionPresupuestoHistoria(): void {
     this.autoAgregarRecomendacionesDesdePresupuesto = false;
+    this.generarPresupuestoDesdeIndicaciones = false;
     this.presupuestoImportadoEnHistoriaCodigo = null;
     this.recomendacionesImportadasDesdePresupuestoMeta = [];
   }
@@ -2193,6 +2421,202 @@ export class HistoriasMedicasComponent implements OnInit {
   getMetaRecomendacionImportada(index: number): OpcionPresupuestoImportableHistoria | null {
     const meta = this.recomendacionesImportadasDesdePresupuestoMeta[index];
     return meta?.nombre ? meta : null;
+  }
+
+  private construirOpcionesPresupuestoDesdeHistoriaActual(): HistoriaPresupuestoOpcionDraft[] {
+    return this.recomendaciones.controls
+      .map((control, index): HistoriaPresupuestoOpcionDraft | null => {
+        const grupo = control as FormGroup;
+        const productos = this.obtenerCategoriasProductoSeleccionadasDesdeGrupo(grupo)
+          .map((categoria) => this.mapearProductoRecomendadoAPresupuesto(categoria.producto, categoria.categoria, grupo))
+          .filter((producto): producto is HistoriaPresupuestoProductoDraft => !!producto);
+
+        if (productos.length === 0) {
+          return null;
+        }
+
+        const metaImportada = this.getMetaRecomendacionImportada(index);
+        return {
+          id: `hist-rec-${index + 1}`,
+          nombre: String(metaImportada?.nombre || `Recomendación ${index + 1}`).trim(),
+          observaciones: String(grupo.get('observaciones')?.value || '').trim(),
+          esPrincipal: index === 0,
+          productos
+        } satisfies HistoriaPresupuestoOpcionDraft;
+      })
+        .filter((opcion): opcion is HistoriaPresupuestoOpcionDraft => opcion !== null);
+  }
+
+  private mapearProductoRecomendadoAPresupuesto(
+    producto: ProductoRecomendadoHistoria | null | undefined,
+    categoria: string,
+    grupo: FormGroup
+  ): HistoriaPresupuestoProductoDraft | null {
+    const productoNormalizado = this.normalizarProductoRecomendado(producto);
+    if (!productoNormalizado) {
+      return null;
+    }
+
+    const medidas = this.esCategoriaCristal(categoria)
+      ? this.obtenerMedidasGrupoRecomendacion(grupo)
+      : null;
+
+    const detallesMedidas = medidas
+      ? [
+          medidas.horizontal ? `H ${medidas.horizontal}` : '',
+          medidas.vertical ? `V ${medidas.vertical}` : '',
+          medidas.diagonal ? `D ${medidas.diagonal}` : '',
+          medidas.puente ? `P ${medidas.puente}` : ''
+        ].filter(Boolean).join(' · ')
+      : '';
+
+    const descripcionBase = String(productoNormalizado.descripcion || productoNormalizado.nombre || 'Producto').trim();
+    const descripcion = detallesMedidas ? `${descripcionBase} · ${detallesMedidas}` : descripcionBase;
+    const precio = Number(productoNormalizado.precio ?? 0);
+
+    return {
+      id: String(productoNormalizado.id),
+      productoId: String(productoNormalizado.id),
+      nombre: String(productoNormalizado.nombre || '').trim(),
+      codigo: String(productoNormalizado.codigo || '').trim(),
+      descripcion,
+      precio,
+      precioUnitario: precio,
+      precioOriginal: precio,
+      cantidad: 1,
+      descuento: 0,
+      descuentoPorcentaje: 0,
+      total: precio,
+      moneda: productoNormalizado.moneda,
+      monedaOriginal: productoNormalizado.moneda || undefined,
+      tasaConversion: 1,
+      aplicaIva: productoNormalizado.aplicaIva !== false,
+      categoria: String(productoNormalizado.categoria || categoria || '').trim(),
+      cristalConfig: productoNormalizado.cristalConfig || null
+    };
+  }
+
+  private construirHandoffPresupuestoDesdeHistoria(
+    paciente: Paciente,
+    historia: HistoriaMedica,
+    opciones: HistoriaPresupuestoOpcionDraft[]
+  ): HistoriaPresupuestoHandoff {
+    const tipoPersona = 'natural' as const;
+    const formulaExternaActiva = Boolean(this.historiaForm.get('esFormulaExterna')?.value);
+
+    return {
+      origen: 'historia-medica',
+      historiaId: String(historia.id || ''),
+      historiaNumero: String(historia.nHistoria || '').trim() || undefined,
+      especialistaTipo: String(historia?.datosConsulta?.especialista?.tipo || '').trim() || undefined,
+      pacienteKey: String(paciente.key || ''),
+      pacienteId: String(paciente.id || ''),
+      pacienteCedula: String(paciente.informacionPersonal?.cedula || '').trim() || undefined,
+      cliente: {
+        tipoPersona,
+        cedula: String(paciente.informacionPersonal?.cedula || '').trim(),
+        nombreCompleto: String(paciente.informacionPersonal?.nombreCompleto || '').trim(),
+        telefono: String(paciente.informacionPersonal?.telefono || '').trim() || undefined,
+        email: String(paciente.informacionPersonal?.email || '').trim() || undefined,
+        direccion: String(paciente.informacionPersonal?.direccion || '').trim() || undefined,
+        pacienteKey: String(paciente.key || ''),
+        pacienteId: String(paciente.id || '')
+      },
+      formulaExterna: formulaExternaActiva ? {
+        activa: true,
+        refraccionFinal: {
+          od: {
+            esfera: this.historiaForm.get('ref_final_esf_od')?.value || null,
+            cilindro: this.historiaForm.get('ref_final_cil_od')?.value || null,
+            eje: this.historiaForm.get('ref_final_eje_od')?.value || null,
+            adicion: this.historiaForm.get('ref_final_add_od')?.value || null,
+            alt: this.historiaForm.get('ref_final_alt_od')?.value || null,
+            dp: this.historiaForm.get('ref_final_dp_od')?.value || null,
+          },
+          oi: {
+            esfera: this.historiaForm.get('ref_final_esf_oi')?.value || null,
+            cilindro: this.historiaForm.get('ref_final_cil_oi')?.value || null,
+            eje: this.historiaForm.get('ref_final_eje_oi')?.value || null,
+            adicion: this.historiaForm.get('ref_final_add_oi')?.value || null,
+            alt: this.historiaForm.get('ref_final_alt_oi')?.value || null,
+            dp: this.historiaForm.get('ref_final_dp_oi')?.value || null,
+          }
+        }
+      } : undefined,
+      observaciones: `Generado desde historia médica ${String(historia.nHistoria || '').trim() || String(historia.id || '').trim()}.`,
+      opciones,
+      opcionPrincipalId: opciones[0]?.id || ''
+    };
+  }
+
+  private restaurarRetornoDesdePresupuestoSiExiste(): boolean {
+    const retornoRaw = sessionStorage.getItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY);
+    if (!retornoRaw) {
+      return false;
+    }
+
+    let retorno: PresupuestoHistoriaReturnDraft | null = null;
+
+    try {
+      retorno = JSON.parse(retornoRaw) as PresupuestoHistoriaReturnDraft;
+    } catch {
+      sessionStorage.removeItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY);
+      return false;
+    }
+
+    if (!retorno?.pacienteKey || !retorno?.historiaId) {
+      sessionStorage.removeItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY);
+      return false;
+    }
+
+    const paciente = this.pacientes.find((item) =>
+      String(item.key || '') === String(retorno?.pacienteKey || '')
+      || (retorno?.pacienteId ? String(item.id || '') === String(retorno.pacienteId) : false)
+      || (retorno?.pacienteCedula ? String(item.informacionPersonal?.cedula || '').trim() === String(retorno.pacienteCedula).trim() : false)
+    );
+
+    if (!paciente) {
+      sessionStorage.removeItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY);
+      this.snackBar.open('No se encontró el paciente para restaurar la historia médica desde presupuestos.', 'Cerrar', {
+        duration: 4500,
+        panelClass: ['snackbar-warning']
+      });
+      return false;
+    }
+
+    this.pacienteSeleccionado = paciente;
+    this.pacienteIdSeleccionado = paciente.id;
+    this.pacienteParaNuevaHistoria = paciente;
+
+    this.cargarHistoriasMedicas(paciente.key, () => {
+      const historia = this.historial.find((item) => String(item.id || '') === String(retorno?.historiaId || ''));
+      sessionStorage.removeItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY);
+
+      if (!historia) {
+        this.snackBar.open('Se restauró el paciente, pero no se encontró la historia médica vinculada al presupuesto.', 'Cerrar', {
+          duration: 4500,
+          panelClass: ['snackbar-warning']
+        });
+        return;
+      }
+
+      this.historiaSeleccionada = historia;
+      this.editarHistoria(historia);
+
+      const codigoPresupuesto = String(retorno?.presupuestoCodigo || '').trim();
+      this.snackBar.open(
+        codigoPresupuesto
+          ? `Regresaste desde el presupuesto ${codigoPresupuesto} a la historia médica ${historia.nHistoria}.`
+          : `Regresaste a la historia médica ${historia.nHistoria}.`,
+        'Cerrar',
+        {
+          duration: 4500,
+          panelClass: ['snackbar-info']
+        }
+      );
+    }, String(retorno.historiaId));
+
+    return true;
   }
 
   agregarCategoriaRecomendada(index: number): void {

@@ -536,7 +536,7 @@
         </div>
 
         <!-- Fechas y Vencimiento -->
-        <div class="info-card">
+        <div class="info-card" *ngIf="mostrarFormulaExternaNuevo()">
             <div class="info-header">
                 <i class="bi bi-calendar"></i>
                 <h4>Vencimiento</h4>
@@ -560,7 +560,7 @@
             </div>
         </div>
 
-        <div class="info-card">
+        <div class="info-card" *ngIf="mostrarFormulaExternaDetalle()">
             <div class="info-header">
                 <i class="bi bi-journal-medical"></i>
                 <h4>Fórmula externa</h4>
@@ -710,11 +710,19 @@
                         <div class="presupuesto-opcion-card__top">
                             <input class="opcion-nombre-input" type="text" [(ngModel)]="opcion.nombre"
                                 (click)="$event.stopPropagation()" placeholder="Nombre de la opción">
-                            <button type="button" class="opcion-principal-btn"
-                                [class.active]="opcion.id === nuevoPresupuesto.opcionPrincipalId"
-                                (click)="$event.stopPropagation(); marcarOpcionPrincipalNuevo(opcion.id)">
-                                {{ opcion.id === nuevoPresupuesto.opcionPrincipalId ? 'Principal' : 'Marcar principal' }}
-                            </button>
+                            <div class="presupuesto-opcion-card__actions">
+                                <button type="button" class="opcion-principal-btn"
+                                    [class.active]="opcion.id === nuevoPresupuesto.opcionPrincipalId"
+                                    (click)="$event.stopPropagation(); marcarOpcionPrincipalNuevo(opcion.id)">
+                                    {{ opcion.id === nuevoPresupuesto.opcionPrincipalId ? 'Principal' : 'Marcar principal' }}
+                                </button>
+                                <button type="button" class="opcion-remove-btn"
+                                    (click)="$event.stopPropagation(); eliminarOpcionNuevo(opcion.id)"
+                                    [disabled]="opcionesNuevoPresupuesto.length === 1"
+                                    aria-label="Eliminar opción">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="presupuesto-opcion-card__meta">
                             <span>{{ opcion.productos.length }} ítem(s)</span>
@@ -734,11 +742,6 @@
                                 <strong>{{ formatMoneda(opcion.total) }}</strong>
                             </div>
                         </div>
-                        <button type="button" class="opcion-remove-btn"
-                            (click)="$event.stopPropagation(); eliminarOpcionNuevo(opcion.id)"
-                            [disabled]="opcionesNuevoPresupuesto.length === 1">
-                            <i class="bi bi-trash"></i>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -769,7 +772,7 @@
                 <div class="productos-disponibles" *ngIf="terminoBusqueda && productosFiltrados.length > 0">
                     <div class="producto-item" *ngFor="let producto of productosFiltrados">
                         <div class="producto-info">
-                            <strong>{{ producto.descripcion }}</strong>
+                            <strong>{{ obtenerNombreVisibleProducto(producto) }}</strong>
                             <small>
                                 <span>{{ producto.codigo }} • {{ formatMoneda(producto.precio) }}</span>
                                 <span *ngIf="debeMostrarReferenciaBs()">• Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}</span>
@@ -810,7 +813,7 @@
                         <tr *ngFor="let producto of nuevoPresupuesto.productos; let i = index">
                             <td>
                                 <div class="producto-descripcion">
-                                    <strong>{{ producto.descripcion }}</strong>
+                                    <strong>{{ obtenerNombreVisibleProducto(producto) }}</strong>
                                     <small *ngIf="producto.codigo || esLineaConsulta(producto)">
                                         {{ esLineaConsulta(producto) ? 'Servicio' : producto.codigo }}
                                     </small>
@@ -872,46 +875,6 @@
                         </tr>
                     </tbody>
                 </table>
-            </div>
-
-            <!-- Totales -->
-            <div class="totales-section" *ngIf="nuevoPresupuesto.productos.length > 0">
-                <div class="total-row">
-                    <span>Subtotal:</span>
-                    <div class="total-stack">
-                        <span>{{ formatMoneda(nuevoPresupuesto.subtotal) }}</span>
-                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                            Ref. {{ formatMoneda(obtenerReferenciaBs(nuevoPresupuesto.subtotal), 'VES') }}
-                        </small>
-                    </div>
-                </div>
-                <div class="total-row">
-                    <span>Descuento total:</span>
-                    <div class="total-stack">
-                        <span class="descuento-total">{{ formatMoneda(nuevoPresupuesto.descuentoTotal) }}</span>
-                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                            Ref. {{ formatMoneda(obtenerReferenciaBs(nuevoPresupuesto.descuentoTotal), 'VES') }}
-                        </small>
-                    </div>
-                </div>
-                <div class="total-row">
-                    <span>{{ getEtiquetaIva() }}:</span>
-                    <div class="total-stack">
-                        <span>{{ formatMoneda(nuevoPresupuesto.iva) }}</span>
-                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                            Ref. {{ formatMoneda(obtenerReferenciaBs(nuevoPresupuesto.iva), 'VES') }}
-                        </small>
-                    </div>
-                </div>
-                <div class="total-row total-final">
-                    <strong>Total:</strong>
-                    <div class="total-stack">
-                        <strong>{{ formatMoneda(nuevoPresupuesto.total) }}</strong>
-                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                            Ref. {{ formatMoneda(obtenerReferenciaBs(nuevoPresupuesto.total), 'VES') }}
-                        </small>
-                    </div>
-                </div>
             </div>
 
             <!-- Estado vacío -->
@@ -996,7 +959,7 @@
                 [class.producto-item--en-presupuesto]="obtenerCantidadProductoEnContextoCatalogo(producto.id) > 0"
                 [class.producto-item--recien-agregado]="esProductoRecienAgregadoEnCatalogo(producto.id)">
                 <div class="producto-info">
-                    <strong>{{ producto.descripcion }}</strong>
+                    <strong>{{ obtenerNombreVisibleProducto(producto) }}</strong>
                     <small>
                         <span>{{ producto.codigo || ('ID ' + producto.id) }} • {{ producto.categoria || 'Sin categoria' }}</span>
                         <span>• {{ formatMoneda(producto.precio) }}</span>
@@ -1176,7 +1139,7 @@
             </div>
         </div>
 
-        <div class="info-card">
+        <div class="info-card" *ngIf="mostrarFormulaExternaDetalle()">
             <div class="info-header">
                 <i class="bi bi-journal-medical"></i>
                 <h4>Fórmula externa</h4>
@@ -1349,12 +1312,21 @@
                                 <input class="opcion-nombre-input" type="text" [(ngModel)]="opcion.nombre"
                                     [disabled]="!modoEditable" (click)="$event.stopPropagation()"
                                     placeholder="Nombre de la opción">
-                                <button type="button" class="opcion-principal-btn"
-                                    [class.active]="opcion.id === presupuestoSeleccionado.opcionPrincipalId"
-                                    (click)="$event.stopPropagation(); marcarOpcionPrincipalDetalle(opcion.id)"
-                                    [disabled]="!modoEditable">
-                                    {{ opcion.id === presupuestoSeleccionado.opcionPrincipalId ? 'Principal' : 'Marcar principal' }}
-                                </button>
+                                <div class="presupuesto-opcion-card__actions">
+                                    <button type="button" class="opcion-principal-btn"
+                                        [class.active]="opcion.id === presupuestoSeleccionado.opcionPrincipalId"
+                                        (click)="$event.stopPropagation(); marcarOpcionPrincipalDetalle(opcion.id)"
+                                        [disabled]="!modoEditable">
+                                        {{ opcion.id === presupuestoSeleccionado.opcionPrincipalId ? 'Principal' : 'Marcar principal' }}
+                                    </button>
+                                    <button type="button" class="opcion-remove-btn"
+                                        *ngIf="modoEditable"
+                                        (click)="$event.stopPropagation(); eliminarOpcionDetalle(opcion.id)"
+                                        [disabled]="opcionesDetallePresupuesto.length === 1"
+                                        aria-label="Eliminar opción">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="presupuesto-opcion-card__meta">
                                 <span>{{ opcion.productos.length }} ítem(s)</span>
@@ -1374,12 +1346,6 @@
                                     <strong>{{ formatMoneda(opcion.total) }}</strong>
                                 </div>
                             </div>
-                            <button type="button" class="opcion-remove-btn"
-                                *ngIf="modoEditable"
-                                (click)="$event.stopPropagation(); eliminarOpcionDetalle(opcion.id)"
-                                [disabled]="opcionesDetallePresupuesto.length === 1">
-                                <i class="bi bi-trash"></i>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -1409,7 +1375,7 @@
                         *ngIf="terminoBusquedaDetalleProducto && productosDetalleFiltrados.length > 0">
                         <div class="producto-item" *ngFor="let producto of productosDetalleFiltrados">
                             <div class="producto-info">
-                                <strong>{{ producto.descripcion }}</strong>
+                                <strong>{{ obtenerNombreVisibleProducto(producto) }}</strong>
                                 <small>
                                     <span>{{ producto.codigo }} • {{ formatMoneda(producto.precio) }}</span>
                                     <span *ngIf="debeMostrarReferenciaBs()">• Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}</span>
@@ -1444,7 +1410,7 @@
                             <tr *ngFor="let producto of presupuestoSeleccionado.productos">
                                 <td class="text-center">
                                     <div class="producto-desc text-center">
-                                        <strong>{{ producto.descripcion }}</strong>
+                                        <strong>{{ obtenerNombreVisibleProducto(producto) }}</strong>
                                         <small *ngIf="esLineaConsulta(producto)">Servicio</small>
                                     </div>
                                 </td>
@@ -1474,41 +1440,6 @@
                                 </td>
                             </tr>
                         </tbody>
-                        <tfoot>
-                            <tr class="tabla-totales-row">
-                                <td colspan="5" class="tabla-totales-label">Subtotal</td>
-                                <td class="tabla-totales-value">
-                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
-                                        <span>{{ formatMoneda(presupuestoSeleccionado.subtotal) }}</span>
-                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.subtotal), 'VES') }}
-                                        </small>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr class="tabla-totales-row">
-                                <td colspan="5" class="tabla-totales-label">{{ getEtiquetaIva() }}</td>
-                                <td class="tabla-totales-value">
-                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
-                                        <span>{{ formatMoneda(presupuestoSeleccionado.iva) }}</span>
-                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.iva), 'VES') }}
-                                        </small>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr class="tabla-totales-row tabla-totales-row--final">
-                                <td colspan="5" class="tabla-totales-label">Total</td>
-                                <td class="tabla-totales-value">
-                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
-                                        <span>{{ formatMoneda(presupuestoSeleccionado.total) }}</span>
-                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.total), 'VES') }}
-                                        </small>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
 
@@ -1528,7 +1459,7 @@
                             <tr *ngFor="let producto of presupuestoSeleccionado.productos; let i = index">
                                 <td>
                                     <div class="producto-descripcion">
-                                        <strong>{{ producto.descripcion }}</strong>
+                                        <strong>{{ obtenerNombreVisibleProducto(producto) }}</strong>
                                         <small *ngIf="producto.codigo || esLineaConsulta(producto)">
                                             {{ esLineaConsulta(producto) ? 'Servicio' : producto.codigo }}
                                         </small>
@@ -1588,44 +1519,6 @@
                                 </td>
                             </tr>
                         </tbody>
-                        <tfoot>
-                            <tr class="tabla-totales-row">
-                                <td colspan="4" class="tabla-totales-label">Subtotal</td>
-                                <td class="tabla-totales-value">
-                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
-                                        <span>{{ formatMoneda(presupuestoSeleccionado.subtotal) }}</span>
-                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.subtotal), 'VES') }}
-                                        </small>
-                                    </div>
-                                </td>
-                                <td></td>
-                            </tr>
-                            <tr class="tabla-totales-row">
-                                <td colspan="4" class="tabla-totales-label">{{ getEtiquetaIva() }}</td>
-                                <td class="tabla-totales-value">
-                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
-                                        <span>{{ formatMoneda(presupuestoSeleccionado.iva) }}</span>
-                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.iva), 'VES') }}
-                                        </small>
-                                    </div>
-                                </td>
-                                <td></td>
-                            </tr>
-                            <tr class="tabla-totales-row tabla-totales-row--final">
-                                <td colspan="4" class="tabla-totales-label">Total</td>
-                                <td class="tabla-totales-value">
-                                    <div class="monto-celda monto-celda--compacta monto-celda--tabla-total">
-                                        <span>{{ formatMoneda(presupuestoSeleccionado.total) }}</span>
-                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.total), 'VES') }}
-                                        </small>
-                                    </div>
-                                </td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
             </div>

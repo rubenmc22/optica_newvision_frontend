@@ -19,9 +19,16 @@ import { Empleado, User } from './../../../Interfaces/models-interface';
 import { SedeCompleta } from './../../login/login-interface';
 import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/presupuesto-venta-handoff.util';
 import { HISTORIA_VENTA_HANDOFF_STORAGE_KEY } from '../shared/historia-venta-handoff.util';
+import {
+  HISTORIA_PRESUPUESTO_HANDOFF_STORAGE_KEY,
+  PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY,
+  HistoriaPresupuestoHandoff,
+  PresupuestoHistoriaReturnDraft
+} from '../shared/historia-presupuesto-handoff.util';
 import { PresupuestoService } from './presupuesto.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { OpcionPresupuesto, Presupuesto } from './presupuesto.interfaz';
+import { SwalService } from '../../../core/services/swal/swal.service';
 
 @Component({
   selector: 'app-presupuesto',
@@ -228,6 +235,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   productosCatalogoRecienAgregados = new Set<string>();
   private timeoutIndicadoresCatalogo = new Map<string, any>();
   cargandoConsultaMedica: boolean = false;
+  private historiaPresupuestoHandoffActivo: HistoriaPresupuestoHandoff | null = null;
 
   constructor(
     private clienteService: ClienteService,
@@ -244,6 +252,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private loader: LoaderService,
+    private swalService: SwalService,
   ) { }
 
   ngOnInit() {
@@ -254,6 +263,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.suscribirCambiosConfiguracion();
     this.cargarDatos();
     this.inicializarNuevoPresupuesto();
+    this.aplicarHandoffHistoriaPresupuestoSiExiste();
     void this.cargarAsesores();
     this.diasVencimientoSeleccionado = 7;
     this.inicializarPresupuestosFiltrados();
@@ -355,14 +365,15 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   private normalizarProductoPresupuestoPersistido(producto: any): any {
     const productoId = producto?.productoId ?? producto?.producto_id ?? producto?.id ?? null;
+    const nombreVisible = this.obtenerNombreVisibleProducto(producto);
 
     return {
       ...producto,
       id: productoId,
       productoId,
       itemId: producto?.itemId,
-      nombre: String(producto?.nombre || producto?.producto?.nombre || '').trim(),
-      descripcion: this.obtenerDescripcionVisibleProducto(producto),
+      nombre: nombreVisible,
+      descripcion: nombreVisible,
       codigo: String(producto?.codigo || producto?.productoCodigo || '').trim(),
       precio: Number(producto?.precio ?? producto?.precioUnitario ?? 0),
       precioUnitario: Number(producto?.precioUnitario ?? producto?.precio ?? 0),
@@ -389,11 +400,12 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     const productoId = producto?.productoId ?? producto?.id ?? null;
     const precioUnitario = Number(producto?.precioUnitario ?? producto?.precio ?? 0);
     const descuentoPorcentaje = Number(producto?.descuentoPorcentaje ?? producto?.descuento ?? 0);
+    const nombreVisible = this.obtenerNombreVisibleProducto(producto);
 
     return {
       productoId: productoId !== null && productoId !== undefined ? Number(productoId) : null,
       codigo: String(producto?.codigo || '').trim(),
-      descripcion: this.obtenerDescripcionVisibleProducto(producto),
+      descripcion: nombreVisible,
       precioUnitario,
       cantidad: Number(producto?.cantidad || 1),
       descuentoPorcentaje,
@@ -1174,6 +1186,18 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   private construirPayloadPresupuesto(presupuesto: any): any {
     const cliente = presupuesto?.cliente || this.getClienteVacio();
     const tipoPersona = cliente?.tipoPersona === 'juridica' ? 'juridica' : 'natural';
+    const pacienteKey = String(
+      cliente?.pacienteKey
+      || presupuesto?.pacienteKeyOrigen
+      || presupuesto?.historia?.pacienteKey
+      || ''
+    ).trim();
+    const pacienteId = String(
+      cliente?.pacienteId
+      || presupuesto?.pacienteIdOrigen
+      || presupuesto?.historia?.pacienteId
+      || ''
+    ).trim();
     const nombreCompleto = String(
       tipoPersona === 'juridica'
         ? (cliente?.razonSocial || cliente?.nombreCompleto || cliente?.nombre || '')
@@ -1205,7 +1229,16 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
         razonSocial: tipoPersona === 'juridica' ? nombreCompleto : '',
         telefono: String(cliente?.telefono || '').trim(),
         email: String(cliente?.email || '').trim(),
-        direccion: String(cliente?.direccion || '').trim()
+        direccion: String(cliente?.direccion || '').trim(),
+        pacienteKey: pacienteKey || null,
+        pacienteId: pacienteId || null
+      },
+      historia: {
+        id: String(presupuesto?.historiaMedicaId || presupuesto?.historia?.id || '').trim() || null,
+        numero: String(presupuesto?.historiaNumero || presupuesto?.historia?.numero || '').trim() || null,
+        pacienteKey: pacienteKey || null,
+        pacienteId: pacienteId || null,
+        especialistaTipo: String(presupuesto?.historia?.especialistaTipo || '').trim() || null
       },
       fechaCreacion: presupuesto?.fechaCreacion,
       fechaVencimiento: presupuesto?.fechaVencimiento,
@@ -1241,6 +1274,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.nuevoPresupuesto = {
       codigo: '',
       cliente: this.getClienteVacio(),
+      historiaMedicaId: null,
+      historiaNumero: null,
+      pacienteKeyOrigen: null,
+      pacienteIdOrigen: null,
       fechaCreacion,
       fechaVencimiento,
       diasVencimiento: 7,
@@ -1261,6 +1298,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
         refraccionFinal: this.crearRefraccionFinalVacia()
       }
     };
+    this.historiaPresupuestoHandoffActivo = null;
 
     this.asegurarOpcionesPresupuesto(this.nuevoPresupuesto);
     this.sincronizarOpcionActivaNuevo(this.nuevoPresupuesto.opcionPrincipalId);
@@ -1470,6 +1508,103 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.mostrarModalNuevoPresupuesto = false;
     this.inicializarNuevoPresupuesto();
     this.sincronizarEstadoBodyModal();
+  }
+
+  private leerHistoriaPresupuestoHandoff(): HistoriaPresupuestoHandoff | null {
+    const handoffRaw = sessionStorage.getItem(HISTORIA_PRESUPUESTO_HANDOFF_STORAGE_KEY);
+    if (!handoffRaw) {
+      return null;
+    }
+
+    try {
+      const handoff = JSON.parse(handoffRaw) as HistoriaPresupuestoHandoff;
+      if (!handoff?.pacienteKey || !handoff?.historiaId || !Array.isArray(handoff?.opciones) || handoff.opciones.length === 0) {
+        sessionStorage.removeItem(HISTORIA_PRESUPUESTO_HANDOFF_STORAGE_KEY);
+        return null;
+      }
+
+      return handoff;
+    } catch {
+      sessionStorage.removeItem(HISTORIA_PRESUPUESTO_HANDOFF_STORAGE_KEY);
+      return null;
+    }
+  }
+
+  private aplicarHandoffHistoriaPresupuestoSiExiste(): void {
+    const handoff = this.leerHistoriaPresupuestoHandoff();
+    if (!handoff) {
+      return;
+    }
+
+    sessionStorage.removeItem(HISTORIA_PRESUPUESTO_HANDOFF_STORAGE_KEY);
+    this.inicializarNuevoPresupuesto();
+
+    const opciones = handoff.opciones
+      .map((opcion, index) => this.crearOpcionPresupuesto(opcion.nombre || `Recomendación ${index + 1}`, opcion.productos || [], {
+        id: String(opcion.id || `hist-rec-${index + 1}`),
+        observaciones: String(opcion.observaciones || '').trim(),
+        esPrincipal: Boolean(opcion.esPrincipal)
+      }))
+      .filter((opcion) => Array.isArray(opcion.productos) && opcion.productos.length > 0);
+
+    if (opciones.length === 0) {
+      this.snackBar.open('La historia médica no tiene productos recomendados listos para presupuestar.', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    const cliente = {
+      ...this.getClienteVacio(),
+      ...(handoff.cliente || {}),
+      pacienteKey: String(handoff.pacienteKey || '').trim() || null,
+      pacienteId: String(handoff.pacienteId || '').trim() || null
+    };
+
+    this.nuevoPresupuesto.cliente = cliente;
+    this.nuevoPresupuesto.historiaMedicaId = String(handoff.historiaId || '').trim() || null;
+    this.nuevoPresupuesto.historiaNumero = String(handoff.historiaNumero || '').trim() || null;
+    this.nuevoPresupuesto.historia = {
+      ...(this.nuevoPresupuesto.historia || {}),
+      id: String(handoff.historiaId || '').trim() || null,
+      numero: String(handoff.historiaNumero || '').trim() || null,
+      pacienteKey: String(handoff.pacienteKey || '').trim() || null,
+      pacienteId: String(handoff.pacienteId || '').trim() || null,
+      especialistaTipo: String(handoff.especialistaTipo || '').trim() || null
+    };
+    this.nuevoPresupuesto.pacienteKeyOrigen = String(handoff.pacienteKey || '').trim() || null;
+    this.nuevoPresupuesto.pacienteIdOrigen = String(handoff.pacienteId || '').trim() || null;
+    this.nuevoPresupuesto.observaciones = String(handoff.observaciones || '').trim();
+    this.nuevoPresupuesto.formulaExterna = this.normalizarFormulaExternaPersistida(handoff.formulaExterna);
+    this.nuevoPresupuesto.opciones = opciones;
+    this.nuevoPresupuesto.opcionPrincipalId = String(
+      handoff.opcionPrincipalId
+      || opciones.find((opcion) => opcion.esPrincipal)?.id
+      || opciones[0]?.id
+      || ''
+    ).trim();
+
+    opciones.forEach((opcion) => {
+      opcion.esPrincipal = opcion.id === this.nuevoPresupuesto.opcionPrincipalId;
+    });
+
+    this.historiaPresupuestoHandoffActivo = handoff;
+    this.sincronizarClienteFormularioDesdePresupuesto();
+    this.sincronizarResumenDesdeOpcionPrincipal(this.nuevoPresupuesto);
+    this.sincronizarOpcionActivaNuevo(this.nuevoPresupuesto.opcionPrincipalId);
+    this.mostrarModalNuevoPresupuesto = true;
+    this.sincronizarEstadoBodyModal();
+    this.cdr.detectChanges();
+
+    this.snackBar.open(
+      `Historia ${handoff.historiaNumero || handoff.historiaId} cargada en presupuesto con ${opciones.length} opción(es).`,
+      'Cerrar',
+      {
+        duration: 4500,
+        panelClass: ['snackbar-info']
+      }
+    );
   }
 
   abrirModalAgregarProducto() {
@@ -1889,18 +2024,70 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     }
 
     try {
+      const handoffHistoria = this.historiaPresupuestoHandoffActivo;
       const presupuestoNuevo = await lastValueFrom(
         this.presupuestoService.crearPresupuesto(this.construirPayloadPresupuesto(this.nuevoPresupuesto))
       );
       await this.cargarPresupuestosDesdeApi(false);
       this.cerrarModalNuevoPresupuesto();
 
+      if (handoffHistoria) {
+        this.historiaPresupuestoHandoffActivo = null;
+      }
+
       this.snackBar.open(`Presupuesto ${presupuestoNuevo.codigo} generado exitosamente`, 'Cerrar', {
         duration: 4000,
         panelClass: ['snackbar-success']
       });
+
+      if (handoffHistoria) {
+        await this.gestionarRetornoAHistoriaTrasCrearPresupuesto(handoffHistoria, presupuestoNuevo);
+      }
     } catch (error) {
       console.error('Error creando presupuesto:', error);
+    }
+  }
+
+  private async gestionarRetornoAHistoriaTrasCrearPresupuesto(
+    handoff: HistoriaPresupuestoHandoff,
+    presupuestoNuevo: any
+  ): Promise<void> {
+    const decision = await this.swalService.showInfo(
+      'Presupuesto generado',
+      `El presupuesto ${presupuestoNuevo?.codigo || ''} ya quedó creado desde la historia médica ${handoff.historiaNumero || handoff.historiaId}. ¿Deseas mantenerte en presupuestos o regresar a la historia?`,
+      {
+        icon: 'success',
+        showCancelButton: true,
+        confirmButtonText: 'Mantenerme en presupuestos',
+        cancelButtonText: 'Regresar a historia médica',
+        allowOutsideClick: false,
+        allowEscapeKey: false
+      }
+    );
+
+    if (decision.isConfirmed) {
+      return;
+    }
+
+    const retorno: PresupuestoHistoriaReturnDraft = {
+      origen: 'presupuesto',
+      historiaId: String(handoff.historiaId || ''),
+      historiaNumero: String(handoff.historiaNumero || '').trim() || undefined,
+      pacienteKey: String(handoff.pacienteKey || ''),
+      pacienteId: String(handoff.pacienteId || '').trim() || undefined,
+      pacienteCedula: String(handoff.pacienteCedula || '').trim() || undefined,
+      presupuestoCodigo: String(presupuestoNuevo?.codigo || '').trim() || undefined
+    };
+
+    try {
+      sessionStorage.setItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY, JSON.stringify(retorno));
+      await this.router.navigate(['/pacientes-historias']);
+    } catch (error) {
+      console.error('No se pudo preparar el retorno a la historia médica:', error);
+      this.snackBar.open('No se pudo regresar automáticamente a la historia médica.', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-warning']
+      });
     }
   }
 
@@ -2823,6 +3010,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
               font-weight: 700;
             }
             .resumen-compacto { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 12px; }
+            .resumen-compacto--solo-info { grid-template-columns: 1fr; }
             .totales-compactos {
                 background: #f8f9fa; border-radius: 6px; padding: 10px; border: 1px solid #dee2e6;
             }
@@ -3082,6 +3270,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       this.construirFilaImpresionPresupuesto(producto, productoIndex)
     ).join('');
     const esPrincipal = opcion?.id === opcionPrincipalId;
+    const mostrarTotalesDetallados = totalOpciones <= 1;
     const observaciones = String(opcion?.observaciones || '').trim();
     const mostrarCabecera = totalOpciones > 1 || !!observaciones || !!opcion?.nombre;
     const tituloOpcion = totalOpciones > 1
@@ -3118,17 +3307,17 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
               </tbody>
           </table>
 
-          <div class="resumen-compacto resumen-compacto--opcion">
-              <div class="totales-compactos">
-                  <div class="total-line"><span class="total-label">Subtotal:</span><span class="total-valor">${this.formatMoneda(subtotal)}</span></div>
-                  ${descuentoTotal > 0 ? `
-                  <div class="total-line"><span class="total-label">Descuento (${porcentajeDescuento}%):</span><span class="total-valor">- ${this.formatMoneda(descuentoTotal)}</span></div>
-                  <div class="total-line"><span class="total-label">Subtotal Neto:</span><span class="total-valor">${this.formatMoneda(subtotalNeto)}</span></div>
-                  ` : ''}
-                  <div class="total-line"><span class="total-label">${this.getEtiquetaIva()}:</span><span class="total-valor">${this.formatMoneda(opcion?.iva || 0)}</span></div>
-                  <div class="total-final total-line"><span class="total-label">TOTAL:</span><span class="total-valor">${this.formatMoneda(total)}</span></div>
-                  ${referenciaBsTotal ? `<div class="total-line"><span class="total-label">REF. EN BS:</span><span class="total-valor">${referenciaBsTotal}</span></div>` : ''}
-              </div>
+            <div class="resumen-compacto resumen-compacto--opcion ${mostrarTotalesDetallados ? '' : 'resumen-compacto--solo-info'}">
+              ${mostrarTotalesDetallados ? `<div class="totales-compactos">
+                <div class="total-line"><span class="total-label">Subtotal:</span><span class="total-valor">${this.formatMoneda(subtotal)}</span></div>
+                ${descuentoTotal > 0 ? `
+                <div class="total-line"><span class="total-label">Descuento (${porcentajeDescuento}%):</span><span class="total-valor">- ${this.formatMoneda(descuentoTotal)}</span></div>
+                <div class="total-line"><span class="total-label">Subtotal Neto:</span><span class="total-valor">${this.formatMoneda(subtotalNeto)}</span></div>
+                ` : ''}
+                <div class="total-line"><span class="total-label">${this.getEtiquetaIva()}:</span><span class="total-valor">${this.formatMoneda(opcion?.iva || 0)}</span></div>
+                <div class="total-final total-line"><span class="total-label">TOTAL:</span><span class="total-valor">${this.formatMoneda(total)}</span></div>
+                ${referenciaBsTotal ? `<div class="total-line"><span class="total-label">REF. EN BS:</span><span class="total-valor">${referenciaBsTotal}</span></div>` : ''}
+              </div>` : ''}
               <div class="info-lateral">
                   <h4>RESUMEN</h4>
                   <div class="info-item"><strong>Productos:</strong> ${productosSinConsulta.length}</div>
@@ -3142,7 +3331,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   private construirFilaImpresionPresupuesto(producto: any, index: number): string {
     const esConsulta = this.esLineaConsulta(producto);
-    const descripcion = this.escaparHtml(esConsulta ? 'Consulta medica' : (producto?.descripcion || 'Sin descripcion'));
+    const descripcion = this.escaparHtml(esConsulta ? 'Consulta medica' : this.obtenerNombreVisibleProducto(producto));
     const codigo = this.escaparHtml(producto?.codigo || '-');
     const badgeServicio = esConsulta
       ? ''
@@ -3563,10 +3752,12 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       const cantidad = Number(producto.cantidad || 1);
       const descuento = Number(producto.descuento || 0);
       const total = productoConvertido.precio * cantidad * (1 - descuento / 100);
+      const nombreVisible = this.obtenerNombreVisibleProducto(producto);
 
       return {
         ...producto,
-        descripcion: this.obtenerDescripcionVisibleProducto(producto),
+        nombre: nombreVisible,
+        descripcion: nombreVisible,
         precio: productoConvertido.precio,
         precioOriginal: productoConvertido.precioOriginal ?? producto.precioOriginal ?? producto.precio,
         moneda: productoConvertido.moneda,
@@ -3598,12 +3789,86 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     return nombreVisible || tipoCristal || descripcionUsuario || 'Cristal';
   }
 
+  obtenerNombreVisibleProducto(producto: any): string {
+    if (!producto) {
+      return 'Producto';
+    }
+
+    const nombreVisible = String(producto?.nombre || producto?.producto?.nombre || '').trim();
+    if (nombreVisible && !nombreVisible.includes('[NV_CRISTAL_CONFIG]')) {
+      return nombreVisible;
+    }
+
+    if (this.esCategoriaCristalPresupuesto(producto)) {
+      const nombreCristal = this.construirNombreCristalPresupuesto(this.obtenerCristalConfigPresupuesto(producto));
+      if (nombreCristal) {
+        return nombreCristal;
+      }
+    }
+
+    return this.obtenerDescripcionVisibleProducto(producto);
+  }
+
+  mostrarFormulaExternaNuevo(): boolean {
+    return this.permiteFormulaExternaSegunEspecialista(this.nuevoPresupuesto);
+  }
+
+  mostrarFormulaExternaDetalle(): boolean {
+    return this.permiteFormulaExternaSegunEspecialista(this.presupuestoSeleccionado);
+  }
+
+  private permiteFormulaExternaSegunEspecialista(presupuesto: any): boolean {
+    const vieneDeHistoriaMedica = this.esPresupuestoOriginadoDesdeHistoriaMedica(presupuesto);
+    if (!vieneDeHistoriaMedica) {
+      return true;
+    }
+
+    const tipoEspecialista = String(
+      presupuesto?.historia?.especialistaTipo
+      || presupuesto?.historia?.datosConsulta?.especialista?.tipo
+      || this.historiaPresupuestoHandoffActivo?.especialistaTipo
+      || ''
+    )
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+
+    if (!tipoEspecialista) {
+      return false;
+    }
+
+    return tipoEspecialista === 'externo' || tipoEspecialista === 'externa';
+  }
+
+  private esPresupuestoOriginadoDesdeHistoriaMedica(presupuesto: any): boolean {
+    if (!presupuesto) {
+      return false;
+    }
+
+    const observaciones = String(presupuesto?.observaciones || '').trim().toLowerCase();
+    const marcadoEnObservaciones = observaciones.includes('generado desde historia medica')
+      || observaciones.includes('generado desde historia médica');
+
+    if (presupuesto === this.nuevoPresupuesto) {
+      return this.historiaPresupuestoHandoffActivo?.origen === 'historia-medica'
+        || Boolean(this.nuevoPresupuesto?.historiaMedicaId || this.nuevoPresupuesto?.historia?.id)
+        || marcadoEnObservaciones;
+    }
+
+    return presupuesto?.origen === 'historia-medica'
+      || Boolean(presupuesto?.historiaMedicaId || presupuesto?.historia?.id)
+      || marcadoEnObservaciones;
+  }
+
   private mapearProductoDisponible(producto: Producto): any {
+    const nombreVisible = this.obtenerNombreVisibleProducto(producto);
+
     return {
       id: producto.id,
-      nombre: producto.nombre,
+      nombre: nombreVisible,
       codigo: producto.codigo,
-      descripcion: this.obtenerDescripcionVisibleProducto(producto),
+      descripcion: nombreVisible,
       precio: producto.precio,
       precioOriginal: producto.precioOriginal ?? producto.precio,
       moneda: this.normalizarCodigoMoneda(producto.moneda),
@@ -3879,6 +4144,9 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       ?? presupuesto?.historia?.nHistoria
       ?? presupuesto?.historia?.numero;
     const pacienteKey = presupuesto?.cliente?.key
+      ?? presupuesto?.pacienteKeyOrigen
+      ?? presupuesto?.paciente_key_origen
+      ?? presupuesto?.historia?.pacienteKey
       ?? presupuesto?.cliente?.pacienteKey
       ?? presupuesto?.cliente?.paciente_id
       ?? presupuesto?.cliente?.pacienteId;
@@ -3897,7 +4165,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
         id: historiaId,
         numero: historiaNumero,
         pacienteKey: pacienteKey ? String(pacienteKey) : undefined,
-        pacienteId: presupuesto?.cliente?.pacienteId ?? presupuesto?.cliente?.paciente_id,
+        pacienteId: presupuesto?.pacienteIdOrigen ?? presupuesto?.paciente_id_origen ?? presupuesto?.cliente?.pacienteId ?? presupuesto?.cliente?.paciente_id,
         especialistaTipo: presupuesto?.historia?.datosConsulta?.especialista?.tipo
       },
       cliente: {
@@ -3907,7 +4175,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
         telefono: presupuesto?.cliente?.telefono || '',
         email: presupuesto?.cliente?.email || '',
         pacienteKey: pacienteKey ? String(pacienteKey) : undefined,
-        pacienteId: presupuesto?.cliente?.pacienteId ?? presupuesto?.cliente?.paciente_id
+        pacienteId: presupuesto?.pacienteIdOrigen ?? presupuesto?.paciente_id_origen ?? presupuesto?.cliente?.pacienteId ?? presupuesto?.cliente?.paciente_id
       },
       observaciones: presupuesto?.observaciones || '',
       productos: lineasPresupuesto
@@ -4008,18 +4276,48 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   private obtenerCategoriaProductoPresupuesto(producto: any): string {
+    const cristalConfigInferido = this.obtenerCristalConfigPresupuesto(producto);
+
     return String(
       producto?.categoria
       || producto?.producto?.categoria
       || producto?.configuracionTecnica?.categoria
       || producto?.cristalConfig?.categoria
       || producto?.configuracionTecnica?.cristalConfig?.categoria
+      || (cristalConfigInferido ? 'Cristales' : '')
       || ''
     ).trim();
   }
 
   private obtenerCristalConfigPresupuesto(producto: any): any {
-    return producto?.cristalConfig || producto?.configuracionTecnica?.cristalConfig || null;
+    return producto?.cristalConfig
+      || producto?.configuracionTecnica?.cristalConfig
+      || parseDescripcionProductoCristal(producto?.descripcion).crystalConfig
+      || null;
+  }
+
+  private construirNombreCristalPresupuesto(config: any): string {
+    if (!config) {
+      return '';
+    }
+
+    const nombreExplicito = String(config?.nombre ?? '').trim();
+    if (nombreExplicito) {
+      return nombreExplicito;
+    }
+
+    return [
+      String(config?.tipoCristal ?? config?.modelo ?? '').trim(),
+      String(config?.presentacion ?? '').trim(),
+      String(config?.material ?? '').trim(),
+      ...(Array.isArray(config?.tratamientos) ? config.tratamientos.map((item: unknown) => String(item ?? '').trim()) : []),
+      String(config?.rangoFormula ?? '').trim()
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toUpperCase();
   }
 
   private normalizarBanderaBooleana(valor: unknown): boolean {
@@ -4052,7 +4350,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   esFormulaExternaActivaNuevo(): boolean {
-    return this.normalizarBanderaBooleana(this.nuevoPresupuesto?.formulaExterna?.activa);
+    return this.mostrarFormulaExternaNuevo()
+      && this.normalizarBanderaBooleana(this.nuevoPresupuesto?.formulaExterna?.activa);
   }
 
   esFormulaExternaCompletaNuevo(): boolean {
@@ -4060,7 +4359,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   debeBloquearSeleccionProductosPorFormulaExterna(): boolean {
-    return this.esFormulaExternaActivaNuevo() && !this.esFormulaExternaCompletaNuevo();
+    return this.mostrarFormulaExternaNuevo() && this.esFormulaExternaActivaNuevo() && !this.esFormulaExternaCompletaNuevo();
   }
 
   onCambioFormulaExternaDetalle(activa: boolean): void {
@@ -4069,7 +4368,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   esFormulaExternaActivaDetalle(): boolean {
-    return this.normalizarBanderaBooleana(this.presupuestoSeleccionado?.formulaExterna?.activa);
+    return this.mostrarFormulaExternaDetalle()
+      && this.normalizarBanderaBooleana(this.presupuestoSeleccionado?.formulaExterna?.activa);
   }
 
   esFormulaExternaCompletaDetalle(): boolean {
@@ -4077,7 +4377,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   debeBloquearSeleccionProductosPorFormulaExternaDetalle(): boolean {
-    return this.esFormulaExternaActivaDetalle() && !this.esFormulaExternaCompletaDetalle();
+    return this.mostrarFormulaExternaDetalle() && this.esFormulaExternaActivaDetalle() && !this.esFormulaExternaCompletaDetalle();
   }
 
   getMensajeFormulaExternaIncompleta(): string {

@@ -1256,6 +1256,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
 
         return {
             categoria: 'Cristales',
+            nombre: this.resolverNombreProducto(producto),
             marca: String(producto.marca ?? '').trim(),
             tipoCristal: String(producto.modelo ?? '').trim(),
             presentacion: this.getPresentacionCristal(producto),
@@ -1290,6 +1291,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     private construirMonturaConfigPayload(producto: Producto): Record<string, unknown> {
         return {
             categoria: 'Monturas',
+            nombre: this.resolverNombreProducto(producto),
             marca: String(producto.marca ?? '').trim(),
             modelo: String(producto.modelo ?? '').trim(),
             color: String(producto.color ?? '').trim(),
@@ -1302,6 +1304,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     private construirLenteContactoConfigPayload(producto: Producto): Record<string, unknown> {
         return {
             categoria: 'Lentes de contacto',
+            nombre: this.resolverNombreProducto(producto),
             marca: String(producto.marca ?? '').trim(),
             tipoLenteContacto: String(producto.modelo ?? '').trim(),
             modelo: String(producto.modelo ?? '').trim(),
@@ -1318,6 +1321,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     private construirLiquidoConfigPayload(producto: Producto): Record<string, unknown> {
         return {
             categoria: 'Líquidos',
+            nombre: this.resolverNombreProducto(producto),
             marca: String(producto.marca ?? '').trim(),
             modelo: String(producto.modelo ?? '').trim(),
             proveedor: String(producto.proveedor ?? '').trim(),
@@ -1328,6 +1332,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     private construirEstucheConfigPayload(producto: Producto): Record<string, unknown> {
         return {
             categoria: 'Estuches',
+            nombre: this.resolverNombreProducto(producto),
             marca: String(producto.marca ?? '').trim(),
             modelo: String(producto.modelo ?? '').trim(),
             material: String(producto.material ?? '').trim(),
@@ -1339,6 +1344,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     private construirAccesorioConfigPayload(producto: Producto): Record<string, unknown> {
         return {
             categoria: 'Accesorios',
+            nombre: this.resolverNombreProducto(producto),
             marca: String(producto.marca ?? '').trim(),
             modelo: String(producto.modelo ?? '').trim(),
             color: String(producto.color ?? '').trim(),

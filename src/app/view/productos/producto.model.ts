@@ -10,6 +10,7 @@ export type ProductoPrecioCristal = 'par' | 'ojo';
 
 export interface ProductoCristalConfig {
   categoria?: string;
+  nombre?: string;
   marca?: string;
   tipoCristal?: string;
   presentacion?: string;
@@ -27,6 +28,7 @@ export interface ProductoCristalConfig {
 
 export interface ProductoMonturaConfig {
   categoria?: string;
+  nombre?: string;
   marca: string;
   modelo: string;
   color: string;
@@ -37,6 +39,7 @@ export interface ProductoMonturaConfig {
 
 export interface ProductoLenteContactoConfig {
   categoria?: string;
+  nombre?: string;
   marca: string;
   tipoLenteContacto: string;
   modelo?: string;
@@ -49,6 +52,7 @@ export interface ProductoLenteContactoConfig {
 
 export interface ProductoLiquidoConfig {
   categoria?: string;
+  nombre?: string;
   marca: string;
   modelo: string;
   proveedor: string;
@@ -57,6 +61,7 @@ export interface ProductoLiquidoConfig {
 
 export interface ProductoEstucheConfig {
   categoria?: string;
+  nombre?: string;
   marca: string;
   modelo: string;
   material: string;
@@ -66,6 +71,7 @@ export interface ProductoEstucheConfig {
 
 export interface ProductoAccesorioConfig {
   categoria?: string;
+  nombre?: string;
   marca: string;
   modelo: string;
   color: string;

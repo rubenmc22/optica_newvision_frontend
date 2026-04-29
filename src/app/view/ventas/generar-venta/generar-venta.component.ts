@@ -42,6 +42,12 @@ import {
     HISTORIA_VENTA_HANDOFF_STORAGE_KEY,
     HistoriaVentaHandoff
 } from '../shared/historia-venta-handoff.util';
+import {
+    historiaPuedeCobrarConsulta,
+    historiaEsFormulaExterna,
+    historiaTienePagoPendiente,
+    obtenerTipoEspecialistaHistoria
+} from '../shared/historia-consulta-payment.util';
 
 // Constantes
 import {
@@ -7355,29 +7361,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         const historia = this.historiaMedicaSeleccionada;
-        const especialista = historia.datosConsulta?.especialista;
-        const esOftalmologo = especialista?.tipo === 'OFTALMOLOGO';
-        const pagoPendiente = historia.datosConsulta?.pagoPendiente === true;
-        const formulaExterna = historia.datosConsulta?.formulaExterna === true;
-        const tieneFormulaOriginal = !!historia.datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
-
-        // Determinar si genera ingreso
-        let generaIngreso = false;
-
-        if (this.tipoVenta === 'solo_consulta') {
-            // Solo se genera ingreso si:
-            // 1. Es oftalmólogo interno con pago pendiente
-            // 2. Es externa rectificada por oftalmólogo con pago pendiente
-            generaIngreso = (esOftalmologo && pagoPendiente && !formulaExterna) ||
-                (formulaExterna && tieneFormulaOriginal && esOftalmologo && pagoPendiente);
-        } else {
-            // Para consulta + productos, solo genera ingreso si:
-            // 1. Es oftalmólogo interno con pago pendiente
-            // 2. Es externa rectificada por oftalmólogo con pago pendiente
-            // (solo el costo médico)
-            generaIngreso = (esOftalmologo && pagoPendiente && !formulaExterna) ||
-                (formulaExterna && tieneFormulaOriginal && esOftalmologo && pagoPendiente);
-        }
+        const generaIngreso = historiaPuedeCobrarConsulta(historia);
 
         if (generaIngreso) {
             // Obtener costos reales del backend
@@ -7911,44 +7895,20 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return false;
         }
 
-        // Verificar que sea oftalmólogo y no externa
-        const esOftalmologo = h.datosConsulta?.medico?.cargo === 'Oftalmólogo';
-        const esExterna = h.datosConsulta?.formulaExterna === true;
-
-        if (esExterna) {
-            console.log('Es fórmula externa');
-            return false;
-        }
-
-        if (!esOftalmologo) {
-            console.log('No es oftalmólogo');
-            return false;
-        }
-
-        // Verificar pago pendiente
-        const pagoPendiente = h.datosConsulta?.pagoPendiente === true;
-        if (!pagoPendiente) {
-            console.log('No tiene pago pendiente');
-            return false;
-        }
-
-        return true;
+        return historiaPuedeCobrarConsulta(h);
     }
 
     getMensajeConsulta(historia?: any): string {
         const h = historia || this.historiaMedicaSeleccionada;
         if (!h) return '';
 
-        // 🔴 Acceder correctamente a la estructura
-        const datosConsulta = h.datosConsulta || h.data?.datosConsulta;
-        const especialista = datosConsulta?.especialista;
-
-        const esOftalmologo = especialista?.tipo === 'OFTALMOLOGO';
-        const esOptometrista = especialista?.tipo === 'OPTOMETRISTA';
-        const esExterno = especialista?.tipo === 'EXTERNO';
-        const pagoPendiente = datosConsulta?.pagoPendiente === true;
-        const formulaExterna = datosConsulta?.formulaExterna === true;
-        const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
+        const tipoEspecialista = obtenerTipoEspecialistaHistoria(h);
+        const esOftalmologo = tipoEspecialista === 'OFTALMOLOGO';
+        const esOptometrista = tipoEspecialista === 'OPTOMETRISTA';
+        const esExterno = tipoEspecialista === 'EXTERNO';
+        const pagoPendiente = historiaTienePagoPendiente(h);
+        const formulaExterna = historiaEsFormulaExterna(h);
+        const tieneFormulaOriginal = Boolean(h?.datosConsulta?.formulaOriginal?.medicoOrigen?.nombre || h?.data?.datosConsulta?.formulaOriginal?.medicoOrigen?.nombre);
 
         // Oftalmólogo interno
         if (esOftalmologo && !formulaExterna) {

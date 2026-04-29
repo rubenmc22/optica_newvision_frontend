@@ -83,6 +83,13 @@
     justify-content: space-between;
 }
 
+.presupuesto-opcion-card__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+}
+
 .presupuesto-opcion-card__meta {
     display: flex;
     justify-content: space-between;
@@ -145,6 +152,8 @@
     font-weight: 700;
     padding-top: 0.9rem;
     padding-bottom: 0.9rem;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
 }
 
 .tabla-totales-row--final {
@@ -166,6 +175,7 @@
 .monto-celda--tabla-total {
     align-items: flex-end;
     gap: 0.18rem;
+    padding-right: 0.25rem;
 }
 
 .tabla-totales-row--final .tabla-totales-label,
@@ -224,15 +234,36 @@
 }
 
 .opcion-remove-btn {
-    position: absolute;
-    right: 0.8rem;
-    bottom: 0.8rem;
-    width: 34px;
-    height: 34px;
-    border: 0;
-    border-radius: 999px;
-    background: rgba(220, 38, 38, 0.08);
-    color: #b42318;
+    position: static;
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(220, 38, 38, 0.14);
+    border-radius: 12px;
+    background: linear-gradient(180deg, #fff5f5 0%, #ffe9e9 100%);
+    color: #d92d20;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 18px rgba(217, 45, 32, 0.12);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+
+    i {
+        font-size: 0.95rem;
+        line-height: 1;
+    }
+
+    &:hover:not(:disabled) {
+        transform: translateY(-1px);
+        background: linear-gradient(180deg, #ffe9e9 0%, #ffd9d6 100%);
+        box-shadow: 0 12px 24px rgba(217, 45, 32, 0.16);
+        color: #b42318;
+    }
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
 }
 
 @media (max-width: 768px) {

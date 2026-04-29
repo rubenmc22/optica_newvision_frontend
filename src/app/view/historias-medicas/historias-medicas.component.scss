@@ -6409,3 +6409,41 @@ body:not(.using-mouse) .campo-activo {
     background: #fff !important;
   }
 }
+
+.recomendacion-presupuesto-toggle {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dbe5f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.recomendacion-presupuesto-toggle__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+
+  strong {
+    color: #1f3550;
+    font-size: 0.95rem;
+    line-height: 1.3;
+  }
+
+  span {
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+}
+
+.recomendacion-presupuesto-toggle__switch {
+  flex-shrink: 0;
+  align-self: center;
+}

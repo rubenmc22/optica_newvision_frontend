@@ -1771,6 +1771,23 @@
                                 <strong>{{ item.producto }}</strong>
                               </div>
                             </div>
+
+                            <div class="recomendacion-presupuesto-toggle" *ngIf="debeMostrarToggleGenerarPresupuesto(i)">
+                              <div class="recomendacion-presupuesto-toggle__copy">
+                                <strong>{{ getEtiquetaToggleGenerarPresupuesto() }}</strong>
+                                <span>{{ getMensajeToggleGenerarPresupuesto() }}</span>
+                              </div>
+
+                              <div class="formula-externa-switch recomendacion-presupuesto-toggle__switch">
+                                <label class="switch-moderno">
+                                  <input type="checkbox" [(ngModel)]="generarPresupuestoDesdeIndicaciones" [ngModelOptions]="{standalone: true}">
+                                  <span class="slider-moderno round"></span>
+                                </label>
+                                <span class="switch-label" [class.text-primary]="generarPresupuestoDesdeIndicaciones">
+                                  {{ generarPresupuestoDesdeIndicaciones ? 'Activado' : 'Desactivado' }}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
