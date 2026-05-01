@@ -50,6 +50,7 @@ export interface HistoriaPresupuestoHandoff {
   };
   formulaExterna?: {
     activa: boolean;
+    origen?: 'externa' | 'interna' | null;
     refraccionFinal: {
       od: { esfera: string | null; cilindro: string | null; eje: string | null; adicion?: string | null; alt?: string | null; dp?: string | null; };
       oi: { esfera: string | null; cilindro: string | null; eje: string | null; adicion?: string | null; alt?: string | null; dp?: string | null; };

@@ -13,7 +13,9 @@
             <div class="header-subtitle">Gestión y consulta de historiales médicos</div>
           </div>
         </div>
-        <button class="btn btn-agregar-historia" (click)="crearHistoriaNueva()">
+        <button class="btn btn-agregar-historia" (click)="crearHistoriaNueva()"
+          [disabled]="pacienteSeleccionado && !puedeCrearHistoriaEnSedeActual"
+          [class.btn-agregar-historia--disabled]="pacienteSeleccionado && !puedeCrearHistoriaEnSedeActual">
           <i class="bi bi-plus-circle"></i>
           Nueva Historia
         </button>
@@ -28,7 +30,7 @@
               Filtrar por sede
             </label>
             <select [(ngModel)]="sedeFiltro" (change)="actualizarPacientesPorSede()" class="form-select modern-select">
-              <option value="">Todas las sedes</option>
+              <option value="todas">Todas las sedes</option>
               <option *ngFor="let sede of sedesDisponibles" [value]="sede.key ? sede.key.toLowerCase() : ''">
                 {{ sede.nombre }}
               </option>
@@ -72,11 +74,25 @@
           </div>
         </div>
 
-        <!-- Panel principal - ESTRUCTURA VERTICAL -->
-        <div class="panel-vertical" *ngIf="mostrarElementos">
+        <div *ngIf="mostrarAvisoConsultaCruzada" class="alert-moderno alert-info alert-moderno--multi-sede">
+          <i class="bi bi-diagram-3"></i>
+          <div class="alert-content">
+            <strong>Consulta multi-sede activa</strong>
+            <span>Las historias de otras sedes se muestran en solo lectura y solo se pueden imprimir. Las historias de {{ obtenerNombreSedeHistoria(sedeActiva) }} permanecen separadas.</span>
+          </div>
+        </div>
 
-          <!-- SECCIÓN SUPERIOR: LISTADO DE HISTORIAS -->
-          <div class="panel-superior">
+        <div *ngIf="mostrarAvisoPacienteNoEnlazado" class="alert-moderno alert-warning alert-moderno--multi-sede">
+          <i class="bi bi-lock"></i>
+          <div class="alert-content">
+            <strong>Paciente no enlazado a esta sede</strong>
+            <span>Puedes consultar e imprimir historias de otras sedes, pero no crear nuevas historias aquí hasta enlazar al paciente.</span>
+          </div>
+        </div>
+
+        <div class="panel-principal" *ngIf="mostrarElementos">
+
+          <div class="panel-superior panel-lateral">
             <div class="card card-secundaria" [class.collapsed]="panelSuperiorColapsado">
               <div class="card-header-secundario" (click)="togglePanelSuperior()">
                 <div class="header-left">
@@ -88,49 +104,119 @@
                   </div>
                 </div>
                 <div class="header-right">
-                  <span class="historial-count">{{historial?.length || 0}}</span>
+                  <span class="historial-count">{{ totalHistoriasVisibles }}/{{ historial?.length || 0 }}</span>
                   <button class="collapse-toggle" [class.collapsed]="panelSuperiorColapsado">
                     <i class="bi bi-chevron-down"></i>
                   </button>
                 </div>
               </div>
               <div class="card-body-secundario">
-                <div class="lista-historias-vertical">
-                  <div *ngFor="let historia of historial" class="item-historia-vertical"
-                    [class.active]="historiaSeleccionada?.id === historia.id" (click)="verDetalle(historia)">
+                <div class="historial-search-bar">
+                  <div class="historial-search-bar__input search-container">
+                    <input
+                      type="text"
+                      class="form-control modern-input"
+                      placeholder="Filtrar por número, motivo, médico o sede"
+                      [(ngModel)]="filtroHistorial"
+                      (input)="manejarCambioFiltroHistorial()">
+                    <button
+                      *ngIf="hayFiltroHistorialActivo; else iconoBusquedaHistorial"
+                      type="button"
+                      class="search-action search-action--clear"
+                      (click)="limpiarFiltroHistorial()"
+                      aria-label="Limpiar filtro de historiales"
+                      title="Limpiar filtro">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                    <ng-template #iconoBusquedaHistorial>
+                      <i class="bi bi-search search-icon"></i>
+                    </ng-template>
+                  </div>
+                  <small class="historial-search-bar__hint">Selecciona una historia y el detalle se mantiene al lado.</small>
+                </div>
 
-                    <div class="historia-header-vertical">
-                      <div class="historia-info-principal">
-                        <div class="historia-motivo-vertical">
-                          {{
-                          historia.datosConsulta.motivo.includes('Otro')
-                          ? historia.datosConsulta.otroMotivo || '— Sin motivo especificado —'
-                          : historia.datosConsulta.motivo.join(', ')
-                          }}
+                <div class="lista-historias-vertical">
+                  <div class="historia-grupo" *ngIf="historiasSedeActualVisibles.length > 0">
+                    <div class="historia-grupo__header historia-grupo__header--actual">
+                      <span>Historias de {{ obtenerNombreSedeHistoria(sedeActiva) }}</span>
+                    </div>
+
+                    <div *ngFor="let historia of historiasSedeActualVisibles" class="item-historia-vertical item-historia-vertical--actual"
+                      [class.active]="historiaSeleccionada?.id === historia.id" (click)="verDetalle(historia)">
+                      <div class="historia-header-vertical">
+                        <div class="historia-info-principal">
+                          <div class="historia-motivo-vertical">
+                            {{
+                            historia.datosConsulta.motivo.includes('Otro')
+                            ? historia.datosConsulta.otroMotivo || '— Sin motivo especificado —'
+                            : historia.datosConsulta.motivo.join(', ')
+                            }}
+                          </div>
+                          <div class="historia-medico-vertical">
+                            <i class="bi bi-person-badge"></i>
+                            {{ obtenerNombreMedicoEspecialista(historia) }}
+                          </div>
+                          <div class="historia-meta-vertical">
+                            <span class="historia-meta-item historia-meta-item--numero">#{{ historia.nHistoria || '' }}</span>
+                            <span class="historia-meta-item">{{ formatearFecha(historia.auditoria.fechaCreacion) }}</span>
+                            <span *ngIf="historia.datosConsulta?.formulaExterna" class="badge-externa">
+                              <i class="bi bi-file-earmark-text"></i> Externa
+                            </span>
+                          </div>
                         </div>
-                        <div class="historia-meta-vertical">
-                          <span class="historia-numero-vertical">#{{ historia.nHistoria || '' }}</span>
-                          <span class="historia-fecha-vertical">{{ formatearFecha(historia.auditoria.fechaCreacion)
-                            }}</span>
-                          <!-- INDICADOR DE FÓRMULA EXTERNA -->
-                          <span *ngIf="historia.datosConsulta?.formulaExterna" class="badge-externa">
-                            <i class="bi bi-file-earmark-text"></i> Externa
-                          </span>
-                        </div>
-                      </div>
-                      <div class="historia-medico-vertical">
-                        <i class="bi bi-person-badge"></i>
-                        {{ obtenerNombreMedicoEspecialista(historia) }}
                       </div>
                     </div>
+                  </div>
+
+                  <div class="historia-grupo" *ngIf="historiasOtrasSedesVisibles.length > 0">
+                    <div class="historia-grupo__header historia-grupo__header--externo">
+                      <span>Historias de otras sedes</span>
+                      <small>Solo lectura e impresión</small>
+                    </div>
+
+                    <div *ngFor="let historia of historiasOtrasSedesVisibles" class="item-historia-vertical item-historia-vertical--externa"
+                      [class.active]="historiaSeleccionada?.id === historia.id" (click)="verDetalle(historia)">
+                      <div class="historia-header-vertical">
+                        <div class="historia-info-principal">
+                          <div class="historia-motivo-vertical">
+                            {{
+                            historia.datosConsulta.motivo.includes('Otro')
+                            ? historia.datosConsulta.otroMotivo || '— Sin motivo especificado —'
+                            : historia.datosConsulta.motivo.join(', ')
+                            }}
+                          </div>
+                          <div class="historia-medico-vertical">
+                            <i class="bi bi-person-badge"></i>
+                            {{ obtenerNombreMedicoEspecialista(historia) }}
+                          </div>
+                          <div class="historia-meta-vertical">
+                            <span class="historia-meta-item historia-meta-item--numero">#{{ historia.nHistoria || '' }}</span>
+                            <span class="historia-meta-item">{{ formatearFecha(historia.auditoria.fechaCreacion) }}</span>
+                            <span class="historia-readonly-chip">Solo lectura</span>
+                            <span *ngIf="historia.datosConsulta?.formulaExterna" class="badge-externa">
+                              <i class="bi bi-file-earmark-text"></i> Externa
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="historia-grupo__empty" *ngIf="historial.length === 0 && !cargando">
+                    <i class="bi bi-journal-x"></i>
+                    <span>No hay historias disponibles para este filtro.</span>
+                  </div>
+
+                  <div class="historia-grupo__empty" *ngIf="historial.length > 0 && totalHistoriasVisibles === 0 && !cargando">
+                    <i class="bi bi-search"></i>
+                    <span>No hay historias que coincidan con esa búsqueda.</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- SECCIÓN INFERIOR: DETALLE DE HISTORIA -->
-          <div class="panel-inferior" *ngIf="historiaSeleccionada">
+          <div class="panel-inferior panel-detalle" *ngIf="historiaSeleccionada">
             <div class="card card-secundaria" [class.collapsed]="panelInferiorColapsado">
               <div class="card-header-detalle" (click)="togglePanelInferior()">
                 <div class="header-left">
@@ -140,7 +226,6 @@
                   <div class="header-text">
                     <div class="header-title-wrapper">
                       <div class="header-title">Detalle del Examen</div>
-                      <!-- INDICADOR DE FÓRMULA EXTERNA -->
                       <span *ngIf="historiaSeleccionada?.datosConsulta?.formulaExterna" class="badge-externa-detalle">
                         <i class="bi bi-file-earmark-text"></i> Externa
                       </span>
@@ -158,7 +243,15 @@
                 </div>
               </div>
 
-              <div class="card-body-detalle">
+              <div class="card-body-detalle" id="detalleExamen">
+                <div class="alert-moderno alert-warning alert-moderno--readonly" *ngIf="historiaSeleccionadaSoloLectura">
+                  <i class="bi bi-lock"></i>
+                  <div class="alert-content">
+                    <strong>Historia registrada en {{ obtenerNombreSedeHistoria(historiaSeleccionada?.sedeId) }}</strong>
+                    <span>Disponible solo para consulta e impresión desde esta sede. Para modificarla debes gestionarla desde su sede de origen.</span>
+                  </div>
+                </div>
+
                 <!-- TARJETA DE REFERENCIA DESTACADA (justo después del header) -->
                 <div class="referencia-destacada"
                     *ngIf="historiaSeleccionada?.datosConsulta?.formulaExterna && obtenerMedicoReferido(historiaSeleccionada)">
@@ -771,7 +864,7 @@
                 </button>
 
                 <button class="btn btn-primary-moderno"
-                  *ngIf="sedePacienteSeleccionado && sedePacienteSeleccionado === sedeActiva"
+                  *ngIf="puedeEditarHistoria(historiaSeleccionada)"
                   (click)="editarHistoria(historiaSeleccionada)">
                   <i class="bi bi-pencil-square"></i> Editar
                 </button>
@@ -1707,7 +1800,21 @@
                                     <ng-template ng-option-tmp let-item="item">
                                       <div class="producto-recomendado-option"
                                         [class.producto-recomendado-option--agotado]="esProductoRecomendadoSinStock(item)">
-                                        <strong>{{ getEtiquetaProductoRecomendado(item) }}</strong>
+                                        <div class="producto-recomendado-option__contenido">
+                                          <strong>{{ getEtiquetaProductoRecomendado(item) }}</strong>
+                                          <div class="producto-recomendado-option__meta">
+                                            <span class="producto-recomendado-badge producto-recomendado-badge--sede"
+                                              *ngIf="item.esOtraSede">
+                                              <i class="bi bi-geo-alt"></i>
+                                              Pertenece a {{ item.sedeNombre }}
+                                            </span>
+                                            <span class="producto-recomendado-badge producto-recomendado-badge--traslado"
+                                              *ngIf="item.requiereTraslado">
+                                              <i class="bi bi-truck"></i>
+                                              Requiere traslado
+                                            </span>
+                                          </div>
+                                        </div>
                                         <span class="producto-recomendado-option__estado"
                                           [class.agotado]="esProductoRecomendadoSinStock(item)">
                                           {{ getMensajeStockProductoRecomendado(item) }}
@@ -1717,6 +1824,10 @@
                                   </ng-select>
                                   <small class="recomendacion-stock-help">
                                     {{ getMensajeDisponibilidadCategoria(i, j) }}
+                                  </small>
+                                  <small class="recomendacion-stock-help recomendacion-stock-help--traslado"
+                                    *ngIf="esProductoRecomendadoOtraSede(categoriaControl.get('producto')?.value)">
+                                    {{ getMensajeTrasladoProductoRecomendado(categoriaControl.get('producto')?.value) }}
                                   </small>
                                 </div>
                               </div>
@@ -1916,6 +2027,18 @@
 </div>
 
 
-<div *ngIf="mostrarBotonVolver && dataIsReady" class="boton-flotante" (click)="volverAlListado()">
-  🧭 ¿Volver al listado de pacientes?
-</div>
+<button
+  *ngIf="mostrarBotonVolver && dataIsReady"
+  type="button"
+  class="boton-flotante-regreso"
+  (click)="volverAlListado()"
+  title="Volver al listado de pacientes y conservar filtros, página y posición"
+  aria-label="Volver al listado de pacientes conservando el estado anterior">
+  <span class="boton-flotante-icono">
+    <i class="bi bi-arrow-left-circle"></i>
+  </span>
+  <span class="boton-flotante-contenido">
+    <span class="boton-flotante-titulo">Volver a pacientes</span>
+    <span class="boton-flotante-subtitulo">Conservar filtros y posición</span>
+  </span>
+</button>

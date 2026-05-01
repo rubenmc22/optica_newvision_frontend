@@ -156,7 +156,7 @@ export class MyAccountComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error cargando datos del usuario:', error);
-        this.loader.forceHide(); // Forzar ocultar loader en error
+        this.loader.hide();
       },
       complete: () => {
         this.loader.hide(); // Ocultar loader al completar

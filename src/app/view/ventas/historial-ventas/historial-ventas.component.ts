@@ -558,8 +558,6 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private cargarDatosIniciales(): void {
-    this.loader.showWithMessage('🔄 Cargando historial de ventas...');
-
     // Inicializar estadísticas
     this.estadisticas = this.crearEstadisticasVacias();
 
@@ -583,7 +581,7 @@ export class HistorialVentasComponent implements OnInit {
         };
 
         // Cargar estadísticas y primera página en paralelo
-        this.cargarEstadisticas();
+        this.cargarEstadisticas(false);
         this.cargarVentasPagina(1, false);
       },
       error: (error) => {
@@ -595,7 +593,7 @@ export class HistorialVentasComponent implements OnInit {
         };
 
         // Cargar igual aunque falle tasas
-        this.cargarEstadisticas();
+        this.cargarEstadisticas(false);
         this.cargarVentasPagina(1, false);
       }
     });
@@ -776,9 +774,7 @@ export class HistorialVentasComponent implements OnInit {
           // Aplicar filtros y paginación
           this.aplicarFiltrosYPaginacion();
 
-          setTimeout(() => {
-            this.loader.hide();
-          }, 500);
+          this.loader.hide();
 
         } else {
           console.error('Respuesta inesperada del API de ventas:', response);
@@ -1272,12 +1268,10 @@ export class HistorialVentasComponent implements OnInit {
           this.generarRangoPaginas();
 
           // También recargar estadísticas después de actualizar ventas
-          this.cargarEstadisticas();
+          this.cargarEstadisticas(false);
         }
 
-        setTimeout(() => {
-          this.loader.hide();
-        }, 500);
+        this.loader.hide();
       },
       error: (error) => {
         console.error('Error al recargar ventas:', error);
@@ -3242,9 +3236,7 @@ export class HistorialVentasComponent implements OnInit {
         }
 
         if (!esBusquedaDinamica) {
-          setTimeout(() => {
-            this.loader.hide();
-          }, 500);
+          this.loader.hide();
         }
       },
       error: (error) => {
@@ -3263,13 +3255,12 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   // Método para cargar estadísticas
-  private cargarEstadisticas(): void {
+  private cargarEstadisticas(mostrarLoader: boolean = true): void {
     if (this.estadisticasCargando) return;
 
     this.estadisticasCargando = true;
 
-    // Solo mostrar loader si no estamos ya cargando ventas
-    if (!this.ventasCargando) {
+    if (mostrarLoader) {
       this.loader.showWithMessage('📊 Cargando estadísticas...');
     }
 
@@ -3295,14 +3286,10 @@ export class HistorialVentasComponent implements OnInit {
           this.estadisticas = this.crearEstadisticasVacias();
         }
 
-        // Forzar actualización de la vista
         this.cdRef.detectChanges();
 
-        // Ocultar loader solo si no estamos cargando ventas
-        if (!this.ventasCargando) {
-          setTimeout(() => {
-            this.loader.hide();
-          }, 500);
+        if (mostrarLoader) {
+          this.loader.hide();
         }
       },
       error: (error) => {
@@ -3310,7 +3297,7 @@ export class HistorialVentasComponent implements OnInit {
         console.error('Error al cargar estadísticas:', error);
         this.estadisticas = this.crearEstadisticasVacias();
 
-        if (!this.ventasCargando) {
+        if (mostrarLoader) {
           this.loader.hide();
         }
       }

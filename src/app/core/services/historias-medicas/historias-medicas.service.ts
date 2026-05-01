@@ -1,6 +1,5 @@
-// atletas.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { map, catchError, timeout } from 'rxjs/operators'; // Importa el operador map
 import { environment } from '../../../../environments/environment';
@@ -35,9 +34,15 @@ export class HistoriaMedicaService {
     );
   }
 
-  getHistoriasPorPaciente(pacienteKey: string): Observable<HistoriaMedica[]> {
+  getHistoriasPorPaciente(pacienteKey: string, sede?: string | null): Observable<HistoriaMedica[]> {
     const url = `${environment.apiUrl}/historial-medico-paciente/${pacienteKey}`;
-    return this.http.get<HistorialResponse>(url).pipe(
+    let params = new HttpParams();
+
+    if (sede && String(sede).trim()) {
+      params = params.set('sede', String(sede).trim());
+    }
+
+    return this.http.get<HistorialResponse>(url, { params }).pipe(
       timeout(this.REQUEST_TIMEOUT),
       map(response => response.historiales_medicos),
       catchError(error => this.errorHandler.handleHttpError(error))

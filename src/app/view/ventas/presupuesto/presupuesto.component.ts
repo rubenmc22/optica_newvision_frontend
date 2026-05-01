@@ -27,8 +27,10 @@ import {
 } from '../shared/historia-presupuesto-handoff.util';
 import { PresupuestoService } from './presupuesto.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
-import { OpcionPresupuesto, Presupuesto } from './presupuesto.interfaz';
+import { OpcionPresupuesto, OrigenFormulaPresupuesto, Presupuesto } from './presupuesto.interfaz';
 import { SwalService } from '../../../core/services/swal/swal.service';
+import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
+import { PacientesService } from '../../../core/services/pacientes/pacientes.service';
 
 @Component({
   selector: 'app-presupuesto',
@@ -100,6 +102,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     estado: 'vigente',
     formulaExterna: {
       activa: false,
+      origen: null,
       refraccionFinal: {
         od: { esfera: null, cilindro: null, eje: null, adicion: null, alt: null, dp: null },
         oi: { esfera: null, cilindro: null, eje: null, adicion: null, alt: null, dp: null }
@@ -253,6 +256,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private loader: LoaderService,
     private swalService: SwalService,
+    private historiaService: HistoriaMedicaService,
+    private pacientesService: PacientesService,
   ) { }
 
   ngOnInit() {
@@ -342,7 +347,11 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       telefono: '',
       email: '',
       direccion: '',
-      razonSocial: ''
+      razonSocial: '',
+      pacienteKey: null,
+      pacienteId: null,
+      key: null,
+      id: null
     };
   }
 
@@ -753,6 +762,17 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     return productos.length > 0;
   }
 
+  private presupuestoTieneProductosNoConsulta(presupuesto: any): boolean {
+    const opciones = Array.isArray(presupuesto?.opciones) ? presupuesto.opciones : [];
+
+    if (opciones.length > 0) {
+      return opciones.some((opcion) => Array.isArray(opcion?.productos) && opcion.productos.some((producto: any) => !this.esLineaConsulta(producto)));
+    }
+
+    const productos = Array.isArray(presupuesto?.productos) ? presupuesto.productos : [];
+    return productos.some((producto: any) => !this.esLineaConsulta(producto));
+  }
+
   getCantidadOpcionesConProductos(presupuesto: any): number {
     const opciones = Array.isArray(presupuesto?.opciones) ? presupuesto.opciones : [];
     return opciones.filter((opcion) => Array.isArray(opcion.productos) && opcion.productos.length > 0).length;
@@ -792,6 +812,65 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     };
   }
 
+  private limpiarContenidoDependienteNuevoPresupuesto(): void {
+    const clienteActual = {
+      ...this.getClienteVacio(),
+      ...(this.nuevoPresupuesto?.cliente || {}),
+      ...(this.clienteSinPaciente || {}),
+      pacienteKey: null,
+      pacienteId: null,
+      key: null,
+      id: null
+    };
+    const fechaCreacion = this.nuevoPresupuesto?.fechaCreacion
+      ? new Date(this.nuevoPresupuesto.fechaCreacion)
+      : new Date();
+    const diasVencimiento = Number(this.nuevoPresupuesto?.diasVencimiento || 7);
+    const fechaVencimiento = this.nuevoPresupuesto?.fechaVencimiento
+      ? new Date(this.nuevoPresupuesto.fechaVencimiento)
+      : new Date(fechaCreacion);
+
+    this.timeoutIndicadoresCatalogo.forEach((timeoutId) => clearTimeout(timeoutId));
+    this.timeoutIndicadoresCatalogo.clear();
+    this.productosCatalogoRecienAgregados.clear();
+
+    this.nuevoPresupuesto = {
+      ...this.nuevoPresupuesto,
+      cliente: clienteActual,
+      historiaMedicaId: null,
+      historiaNumero: null,
+      pacienteKeyOrigen: null,
+      pacienteIdOrigen: null,
+      opciones: [],
+      opcionPrincipalId: '',
+      productos: [],
+      subtotal: 0,
+      descuentoTotal: 0,
+      iva: 0,
+      total: 0,
+      observaciones: '',
+      fechaCreacion,
+      fechaVencimiento,
+      diasVencimiento,
+      diasRestantes: this.calcularDiasRestantesParaFecha(fechaVencimiento),
+      formulaExterna: {
+        activa: false,
+        origen: null,
+        refraccionFinal: this.crearRefraccionFinalVacia()
+      }
+    };
+
+    this.historiaPresupuestoHandoffActivo = null;
+    this.terminoBusqueda = '';
+    this.productosFiltrados = [];
+    this.terminoBusquedaCatalogoProductos = '';
+    this.productosCatalogoFiltrados = [];
+
+    this.asegurarOpcionesPresupuesto(this.nuevoPresupuesto);
+    this.sincronizarOpcionActivaNuevo(this.nuevoPresupuesto.opcionPrincipalId);
+    this.sincronizarClienteFormularioConPresupuesto();
+  }
+
   validarEmail(email: string): boolean {
     if (!email || email.trim() === '') {
       return true;
@@ -812,7 +891,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       return /^[JjVvGgEe]-?\d{7,9}$/.test(cedulaLimpia);
     }
 
-    return /^\d{1,8}$/.test(cedulaLimpia);
+    return /^\d{1,9}$/.test(cedulaLimpia);
   }
 
   validarNombre(nombre: string): boolean {
@@ -847,7 +926,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   getMensajeErrorCedula(): string {
     return this.clienteSinPaciente.tipoPersona === 'juridica'
       ? 'Formato de RIF invalido. Use J- seguido de 7-9 numeros.'
-      : 'La cedula debe contener solo numeros y maximo 8 digitos.';
+      : 'La cedula debe contener solo numeros y maximo 9 digitos.';
   }
 
   private getMensajeErrorTelefono(): string {
@@ -868,22 +947,24 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   onTipoPersonaChange(): void {
+    const tipoPersonaAnterior = this.nuevoPresupuesto?.cliente?.tipoPersona === 'juridica' ? 'juridica' : 'natural';
+
     this.clienteSinPaciente.tipoPersona = this.clienteSinPaciente.tipoPersona === 'juridica' ? 'juridica' : 'natural';
+
+    if (tipoPersonaAnterior !== this.clienteSinPaciente.tipoPersona) {
+      this.limpiarContenidoDependienteNuevoPresupuesto();
+    }
+
     this.limpiarEstadoValidacion();
     this.sincronizarClienteFormularioConPresupuesto();
   }
 
   onCampoEditadoManualmente(): void {
-    if (this.clienteEncontrado) {
-      this.clienteEncontrado = false;
-      this.validacionIntentada = false;
-      this.mensajeValidacionCliente = 'Editando datos manualmente';
-    }
-
     this.sincronizarClienteFormularioConPresupuesto();
   }
 
   onCedulaChange(): void {
+    const cedulaAnterior = String(this.nuevoPresupuesto?.cliente?.cedula || '').trim();
     let cedula = String(this.clienteSinPaciente.cedula || '').trim();
 
     if (this.clienteSinPaciente.tipoPersona === 'juridica') {
@@ -893,10 +974,17 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
         cedula = `${prefijo}-${numeros}`;
       }
     } else {
-      cedula = cedula.replace(/\D/g, '').slice(0, 8);
+      cedula = cedula.replace(/\D/g, '').slice(0, 9);
     }
 
     this.clienteSinPaciente.cedula = cedula;
+
+    if (cedula !== cedulaAnterior) {
+      this.limpiarContenidoDependienteNuevoPresupuesto();
+      this.clienteEncontrado = false;
+      this.validacionIntentada = false;
+      this.mensajeValidacionCliente = '';
+    }
 
     if (this.cedulaAnterior && cedula !== this.cedulaAnterior) {
       this.clienteEncontrado = false;
@@ -925,6 +1013,12 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     if (cedula.length >= 4 && cedula !== this.cedulaAnterior) {
       void this.validarClientePorCedula();
     }
+  }
+
+  onCedulaEnter(event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    this.forzarValidacionCliente();
   }
 
   forzarValidacionCliente(): void {
@@ -1041,6 +1135,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   private autocompletarDatosCliente(respuesta: any): void {
     const cliente = respuesta?.cliente || respuesta || {};
+    const pacienteKey = String(cliente?.pacienteKey || cliente?.paciente_key || '').trim() || null;
+    const pacienteId = String(cliente?.pacienteId || cliente?.paciente_id || '').trim() || null;
 
     this.clienteSinPaciente = {
       ...this.getClienteVacio(),
@@ -1050,7 +1146,11 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       telefono: String(cliente?.telefono || '').trim(),
       email: String(cliente?.email || '').trim(),
       direccion: String(cliente?.direccion || '').trim(),
-      razonSocial: String(cliente?.razonSocial || cliente?.nombreCompleto || cliente?.nombre || '').trim()
+      razonSocial: String(cliente?.razonSocial || cliente?.nombreCompleto || cliente?.nombre || '').trim(),
+      pacienteKey,
+      pacienteId,
+      key: String(cliente?.key || '').trim() || null,
+      id: String(cliente?.id || '').trim() || null
     };
 
     this.sincronizarClienteFormularioConPresupuesto();
@@ -1295,6 +1395,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       diasRestantes: this.calcularDiasRestantesParaFecha(fechaVencimiento),
       formulaExterna: {
         activa: false,
+        origen: null,
         refraccionFinal: this.crearRefraccionFinalVacia()
       }
     };
@@ -1968,6 +2069,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     const fecha = new Date();
     fecha.setDate(fecha.getDate() + dias);
     this.nuevoPresupuesto.fechaVencimiento = fecha;
+  }
+
+  puedeMostrarSeccionesPosterioresNuevo(): boolean {
+    return this.clienteEncontrado && !this.validandoCliente;
   }
 
   puedeGenerarPresupuesto(): boolean {
@@ -2771,6 +2876,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     const diasInfo = presupuestoImpresion.diasRestantes >= 0
       ? `${presupuestoImpresion.diasRestantes} días restantes`
       : `Vencido hace ${Math.abs(presupuestoImpresion.diasRestantes)} días`;
+    const observacionesImpresion = this.obtenerObservacionesSinFormulaParaImpresion(presupuestoImpresion?.observaciones);
 
     const contactoSede = [
       datosSede.telefono && datosSede.telefono !== 'Sin teléfono' ? `Tel: ${this.escaparHtml(datosSede.telefono)}` : '',
@@ -3160,7 +3266,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
             <div class="obs-section">
                 <h4>OBSERVACIONES</h4>
-                <div class="obs-content">${this.escaparHtml(presupuestoImpresion.observaciones || 'Sin observaciones adicionales.')}</div>
+              <div class="obs-content">${this.escaparHtml(observacionesImpresion || 'Sin observaciones adicionales.')}</div>
             </div>
 
             <div class="footer-compacto">
@@ -3271,7 +3377,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     ).join('');
     const esPrincipal = opcion?.id === opcionPrincipalId;
     const mostrarTotalesDetallados = totalOpciones <= 1;
-    const observaciones = String(opcion?.observaciones || '').trim();
+    const observaciones = this.obtenerObservacionesSinFormulaParaImpresion(opcion?.observaciones);
     const mostrarCabecera = totalOpciones > 1 || !!observaciones || !!opcion?.nombre;
     const tituloOpcion = totalOpciones > 1
       ? this.escaparHtml(opcion?.nombre || `Opción ${index + 1}`)
@@ -3316,7 +3422,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
                 ` : ''}
                 <div class="total-line"><span class="total-label">${this.getEtiquetaIva()}:</span><span class="total-valor">${this.formatMoneda(opcion?.iva || 0)}</span></div>
                 <div class="total-final total-line"><span class="total-label">TOTAL:</span><span class="total-valor">${this.formatMoneda(total)}</span></div>
-                ${referenciaBsTotal ? `<div class="total-line"><span class="total-label">REF. EN BS:</span><span class="total-valor">${referenciaBsTotal}</span></div>` : ''}
+                ${referenciaBsTotal ? `<div class="total-line"><span class="total-label">REFERENCIA:</span><span class="total-valor">${referenciaBsTotal}</span></div>` : ''}
+                ${referenciaBsTotal ? `<div class="print-note print-note--currency">La referencia en bolívares es informativa. El monto definitivo se calcula según la tasa vigente al momento de la compra.</div>` : ''}
               </div>` : ''}
               <div class="info-lateral">
                   <h4>RESUMEN</h4>
@@ -4347,11 +4454,14 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   onCambioFormulaExternaNuevo(activa: boolean): void {
     this.asegurarFormulaExternaEnPresupuesto(this.nuevoPresupuesto);
     this.nuevoPresupuesto.formulaExterna.activa = Boolean(activa);
+    this.nuevoPresupuesto.formulaExterna.origen = activa
+      ? (this.obtenerOrigenFormulaPresupuesto(this.nuevoPresupuesto) || 'externa')
+      : null;
   }
 
   esFormulaExternaActivaNuevo(): boolean {
     return this.mostrarFormulaExternaNuevo()
-      && this.normalizarBanderaBooleana(this.nuevoPresupuesto?.formulaExterna?.activa);
+      && Boolean(this.obtenerOrigenFormulaPresupuesto(this.nuevoPresupuesto));
   }
 
   esFormulaExternaCompletaNuevo(): boolean {
@@ -4365,11 +4475,14 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   onCambioFormulaExternaDetalle(activa: boolean): void {
     this.asegurarFormulaExternaEnPresupuesto(this.presupuestoSeleccionado);
     this.presupuestoSeleccionado.formulaExterna.activa = Boolean(activa);
+    this.presupuestoSeleccionado.formulaExterna.origen = activa
+      ? (this.obtenerOrigenFormulaPresupuesto(this.presupuestoSeleccionado) || 'externa')
+      : null;
   }
 
   esFormulaExternaActivaDetalle(): boolean {
     return this.mostrarFormulaExternaDetalle()
-      && this.normalizarBanderaBooleana(this.presupuestoSeleccionado?.formulaExterna?.activa);
+      && Boolean(this.obtenerOrigenFormulaPresupuesto(this.presupuestoSeleccionado));
   }
 
   esFormulaExternaCompletaDetalle(): boolean {
@@ -4380,8 +4493,432 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     return this.mostrarFormulaExternaDetalle() && this.esFormulaExternaActivaDetalle() && !this.esFormulaExternaCompletaDetalle();
   }
 
+  async seleccionarOrigenFormulaNuevo(origen: OrigenFormulaPresupuesto): Promise<void> {
+    await this.actualizarOrigenFormulaPresupuesto(this.nuevoPresupuesto, origen, false);
+  }
+
+  async seleccionarOrigenFormulaDetalle(origen: OrigenFormulaPresupuesto): Promise<void> {
+    await this.actualizarOrigenFormulaPresupuesto(this.presupuestoSeleccionado, origen, true);
+  }
+
+  esOrigenFormulaNuevo(origen: OrigenFormulaPresupuesto): boolean {
+    return this.obtenerOrigenFormulaPresupuesto(this.nuevoPresupuesto) === origen;
+  }
+
+  esOrigenFormulaDetalle(origen: OrigenFormulaPresupuesto): boolean {
+    return this.obtenerOrigenFormulaPresupuesto(this.presupuestoSeleccionado) === origen;
+  }
+
+  getTituloBloqueFormulaNuevo(): string {
+    return 'Formula de referencia';
+  }
+
+  getTituloBloqueFormulaDetalle(): string {
+    return 'Formula de referencia';
+  }
+
+  getEtiquetaOrigenFormulaNuevo(): string {
+    return this.getEtiquetaOrigenFormula(this.obtenerOrigenFormulaPresupuesto(this.nuevoPresupuesto));
+  }
+
+  getEtiquetaOrigenFormulaDetalle(): string {
+    return this.getEtiquetaOrigenFormula(this.obtenerOrigenFormulaPresupuesto(this.presupuestoSeleccionado));
+  }
+
+  getDescripcionOrigenFormulaNuevo(): string {
+    return this.getDescripcionOrigenFormula(this.obtenerOrigenFormulaPresupuesto(this.nuevoPresupuesto));
+  }
+
+  getDescripcionOrigenFormulaDetalle(): string {
+    return this.getDescripcionOrigenFormula(this.obtenerOrigenFormulaPresupuesto(this.presupuestoSeleccionado));
+  }
+
   getMensajeFormulaExternaIncompleta(): string {
-    return 'Para fórmula externa, completa refracción final (OD/OI: esfera, cilindro y eje) antes de agregar productos.';
+    const origen = this.obtenerOrigenFormulaPresupuesto(this.presupuestoSeleccionado)
+      || this.obtenerOrigenFormulaPresupuesto(this.nuevoPresupuesto)
+      || 'externa';
+    return `Para formula ${origen}, completa refraccion final (OD/OI: esfera, cilindro y eje) antes de agregar productos.`;
+  }
+
+  private getEtiquetaOrigenFormula(origen: OrigenFormulaPresupuesto | null): string {
+    return origen === 'interna' ? 'Formula interna' : 'Formula externa';
+  }
+
+  private getDescripcionOrigenFormula(origen: OrigenFormulaPresupuesto | null): string {
+    if (origen === 'interna') {
+      return 'Usa esta referencia si los lentes actuales del paciente fueron hechos en la tienda; la lectura actual corresponde con la refraccion final de su ultima historia medica registrada.';
+    }
+
+    return 'Usa esta referencia si el paciente trae formula de fuera o si sus lentes actuales fueron hechos fuera de la tienda y se toman como referencia.';
+  }
+
+  private compararHistoriasPorRecencia(a: any, b: any): number {
+    const fechaA = new Date(a?.auditoria?.fechaCreacion || a?.fecha || 0).getTime();
+    const fechaB = new Date(b?.auditoria?.fechaCreacion || b?.fecha || 0).getTime();
+
+    if (fechaA !== fechaB) {
+      return fechaB - fechaA;
+    }
+
+    const extraerSecuencia = (nHistoria: unknown): number => {
+      const partes = String(nHistoria || '').trim().split('-');
+      return partes.length === 3 ? Number(partes[2]) || 0 : 0;
+    };
+
+    return extraerSecuencia(b?.nHistoria) - extraerSecuencia(a?.nHistoria);
+  }
+
+  private obtenerHistoriaConFormulaMasReciente(historias: any[]): any | null {
+    if (!Array.isArray(historias) || !historias.length) {
+      return null;
+    }
+
+    return historias
+      .slice()
+      .sort((a: any, b: any) => this.compararHistoriasPorRecencia(a, b))
+      .find((historia: any) => this.obtenerFormulaInternaDesdeHistoria(historia)) || null;
+  }
+
+  private obtenerOrigenFormulaPresupuesto(presupuesto: any): OrigenFormulaPresupuesto | null {
+    const origen = String(presupuesto?.formulaExterna?.origen || '').trim().toLowerCase();
+
+    if (origen === 'externa' || origen === 'interna') {
+      return origen;
+    }
+
+    if (this.normalizarBanderaBooleana(presupuesto?.formulaExterna?.activa)) {
+      return 'externa';
+    }
+
+    return null;
+  }
+
+  private async actualizarOrigenFormulaPresupuesto(
+    presupuesto: any,
+    origen: OrigenFormulaPresupuesto,
+    esDetalle: boolean
+  ): Promise<void> {
+    if (!presupuesto) {
+      return;
+    }
+
+    this.asegurarFormulaExternaEnPresupuesto(presupuesto);
+    const origenActual = this.obtenerOrigenFormulaPresupuesto(presupuesto);
+    const nuevoOrigen = origenActual === origen ? null : origen;
+
+    if (nuevoOrigen === 'interna') {
+      const requiereConfirmacion = origenActual === 'externa'
+        && this.presupuestoTieneDatosEnFormulaReferencia(presupuesto);
+
+      if (requiereConfirmacion) {
+        const decision = await this.swalService.showConfirm(
+          'Cambiar a formula interna',
+          'Se reemplazara la formula externa cargada por la ultima formula interna disponible del paciente.',
+          'Cambiar',
+          'Mantener externa'
+        );
+
+        if (!decision.isConfirmed) {
+          return;
+        }
+      }
+
+      const formulaAplicada = await this.cargarFormulaInternaDesdeUltimaHistoria(presupuesto, esDetalle);
+      if (!formulaAplicada) {
+        return;
+      }
+    }
+
+    if (nuevoOrigen === 'externa' && origenActual === 'interna') {
+      const requiereConfirmacion = this.presupuestoTieneDatosEnFormulaReferencia(presupuesto);
+
+      if (requiereConfirmacion) {
+        const decision = await this.swalService.showConfirm(
+          'Cambiar a formula externa',
+          'Se limpiara la formula interna cargada para que ingreses una referencia externa nueva.',
+          'Cambiar',
+          'Mantener interna'
+        );
+
+        if (!decision.isConfirmed) {
+          return;
+        }
+      }
+
+      presupuesto.formulaExterna.refraccionFinal = this.crearRefraccionFinalVacia();
+    }
+
+    presupuesto.formulaExterna.origen = nuevoOrigen;
+    presupuesto.formulaExterna.activa = Boolean(nuevoOrigen);
+
+    if (esDetalle) {
+      this.cdr.detectChanges();
+    }
+  }
+
+  private presupuestoTieneDatosEnFormulaReferencia(presupuesto: any): boolean {
+    const refraccion = presupuesto?.formulaExterna?.refraccionFinal;
+
+    if (!refraccion) {
+      return false;
+    }
+
+    const valores = [
+      refraccion?.od?.esfera,
+      refraccion?.od?.cilindro,
+      refraccion?.od?.eje,
+      refraccion?.od?.adicion,
+      refraccion?.od?.alt,
+      refraccion?.od?.dp,
+      refraccion?.oi?.esfera,
+      refraccion?.oi?.cilindro,
+      refraccion?.oi?.eje,
+      refraccion?.oi?.adicion,
+      refraccion?.oi?.alt,
+      refraccion?.oi?.dp
+    ];
+
+    return valores.some((valor) => this.tieneValorFormula(valor));
+  }
+
+  private async cargarFormulaInternaDesdeUltimaHistoria(presupuesto: any, esDetalle: boolean): Promise<boolean> {
+    this.asegurarFormulaExternaEnPresupuesto(presupuesto);
+
+    let pacienteKey = this.obtenerPacienteKeyPresupuesto(presupuesto);
+    let pacienteId = this.obtenerPacienteIdPresupuesto(presupuesto);
+
+    if (!pacienteKey && !pacienteId) {
+      const pacienteRelacionado = await this.resolverPacienteDesdeCedulaPresupuesto(presupuesto);
+      pacienteKey = String(pacienteRelacionado?.key || '').trim();
+      pacienteId = String(pacienteRelacionado?.id || '').trim();
+
+      if (pacienteRelacionado) {
+        this.asegurarReferenciaPacienteEnPresupuesto(presupuesto, pacienteRelacionado);
+      }
+    }
+
+    if (!pacienteKey && !pacienteId) {
+      presupuesto.formulaExterna.refraccionFinal = this.crearRefraccionFinalVacia();
+      this.snackBar.open('No se encontro un paciente relacionado para recuperar formula interna.', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-warning']
+      });
+      return false;
+    }
+
+    try {
+      const historias = pacienteKey
+        ? await lastValueFrom(this.historiaService.getHistoriasPorPaciente(pacienteKey))
+        : await lastValueFrom(this.historiaService.getHistoriasPaciente(pacienteId));
+      const historiaConFormula = this.obtenerHistoriaConFormulaMasReciente(historias || []);
+
+      const formulaInterna = this.obtenerFormulaInternaDesdeHistoria(historiaConFormula);
+      if (!formulaInterna) {
+        presupuesto.formulaExterna.refraccionFinal = this.crearRefraccionFinalVacia();
+        this.snackBar.open('El paciente no tiene historias previas con refraccion final disponible para usar como formula interna.', 'Cerrar', {
+          duration: 4500,
+          panelClass: ['snackbar-warning']
+        });
+        return false;
+      }
+
+      presupuesto.formulaExterna.refraccionFinal = formulaInterna;
+
+      let opcionesImportadas = 0;
+      const recomendacionesDisponibles = this.construirOpcionesPresupuestoDesdeHistoriaPersistida(historiaConFormula);
+
+      if (recomendacionesDisponibles.length > 0) {
+        const puedeImportar = await this.confirmarImportacionRecomendacionesHistoriaSiAplica(
+          presupuesto,
+          historiaConFormula,
+          recomendacionesDisponibles.length
+        );
+
+        if (puedeImportar) {
+          opcionesImportadas = this.aplicarRecomendacionesHistoriaEnPresupuesto(
+            presupuesto,
+            historiaConFormula,
+            recomendacionesDisponibles,
+            esDetalle
+          );
+        }
+      }
+
+      const numeroHistoria = String(historiaConFormula?.nHistoria || historiaConFormula?.id || '').trim();
+      this.snackBar.open(
+        opcionesImportadas > 0
+          ? `Formula interna y ${opcionesImportadas} recomendacion(es) cargadas desde la historia ${numeroHistoria || 'mas reciente'}.`
+          : `Formula interna cargada desde la historia ${numeroHistoria || 'mas reciente'}.`,
+        'Cerrar',
+        {
+          duration: 3500,
+          panelClass: ['snackbar-info']
+        }
+      );
+
+      if (esDetalle) {
+        this.cdr.detectChanges();
+      }
+
+      return true;
+    } catch (error) {
+      console.error('No se pudo cargar la formula interna desde historias:', error);
+      presupuesto.formulaExterna.refraccionFinal = this.crearRefraccionFinalVacia();
+      this.snackBar.open('No se pudo recuperar la formula interna del paciente.', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-warning']
+      });
+      return false;
+    }
+  }
+
+  private obtenerPacienteKeyPresupuesto(presupuesto: any): string {
+    return String(
+      presupuesto?.cliente?.pacienteKey
+      || presupuesto?.pacienteKeyOrigen
+      || presupuesto?.historia?.pacienteKey
+      || ''
+    ).trim();
+  }
+
+  private obtenerPacienteIdPresupuesto(presupuesto: any): string {
+    return String(
+      presupuesto?.cliente?.pacienteId
+      || presupuesto?.pacienteIdOrigen
+      || presupuesto?.historia?.pacienteId
+      || ''
+    ).trim();
+  }
+
+  private obtenerCedulaPresupuesto(presupuesto: any): string {
+    return String(
+      presupuesto?.cliente?.cedula
+      || this.clienteSinPaciente?.cedula
+      || ''
+    ).trim();
+  }
+
+  private async resolverPacienteDesdeCedulaPresupuesto(presupuesto: any): Promise<any | null> {
+    const cedula = this.obtenerCedulaPresupuesto(presupuesto);
+    if (!cedula) {
+      return null;
+    }
+
+    try {
+      const respuesta = await lastValueFrom(this.pacientesService.getPacientes());
+      const pacientes = Array.isArray(respuesta?.pacientes) ? respuesta.pacientes : [];
+      const cedulaNormalizada = cedula.trim().toLowerCase();
+      const candidatos = pacientes.filter((item: any) => {
+        const cedulaItem = String(item?.informacionPersonal?.cedula || '').trim().toLowerCase();
+
+        if (cedulaItem !== cedulaNormalizada) {
+          return false;
+        }
+
+        return true;
+      });
+
+      if (candidatos.length <= 1) {
+        return candidatos[0] || null;
+      }
+
+      let mejorCandidato: any | null = null;
+      let mejorHistoria: any | null = null;
+
+      for (const candidato of candidatos) {
+        const pacienteKey = String(candidato?.key || '').trim();
+        const pacienteId = String(candidato?.id || '').trim();
+
+        if (!pacienteKey && !pacienteId) {
+          continue;
+        }
+
+        const historias = pacienteKey
+          ? await lastValueFrom(this.historiaService.getHistoriasPorPaciente(pacienteKey))
+          : await lastValueFrom(this.historiaService.getHistoriasPaciente(pacienteId));
+
+        const historiaConFormula = this.obtenerHistoriaConFormulaMasReciente(historias || []);
+
+        if (!historiaConFormula) {
+          continue;
+        }
+
+        if (!mejorHistoria || this.compararHistoriasPorRecencia(historiaConFormula, mejorHistoria) < 0) {
+          mejorCandidato = candidato;
+          mejorHistoria = historiaConFormula;
+        }
+      }
+
+      return mejorCandidato || candidatos[0] || null;
+    } catch (error) {
+      console.error('No se pudo resolver el paciente por cedula para presupuesto:', error);
+      return null;
+    }
+  }
+
+  private asegurarReferenciaPacienteEnPresupuesto(presupuesto: any, paciente: any): void {
+    if (!presupuesto || !paciente) {
+      return;
+    }
+
+    presupuesto.pacienteKeyOrigen = String(paciente?.key || presupuesto?.pacienteKeyOrigen || '').trim() || null;
+    presupuesto.pacienteIdOrigen = String(paciente?.id || presupuesto?.pacienteIdOrigen || '').trim() || null;
+
+    presupuesto.cliente = {
+      ...(presupuesto?.cliente || {}),
+      pacienteKey: String(paciente?.key || presupuesto?.cliente?.pacienteKey || '').trim() || null,
+      pacienteId: String(paciente?.id || presupuesto?.cliente?.pacienteId || '').trim() || null,
+      key: String(paciente?.key || presupuesto?.cliente?.key || '').trim() || null,
+      id: String(paciente?.id || presupuesto?.cliente?.id || '').trim() || null
+    };
+
+    presupuesto.historia = {
+      ...(presupuesto?.historia || {}),
+      pacienteKey: String(paciente?.key || presupuesto?.historia?.pacienteKey || '').trim() || null,
+      pacienteId: String(paciente?.id || presupuesto?.historia?.pacienteId || '').trim() || null
+    };
+  }
+
+  private obtenerFormulaInternaDesdeHistoria(historia: any): any | null {
+    const refraccionFinal = historia?.examenOcular?.refraccionFinal;
+    if (!refraccionFinal) {
+      return null;
+    }
+
+    const formula = {
+      od: {
+        esfera: this.normalizarValorFormulaHistoria(refraccionFinal?.esf_od),
+        cilindro: this.normalizarValorFormulaHistoria(refraccionFinal?.cil_od),
+        eje: this.normalizarValorFormulaHistoria(refraccionFinal?.eje_od),
+        adicion: this.normalizarValorFormulaHistoria(refraccionFinal?.add_od),
+        alt: this.normalizarValorFormulaHistoria(refraccionFinal?.alt_od),
+        dp: this.normalizarValorFormulaHistoria(refraccionFinal?.dp_od)
+      },
+      oi: {
+        esfera: this.normalizarValorFormulaHistoria(refraccionFinal?.esf_oi),
+        cilindro: this.normalizarValorFormulaHistoria(refraccionFinal?.cil_oi),
+        eje: this.normalizarValorFormulaHistoria(refraccionFinal?.eje_oi),
+        adicion: this.normalizarValorFormulaHistoria(refraccionFinal?.add_oi),
+        alt: this.normalizarValorFormulaHistoria(refraccionFinal?.alt_oi),
+        dp: this.normalizarValorFormulaHistoria(refraccionFinal?.dp_oi)
+      }
+    };
+
+    if (!this.tieneValorFormula(formula.od.esfera)
+      || !this.tieneValorFormula(formula.od.cilindro)
+      || !this.tieneValorFormula(formula.od.eje)
+      || !this.tieneValorFormula(formula.oi.esfera)
+      || !this.tieneValorFormula(formula.oi.cilindro)
+      || !this.tieneValorFormula(formula.oi.eje)) {
+      return null;
+    }
+
+    return formula;
+  }
+
+  private normalizarValorFormulaHistoria(valor: unknown): string | null {
+    const texto = String(valor ?? '').trim();
+    return texto.length > 0 ? texto : null;
   }
 
   private crearRefraccionFinalVacia(): any {
@@ -4393,13 +4930,15 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   private normalizarFormulaExternaPersistida(formulaExterna: any): any {
     const refraccion = formulaExterna?.refraccionFinal || {};
+    const origenNormalizado = this.obtenerOrigenFormulaNormalizado(formulaExterna?.origen, formulaExterna?.activa);
     const normalizarValor = (valor: unknown): string | null => {
       const texto = String(valor ?? '').trim();
       return texto.length > 0 ? texto : null;
     };
 
     return {
-      activa: this.normalizarBanderaBooleana(formulaExterna?.activa),
+      activa: Boolean(origenNormalizado),
+      origen: origenNormalizado,
       refraccionFinal: {
         od: {
           esfera: normalizarValor(refraccion?.od?.esfera),
@@ -4421,8 +4960,223 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     };
   }
 
+  private async confirmarImportacionRecomendacionesHistoriaSiAplica(
+    presupuesto: any,
+    historia: any,
+    totalOpciones: number
+  ): Promise<boolean> {
+    if (!this.presupuestoTieneProductosNoConsulta(presupuesto)) {
+      return true;
+    }
+
+    const numeroHistoria = String(historia?.nHistoria || historia?.id || '').trim() || 'mas reciente';
+    const etiquetaOpciones = totalOpciones === 1 ? '1 recomendacion' : `${totalOpciones} recomendaciones`;
+    const decision = await this.swalService.showConfirm(
+      'Importar recomendaciones de historia',
+      `La historia ${numeroHistoria} tiene ${etiquetaOpciones} listas para presupuesto. Si continúas, se reemplazarán los productos actuales por esa selección.`,
+      'Reemplazar',
+      'Conservar actual'
+    );
+
+    return !!decision?.isConfirmed;
+  }
+
+  private aplicarRecomendacionesHistoriaEnPresupuesto(
+    presupuesto: any,
+    historia: any,
+    opciones: OpcionPresupuesto[],
+    esDetalle: boolean
+  ): number {
+    if (!presupuesto || !Array.isArray(opciones) || opciones.length === 0) {
+      return 0;
+    }
+
+    presupuesto.historiaMedicaId = String(historia?.id || presupuesto?.historiaMedicaId || '').trim() || null;
+    presupuesto.historiaNumero = String(historia?.nHistoria || presupuesto?.historiaNumero || '').trim() || null;
+    presupuesto.historia = {
+      ...(presupuesto?.historia || {}),
+      id: String(historia?.id || presupuesto?.historia?.id || '').trim() || null,
+      numero: String(historia?.nHistoria || presupuesto?.historia?.numero || '').trim() || null,
+      pacienteKey: String(historia?.pacienteId || presupuesto?.historia?.pacienteKey || this.obtenerPacienteKeyPresupuesto(presupuesto) || '').trim() || null,
+      pacienteId: String(historia?.paciente_id || historia?.pacienteKey || presupuesto?.historia?.pacienteId || this.obtenerPacienteIdPresupuesto(presupuesto) || '').trim() || null,
+      especialistaTipo: String(historia?.datosConsulta?.especialista?.tipo || presupuesto?.historia?.especialistaTipo || '').trim() || null
+    };
+
+    presupuesto.opciones = opciones.map((opcion) => ({
+      ...opcion,
+      productos: Array.isArray(opcion?.productos)
+        ? opcion.productos.map((producto: any) => this.normalizarProductoPresupuestoPersistido(producto))
+        : []
+    }));
+    presupuesto.opcionPrincipalId = String(
+      opciones.find((opcion) => opcion.esPrincipal)?.id
+      || opciones[0]?.id
+      || ''
+    ).trim();
+
+    presupuesto.opciones.forEach((opcion: OpcionPresupuesto) => {
+      opcion.esPrincipal = opcion.id === presupuesto.opcionPrincipalId;
+      this.recalcularTotalesPresupuesto(opcion as any);
+    });
+
+    this.sincronizarResumenDesdeOpcionPrincipal(presupuesto);
+
+    if (esDetalle) {
+      this.sincronizarOpcionActivaDetalle(presupuesto.opcionPrincipalId);
+      this.cdr.detectChanges();
+    } else {
+      this.sincronizarOpcionActivaNuevo(presupuesto.opcionPrincipalId);
+    }
+
+    return presupuesto.opciones.length;
+  }
+
+  private construirOpcionesPresupuestoDesdeHistoriaPersistida(historia: any): OpcionPresupuesto[] {
+    const recomendaciones = Array.isArray(historia?.recomendaciones) ? historia.recomendaciones : [];
+
+    return recomendaciones
+      .map((recomendacion: any, index: number) => {
+        const productos = this.obtenerProductosPresupuestablesDesdeRecomendacionHistoria(recomendacion);
+        if (productos.length === 0) {
+          return null;
+        }
+
+        return this.crearOpcionPresupuesto(`Recomendación ${index + 1}`, productos, {
+          id: `historia-${String(historia?.id || 'sin-id')}-rec-${index + 1}`,
+          observaciones: String(recomendacion?.observaciones || '').trim(),
+          esPrincipal: index === 0
+        });
+      })
+      .filter((opcion): opcion is OpcionPresupuesto => !!opcion);
+  }
+
+  private obtenerProductosPresupuestablesDesdeRecomendacionHistoria(recomendacion: any): any[] {
+    const categorias = this.obtenerCategoriasProductosDesdeRecomendacionHistoria(recomendacion);
+
+    return categorias
+      .map((categoria) => this.mapearProductoHistoriaAPresupuesto(categoria.producto, categoria.categoria, recomendacion))
+      .filter(Boolean);
+  }
+
+  private obtenerCategoriasProductosDesdeRecomendacionHistoria(recomendacion: any): Array<{ categoria: string; producto: any }> {
+    const categoriasPersistidas = Array.isArray(recomendacion?.seleccionProductos?.categorias)
+      ? recomendacion.seleccionProductos.categorias
+      : [];
+
+    const categorias = categoriasPersistidas
+      .map((item: any) => ({
+        categoria: String(item?.categoria || item?.producto?.categoria || '').trim().toLowerCase(),
+        producto: item?.producto || null
+      }))
+      .filter((item: { categoria: string; producto: any }) => !!item.categoria && !!item.producto?.id);
+
+    if (categorias.length > 0) {
+      return categorias;
+    }
+
+    const derivadas: Array<{ categoria: string; producto: any }> = [];
+    const productoCristal = recomendacion?.seleccionProductos?.cristal;
+    const productoMontura = recomendacion?.seleccionProductos?.montura;
+    const filtrosAditivos = Array.isArray(recomendacion?.seleccionProductos?.filtrosAditivos)
+      ? recomendacion.seleccionProductos.filtrosAditivos
+      : [];
+    const materiales = Array.isArray(recomendacion?.seleccionProductos?.materiales)
+      ? recomendacion.seleccionProductos.materiales
+      : [];
+
+    if (productoCristal?.id) {
+      derivadas.push({
+        categoria: String(productoCristal?.categoria || (recomendacion?.tipoLentesContacto ? 'lentes de contacto' : 'cristales')).trim().toLowerCase(),
+        producto: productoCristal
+      });
+    }
+
+    if (productoMontura?.id) {
+      derivadas.push({ categoria: 'monturas', producto: productoMontura });
+    }
+
+    filtrosAditivos.forEach((producto: any) => {
+      if (producto?.id) {
+        derivadas.push({ categoria: String(producto?.categoria || 'filtros/aditivos').trim().toLowerCase(), producto });
+      }
+    });
+
+    materiales.forEach((producto: any) => {
+      if (producto?.id) {
+        derivadas.push({ categoria: String(producto?.categoria || 'materiales').trim().toLowerCase(), producto });
+      }
+    });
+
+    return derivadas;
+  }
+
+  private mapearProductoHistoriaAPresupuesto(producto: any, categoria: string, recomendacion: any): any | null {
+    if (!producto?.id) {
+      return null;
+    }
+
+    const precio = Number(producto?.precioConIva ?? producto?.precio ?? 0);
+    const descripcionBase = String(producto?.descripcion || producto?.nombre || 'Producto').trim();
+    const medidas = this.construirDetalleMedidasRecomendacionHistoria(producto, categoria, recomendacion);
+    const descripcion = medidas ? `${descripcionBase} · ${medidas}` : descripcionBase;
+
+    return this.normalizarProductoPresupuestoPersistido({
+      id: String(producto?.id),
+      productoId: String(producto?.id),
+      nombre: String(producto?.nombre || '').trim(),
+      descripcion,
+      codigo: String(producto?.codigo || '').trim(),
+      precio,
+      precioUnitario: precio,
+      precioOriginal: Number(producto?.precioOriginal ?? producto?.precio ?? precio),
+      cantidad: 1,
+      descuento: 0,
+      descuentoPorcentaje: 0,
+      total: precio,
+      moneda: producto?.moneda || this.monedaSistema,
+      monedaOriginal: producto?.monedaOriginal || producto?.moneda || this.monedaSistema,
+      tasaConversion: Number(producto?.tasaConversion ?? 1),
+      aplicaIva: producto?.aplicaIva !== false,
+      categoria: String(producto?.categoria || categoria || '').trim(),
+      cristalConfig: producto?.cristalConfig || null
+    });
+  }
+
+  private construirDetalleMedidasRecomendacionHistoria(producto: any, categoria: string, recomendacion: any): string {
+    const categoriaNormalizada = String(categoria || '').trim().toLowerCase();
+    const esCristal = categoriaNormalizada === 'cristales' || categoriaNormalizada === 'cristal';
+
+    if (!esCristal) {
+      return '';
+    }
+
+    const medidas = producto?.medidas || {
+      horizontal: recomendacion?.medidaHorizontal,
+      vertical: recomendacion?.medidaVertical,
+      diagonal: recomendacion?.medidaDiagonal,
+      puente: recomendacion?.medidaPuente
+    };
+
+    return [
+      medidas?.horizontal ? `H ${medidas.horizontal}` : '',
+      medidas?.vertical ? `V ${medidas.vertical}` : '',
+      medidas?.diagonal ? `D ${medidas.diagonal}` : '',
+      medidas?.puente ? `P ${medidas.puente}` : ''
+    ].filter(Boolean).join(' · ');
+  }
+
   private tieneValorFormula(valor: unknown): boolean {
     return String(valor ?? '').trim().length > 0;
+  }
+
+  private obtenerOrigenFormulaNormalizado(valor: unknown, activa?: unknown): OrigenFormulaPresupuesto | null {
+    const origen = String(valor || '').trim().toLowerCase();
+
+    if (origen === 'externa' || origen === 'interna') {
+      return origen;
+    }
+
+    return this.normalizarBanderaBooleana(activa) ? 'externa' : null;
   }
 
   private asegurarFormulaExternaEnPresupuesto(presupuesto: any): void {
@@ -4433,8 +5187,16 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     if (!presupuesto.formulaExterna) {
       presupuesto.formulaExterna = {
         activa: false,
+        origen: null,
         refraccionFinal: this.crearRefraccionFinalVacia()
       };
+    }
+
+    if (!('origen' in presupuesto.formulaExterna)) {
+      presupuesto.formulaExterna.origen = this.obtenerOrigenFormulaNormalizado(
+        presupuesto.formulaExterna?.origen,
+        presupuesto.formulaExterna?.activa
+      );
     }
 
     if (!presupuesto.formulaExterna.refraccionFinal) {
@@ -4458,8 +5220,9 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   private construirObservacionesConFormulaExterna(presupuesto: any): string {
     const observacionesBase = String(presupuesto?.observaciones || '').trim();
+    const origenFormula = this.obtenerOrigenFormulaPresupuesto(presupuesto);
 
-    if (!this.normalizarBanderaBooleana(presupuesto?.formulaExterna?.activa)) {
+    if (!origenFormula) {
       return observacionesBase;
     }
 
@@ -4477,21 +5240,30 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     const oiAlt = String(refraccion?.oi?.alt || '').trim();
     const oiDp = String(refraccion?.oi?.dp || '').trim();
 
+    const marcadorFormula = origenFormula === 'interna' ? 'FORMULA_INTERNA' : 'FORMULA_EXTERNA';
     const resumenFormula = [
-      'FORMULA_EXTERNA',
+      marcadorFormula,
       `OD(${odEsf}/${odCil}x${odEje}${odAdd ? ` ADD ${odAdd}` : ''}${odAlt ? ` ALT ${odAlt}` : ''}${odDp ? ` DP ${odDp}` : ''})`,
       `OI(${oiEsf}/${oiCil}x${oiEje}${oiAdd ? ` ADD ${oiAdd}` : ''}${oiAlt ? ` ALT ${oiAlt}` : ''}${oiDp ? ` DP ${oiDp}` : ''})`
     ].filter(Boolean).join(' | ');
 
-    if (!observacionesBase) {
+    const observacionesSinFormula = observacionesBase
+      .replace(/\s*\|\s*FORMULA_(?:EXTERNA|INTERNA)\s*\|\s*OD\([^|]+\)\s*\|\s*OI\([^|]+\)\s*$/i, '')
+      .replace(/^FORMULA_(?:EXTERNA|INTERNA)\s*\|\s*OD\([^|]+\)\s*\|\s*OI\([^|]+\)\s*$/i, '')
+      .trim();
+
+    if (!observacionesSinFormula) {
       return resumenFormula;
     }
 
-    if (observacionesBase.includes('FORMULA_EXTERNA')) {
-      return observacionesBase;
-    }
+    return `${observacionesSinFormula} | ${resumenFormula}`;
+  }
 
-    return `${observacionesBase} | ${resumenFormula}`;
+  private obtenerObservacionesSinFormulaParaImpresion(observaciones: any): string {
+    return String(observaciones || '')
+      .replace(/\s*\|\s*FORMULA_(?:EXTERNA|INTERNA)\s*\|\s*OD\([^|]+\)\s*\|\s*OI\([^|]+\)\s*$/i, '')
+      .replace(/^FORMULA_(?:EXTERNA|INTERNA)\s*\|\s*OD\([^|]+\)\s*\|\s*OI\([^|]+\)\s*$/i, '')
+      .trim();
   }
 
   // Método para guardar cambios del presupuesto

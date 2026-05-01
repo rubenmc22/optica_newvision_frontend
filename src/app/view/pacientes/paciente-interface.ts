@@ -7,6 +7,11 @@ export interface PacientesListState {
   scrollPosition: number;
   filtroActual: string;
   desdePacientes: boolean;
+  sedeFiltro?: string;
+  paginaActual?: number;
+  registrosPorPagina?: number;
+  ordenActual?: string;
+  ordenAscendente?: boolean;
 }
 
 
@@ -33,6 +38,8 @@ export interface Paciente {
 
   //Sede
   sede: string;
+  sedesAsociadas?: { id: string; nombre: string }[];
+  disponibleEnSedeActual?: boolean;
 
   redesSociales?: { platform: string; username: string }[];
 
@@ -53,6 +60,7 @@ export interface Paciente {
     traumatismoOcular?: string | null;
     traumatismoOcularDescripcion?: string | null;
     usoDispositivo?: string;
+    tiempoUsoEstimado?: string;
     cirugiaOcular?: string | null;
     cirugiaOcularDescripcion?: string | null;
     alergicoA?: string | null;

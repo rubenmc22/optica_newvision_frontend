@@ -32,6 +32,8 @@ export interface Presupuesto {
     estadoColor?: string;
 }
 
+export type OrigenFormulaPresupuesto = 'externa' | 'interna';
+
 export interface OpcionPresupuesto {
     id: string;
     nombre: string;
@@ -46,6 +48,7 @@ export interface OpcionPresupuesto {
 
 export interface FormulaExternaPresupuesto {
     activa: boolean;
+    origen?: OrigenFormulaPresupuesto | null;
     refraccionFinal: {
         od: FormulaExternaOjoPresupuesto;
         oi: FormulaExternaOjoPresupuesto;

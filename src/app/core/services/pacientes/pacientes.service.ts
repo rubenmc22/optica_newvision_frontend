@@ -43,6 +43,25 @@ export class PacientesService {
     );
   }
 
+  buscarCoincidenciasPaciente(tipo: 'cedula' | 'representante', cedula: string): Observable<any> {
+    return this.http.get(`${environment.apiUrl}/paciente-buscar`, {
+      params: {
+        tipo,
+        cedula
+      }
+    }).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
+  }
+
+  enlazarPacienteASede(clavePaciente: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/paciente-enlazar/${clavePaciente}`, {}).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
+  }
+
   updatePaciente(clavePaciente: string, payload: any): Observable<any> {
     return this.http.put(`${environment.apiUrl}/paciente-update/${clavePaciente}`, payload).pipe(
       timeout(this.REQUEST_TIMEOUT),

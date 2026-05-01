@@ -16,6 +16,10 @@ import { LoaderService } from './../../shared/loader/loader.service';
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent implements OnInit {
+  private readonly loaderStepDelayMs = 180;
+  private readonly loaderResultDelayMs = 280;
+  private readonly loaderErrorDelayMs = 700;
+
   loginForm: FormGroup;
   isLoading: boolean = false;
   showPassword: boolean = false;
@@ -93,13 +97,12 @@ export class LoginComponent implements OnInit {
     const { cedula, password, sede, rememberMe } = this.loginForm.value;
 
     try {
-      // 🔥 FLUJO COMPLETO CON MÚLTIPLES ESTADOS
       this.loader.showWithMessage('🔍 Validando datos...');
+      await this.delay(this.loaderStepDelayMs);
 
-      await this.delay(300);
       this.loader.updateMessage('🔐 Conectando de forma segura...');
+      await this.delay(this.loaderStepDelayMs);
 
-      await this.delay(300);
       this.loader.updateMessage('👤 Verificando credenciales...');
 
       this.authService.login(cedula, password, sede).pipe(
@@ -109,9 +112,7 @@ export class LoginComponent implements OnInit {
       ).subscribe({
         next: async (authData) => {
           this.loader.updateMessage('✅ ¡Acceso autorizado!');
-          await this.delay(500);
-
-          this.loader.updateMessage('🚀 Redirigiendo al dashboard...');
+          await this.delay(this.loaderResultDelayMs);
 
           // Guardar credenciales
           if (rememberMe) {
@@ -128,7 +129,8 @@ export class LoginComponent implements OnInit {
           //Marcar que la navegación viene del login
           sessionStorage.setItem('fromLogin', 'true');
 
-          await this.delay(800);
+          this.loader.updateMessage('🚀 Redirigiendo al dashboard...');
+          await this.delay(this.loaderResultDelayMs);
           this.loader.hide();
 
           this.router.navigate(['/dashboard'], { replaceUrl: true });
@@ -136,13 +138,12 @@ export class LoginComponent implements OnInit {
           localStorage.removeItem('selectedSubmenuLabel');
         },
         error: async (err: HttpErrorResponse) => {
-          // 🔥 ERROR - TRANSICIÓN CLARA
           const message = err.error?.message === 'Credenciales inválidas.'
             ? '❌ Estimado usuario, las credenciales ingresadas son inválidas.'
             : '❌ ' + (err.error?.message || 'Error durante el login');
 
           this.loader.updateMessage(message);
-          await this.delay(1500);
+          await this.delay(this.loaderErrorDelayMs);
           this.loader.hide();
           // this.swalService.showError('Error', message);
         }
@@ -154,7 +155,6 @@ export class LoginComponent implements OnInit {
     }
   }
 
-  // 🔧 MÉTODO AUXILIAR PARA DELAYS
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }

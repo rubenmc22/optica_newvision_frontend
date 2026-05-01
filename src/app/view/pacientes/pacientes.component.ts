@@ -6,7 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import * as bootstrap from 'bootstrap';
 import { ModalService } from '../../core/services/modal/modal.service';
-import { Paciente } from './paciente-interface';
+import { Paciente, PacientesListState } from './paciente-interface';
 import { Observable, of, forkJoin, lastValueFrom, Subscription } from 'rxjs';
 import { take, catchError } from 'rxjs/operators';
 import { Sede } from '../../view/login/login-interface';
@@ -54,6 +54,7 @@ import {
 })
 
 export class VerPacientesComponent implements OnInit {
+  private estadoListadoPendiente: PacientesListState | null = null;
   // Propiedades del componente
   formPaciente: FormGroup;
   pacientes: Paciente[] = [];
@@ -82,10 +83,25 @@ export class VerPacientesComponent implements OnInit {
   sedeActiva: string = '';
   sedeFiltro: string = this.sedeActiva;
   filtro: string = '';
+  busquedaGlobalPorCedulaActiva: boolean = false;
   ordenActual: string = 'informacionPersonal.nombreCompleto';
   ordenAscendente: boolean = true;
   esMenorSinCedula: boolean = false;
   dataIsReady = false;
+  tipoBusquedaPaciente: 'cedula' | 'representante' = 'cedula';
+  cedulaBusquedaPaciente: string = '';
+  busquedaPacienteCargando: boolean = false;
+  busquedaPacienteRealizada: boolean = false;
+  estadoBusquedaPaciente: 'idle' | 'no_encontrado' | 'asociado_sede_actual' | 'disponible_en_otra_sede' | 'coincidencias' | 'error' = 'idle';
+  pacienteEncontradoBusqueda: Paciente | null = null;
+  pacientesCoincidentesBusqueda: Paciente[] = [];
+  mostrarBusquedaAuxiliarPaciente: boolean = false;
+  cedulaPrecargadaDesdeListado: boolean = false;
+  enlaceHintVisible: boolean = false;
+  enlaceHintMensaje: string = '';
+  enlaceHintTop: string = '0px';
+  enlaceHintLeft: string = '0px';
+  mostrarFormularioCreacionPaciente: boolean = false;
 
   // Propiedades para paginación
   paginaActual: number = 1;
@@ -227,6 +243,8 @@ export class VerPacientesComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.cargarEstadoListadoPendiente();
+
     this.route.queryParams.subscribe(params => {
       if (params['abrirModal'] === 'nuevo') {
         // Esperar a que la vista cargue
@@ -262,6 +280,22 @@ export class VerPacientesComponent implements OnInit {
     //Establecer orden por defecto por fecha de registro (más reciente primero)
     this.ordenActual = 'fechaRegistro';
     this.ordenAscendente = false;
+  }
+
+  private cargarEstadoListadoPendiente(): void {
+    const savedState = sessionStorage.getItem('pacientesListState');
+    if (!savedState) {
+      this.estadoListadoPendiente = null;
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(savedState) as PacientesListState;
+      this.estadoListadoPendiente = parsed?.desdePacientes ? parsed : null;
+    } catch {
+      this.estadoListadoPendiente = null;
+      sessionStorage.removeItem('pacientesListState');
+    }
   }
 
   private convertirOpcionesNgSelect(opciones: string[]): any[] {
@@ -465,10 +499,15 @@ export class VerPacientesComponent implements OnInit {
           )
         );
 
-      const sedeUsuario = (user?.sede ?? '').trim().toLowerCase();
+      const sedeUsuario = (
+        this.authService.currentUserValue?.sede?.key
+        || this.userStateService.getSedeActual()?.key
+        || user?.sede
+        || ''
+      ).trim().toLowerCase();
       const sedeValida = this.sedesDisponibles.some(s => s.key === sedeUsuario);
       this.sedeActiva = sedeValida ? sedeUsuario : '';
-      this.sedeFiltro = sedeValida ? sedeUsuario : '';
+      this.sedeFiltro = this.sedeActiva || 'todas';
 
       this.cargarPacientes();
     });
@@ -500,64 +539,12 @@ export class VerPacientesComponent implements OnInit {
       next: (data) => {
         this.pacientes = Array.isArray(data.pacientes)
           ? data.pacientes
-            .map((p: any) => {
-              const info = p.informacionPersonal;
-              const historia = p.historiaClinica;
-              const empresa = p.informacionEmpresa;
-
-              return {
-                id: p.id,
-                key: p.key,
-                fechaRegistro: this.formatearFecha(p.created_at),
-                fechaRegistroRaw: p.created_at,
-                fechaActualizacion: this.formatearFecha(p.updated_at),
-                fechaActualizacionRaw: p.updated_at,
-                sede: p.sedeId?.toLowerCase() ?? 'sin-sede',
-                redesSociales: p.redesSociales || [],
-
-                informacionEmpresa: empresa ? {
-                  referidoEmpresa: empresa.referidoEmpresa || false,
-                  empresaNombre: empresa.empresaNombre || '',
-                  empresaRif: empresa.empresaRif || '',
-                  empresaTelefono: empresa.empresaTelefono || '',
-                  empresaDireccion: empresa.empresaDireccion || ''
-                } : null,
-
-                informacionPersonal: {
-                  esMenorSinCedula: info.esMenorSinCedula ?? false,
-                  nombreCompleto: info.nombreCompleto,
-                  cedula: info.cedula,
-                  telefono: info.telefono,
-                  email: info.email,
-                  fechaNacimiento: info.fechaNacimiento,
-                  edad: this.calcularEdad(info.fechaNacimiento),
-                  ocupacion: info.ocupacion,
-                  genero: info.genero === 'm' ? 'Masculino' : info.genero === 'f' ? 'Femenino' : 'Otro',
-                  direccion: info.direccion
-                },
-
-                historiaClinica: {
-                  usuarioLentes: historia.usuarioLentes ?? null,
-                  tipoCristalActual: historia.tipoCristalActual ?? '',
-                  ultimaGraduacion: historia.ultimaGraduacion ?? '',
-                  fotofobia: historia.fotofobia ?? null,
-                  traumatismoOcular: historia.traumatismoOcular ?? null,
-                  traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion ?? '',
-                  usoDispositivo: historia.usoDispositivo,
-                  tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
-                  cirugiaOcular: historia.cirugiaOcular ?? null,
-                  cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion ?? '',
-                  alergicoA: historia.alergicoA ?? null,
-                  antecedentesPersonales: historia.antecedentesPersonales ?? [],
-                  antecedentesFamiliares: historia.antecedentesFamiliares ?? [],
-                  patologias: historia.patologias ?? [],
-                }
-              };
-            })
+            .map((p: any) => this.transformarPacienteApi(p))
             .sort((a, b) => new Date(b.fechaRegistroRaw).getTime() - new Date(a.fechaRegistroRaw).getTime())
           : [];
 
         this.actualizarPacientesPorSede();
+        this.restaurarEstadoListadoSiExiste();
         setTimeout(() => {
           this.dataIsReady = true;
           this.loader.hide();
@@ -721,69 +708,39 @@ export class VerPacientesComponent implements OnInit {
       next: (response) => {
         this.cargando = false;
 
-        const pacienteData = response.paciente;
+        const pacienteTransformado = this.transformarPacienteApi(response.paciente);
 
-        // Transformar la respuesta del paciente
-        const pacienteTransformado = {
-          ...pacienteData,
-          key: pacienteData.key || pacienteData.id,
-          fechaRegistro: this.formatearFecha(pacienteData.created_at),
-          fechaRegistroRaw: pacienteData.created_at,
-          fechaActualizacion: this.formatearFecha(pacienteData.updated_at),
-          fechaActualizacionRaw: pacienteData.updated_at,
-          sede: pacienteData.sedeId || this.sedeActiva,
-          informacionPersonal: {
-            ...pacienteData.informacionPersonal,
-            edad: this.calcularEdad(pacienteData.informacionPersonal.fechaNacimiento),
-            genero: pacienteData.informacionPersonal.genero === 'm' ? 'Masculino' :
-              pacienteData.informacionPersonal.genero === 'f' ? 'Femenino' : 'Otro'
-          }
-        };
-
-        // Encontrar la posición correcta para insertar (orden descendente por fecha de creación)
-        const fechaCreacion = new Date(pacienteTransformado.fechaRegistroRaw).getTime();
-        let posicionInsercion = 0;
-
-        for (let i = 0; i < this.pacientes.length; i++) {
-          const fechaExistente = new Date(this.pacientes[i].fechaRegistroRaw).getTime();
-          if (fechaCreacion > fechaExistente) {
-            posicionInsercion = i;
-            break;
-          } else {
-            posicionInsercion = i + 1;
-          }
-        }
-
-        // Insertar en la posición correcta
-        this.pacientes.splice(posicionInsercion, 0, pacienteTransformado);
+        this.insertarOActualizarPacienteEnListado(pacienteTransformado);
 
         this.cerrarModal('modalAgregarPaciente');
 
-        // Mostrar Swal con acción para crear historia al vuelo
-        this.swalService.showSuccessWithAction('¡Registro exitoso!', 'Paciente registrado correctamente.')
-          .then((result) => {
-            // Si el usuario decide crear la historia, navegar al módulo de historias
-            if (result && result.isConfirmed) {
-              try {
-                // Guardar temporalmente el paciente para que historias lo precargue
-                sessionStorage.removeItem('pacienteParaHistoriaProcesado');
-                sessionStorage.setItem('pacienteParaHistoria', JSON.stringify(pacienteTransformado));
-                sessionStorage.setItem('desdePacientes', '1');
-              } catch (e) {
-                console.warn('No se pudo persistir paciente en sessionStorage', e);
-              }
+        const sedesPrevias = Array.isArray(response?.sedesPrevias)
+          ? response.sedesPrevias
+            .map((sede: any) => {
+              const fecha = sede?.fechaAsociacion
+                ? this.formatearFecha(sede.fechaAsociacion)
+                : '';
 
-              // Navegar al módulo de historias
-              this.router.navigate(['/pacientes-historias']);
-            }
-          })
-          .catch(() => {
-            // Ignorar errores del modal
-          });
+              return fecha
+                ? `Asociado previamente el ${fecha}`
+                : '';
+            })
+            .filter((detalle: string) => detalle.length > 0)
+          : [];
 
-        // Actualizar la vista
-        this.actualizarPacientesPorSede();
-        this.cdRef.detectChanges();
+        const nombreSedeActual = this.sedesDisponibles.find(
+          sede => sede.key === String(this.sedeActiva || '').trim().toLowerCase()
+        )?.nombre || this.sedeActiva || 'la sede actual';
+
+        const nombreSedeOrigen = String(response?.sedesPrevias?.[0]?.nombre || '').trim();
+
+        const mensajeRegistro = response?.reutilizado && sedesPrevias.length
+          ? `Este paciente ya se encontraba registrado en la sede ${nombreSedeOrigen || 'de origen'}. Se procedera a enlazarlo tambien a la sede ${nombreSedeActual}. ${sedesPrevias.join(', ')}.`
+          : response?.reutilizado
+            ? `Este paciente ya se encontraba registrado en otra sede. Se procedera a enlazarlo tambien a la sede ${nombreSedeActual}.`
+            : 'Paciente registrado correctamente.';
+
+        this.ofrecerCrearHistoriaDesdePaciente(pacienteTransformado, '¡Registro exitoso!', mensajeRegistro);
       },
       error: (error) => {
         this.cargando = false;
@@ -1087,25 +1044,22 @@ export class VerPacientesComponent implements OnInit {
   }
 
   // Métodos para modales
-  abrirModalAgregarPaciente(): void {
+  abrirModalAgregarPaciente(mostrarBusquedaAuxiliar: boolean = false): void {
     this.modoEdicion = false;
+    this.prepararFormularioNuevoPaciente();
+    this.resetearBusquedaPaciente();
+    this.mostrarFormularioCreacionPaciente = true;
+    this.mostrarBusquedaAuxiliarPaciente = mostrarBusquedaAuxiliar;
 
-    //Reset completo del formulario
-    this.formPaciente.reset(this.crearPacienteVacio());
+    const cedulaSugerida = this.obtenerCedulaSugeridaDesdeListado();
+    this.cedulaPrecargadaDesdeListado = !!cedulaSugerida;
 
-    const redesFormArray = this.formPaciente.get('redesSociales') as FormArray;
-    this.limpiarFormArray(redesFormArray);
-
-    // Resetear estado de empresa
-    this.empresaEncontrada = false;
-    this.validandoEmpresa = false;
-    this.validacionEmpresaIntentada = false;
-    this.datosEmpresa = null;
-    this.rifAnterior = '';
-
-    this.nuevaRed = '';
-    this.nuevoUsuario = '';
-    this.usuarioInputHabilitado = false;
+    if (cedulaSugerida) {
+      this.cedulaBusquedaPaciente = cedulaSugerida;
+      this.formPaciente.patchValue({
+        cedula: cedulaSugerida
+      });
+    }
 
     // 🧼 Mostrar modal limpio
     const modalElement = document.getElementById('modalAgregarPaciente');
@@ -1319,6 +1273,200 @@ export class VerPacientesComponent implements OnInit {
     this.nuevaRed = '';
     this.nuevoUsuario = '';
     this.usuarioInputHabilitado = false;
+    this.resetearBusquedaPaciente();
+  }
+
+  cambiarTipoBusquedaPaciente(): void {
+    this.resetearBusquedaPaciente(true);
+  }
+
+  buscarPacienteAntesDeCrear(): void {
+    const cedula = String(this.cedulaBusquedaPaciente || '').trim();
+
+    if (!/^\d{6,9}$/.test(cedula)) {
+      this.swalService.showWarning('Cédula inválida', 'Ingresa una cédula válida para realizar la búsqueda.');
+      return;
+    }
+
+    this.busquedaPacienteCargando = true;
+    this.busquedaPacienteRealizada = false;
+    this.estadoBusquedaPaciente = 'idle';
+    this.pacienteEncontradoBusqueda = null;
+    this.pacientesCoincidentesBusqueda = [];
+
+    this.pacientesService.buscarCoincidenciasPaciente(this.tipoBusquedaPaciente, cedula).subscribe({
+      next: (response) => {
+        this.busquedaPacienteCargando = false;
+        this.busquedaPacienteRealizada = true;
+        this.estadoBusquedaPaciente = response?.estado || 'no_encontrado';
+
+        if (response?.paciente) {
+          this.pacienteEncontradoBusqueda = this.transformarPacienteApi(response.paciente);
+        }
+
+        if (Array.isArray(response?.pacientes)) {
+          this.pacientesCoincidentesBusqueda = response.pacientes.map((paciente: any) => this.transformarPacienteApi(paciente));
+        }
+      },
+      error: (error) => {
+        this.busquedaPacienteCargando = false;
+        this.busquedaPacienteRealizada = true;
+        this.estadoBusquedaPaciente = 'error';
+        console.error('Error buscando paciente previo al registro:', error);
+        this.swalService.showError('Error', 'No se pudo realizar la búsqueda del paciente.');
+      }
+    });
+  }
+
+  habilitarFormularioCreacionPaciente(): void {
+    this.mostrarFormularioCreacionPaciente = true;
+    this.mostrarBusquedaAuxiliarPaciente = false;
+    this.prepararFormularioNuevoPaciente();
+    this.formPaciente.patchValue({
+      esMenorSinCedula: this.tipoBusquedaPaciente === 'representante',
+      cedula: this.cedulaBusquedaPaciente
+    });
+  }
+
+  volverABusquedaPaciente(): void {
+    this.mostrarBusquedaAuxiliarPaciente = true;
+  }
+
+  enlazarPacienteEncontrado(paciente: Paciente): void {
+    if (!paciente?.key) {
+      return;
+    }
+
+    this.cargando = true;
+    this.pacientesService.enlazarPacienteASede(paciente.key).subscribe({
+      next: (response) => {
+        this.cargando = false;
+        const pacienteTransformado = this.transformarPacienteApi(response.paciente);
+        pacienteTransformado.disponibleEnSedeActual = true;
+
+        this.insertarOActualizarPacienteEnListado(pacienteTransformado);
+        this.pacienteEncontradoBusqueda = pacienteTransformado;
+        this.estadoBusquedaPaciente = 'asociado_sede_actual';
+
+        const nombreSedeActual = this.sedesDisponibles.find(
+          sede => sede.key === String(this.sedeActiva || '').trim().toLowerCase()
+        )?.nombre || this.sedeActiva || 'la sede actual';
+
+        this.swalService.showSuccessWithAction(
+          'Paciente enlazado',
+          `El paciente ya quedó disponible en ${nombreSedeActual}. Si lo necesitas, puedes actualizar sus datos ahora.`
+        ).then((result) => {
+          if (result?.isConfirmed) {
+            this.editarPacienteDesdeBusqueda(pacienteTransformado);
+          }
+        }).catch(() => undefined);
+      },
+      error: (error) => {
+        this.cargando = false;
+        console.error('Error enlazando paciente:', error);
+        this.swalService.showError('Error', 'No se pudo enlazar el paciente a la sede actual.');
+      }
+    });
+  }
+
+  editarPacienteDesdeBusqueda(paciente: Paciente): void {
+    this.resetearBusquedaPaciente();
+    this.editarPaciente(paciente);
+  }
+
+  getTextoAyudaBusquedaPaciente(): string {
+    return this.tipoBusquedaPaciente === 'representante'
+      ? 'Busca por la cédula del representante para listar pacientes menores asociados.'
+      : 'Busca por la cédula del paciente para validar si ya existe o enlazarlo a esta sede antes de seguir con el registro manual.';
+  }
+
+  getTextoBusquedaAuxiliarPaciente(): string {
+    return this.mostrarBusquedaAuxiliarPaciente
+      ? 'Ocultar buscador auxiliar'
+      : 'Buscar paciente existente';
+  }
+
+  getMensajeEnlaceListado(paciente: Paciente): string {
+    return `Paciente de ${this.getEtiquetaSedePaciente(paciente)}. Enlázalo para usar historias, ventas y presupuestos en esta sede.`;
+  }
+
+  mostrarHintEnlaceListado(elementoAncla: HTMLElement | null, paciente: Paciente): void {
+    if (!this.debeMostrarBotonEnlazarListado(paciente)) {
+      return;
+    }
+
+    if (!elementoAncla) {
+      return;
+    }
+
+    const botonEnlace = elementoAncla.matches('.btn-enlazar')
+      ? elementoAncla
+      : elementoAncla.querySelector('.btn-enlazar');
+
+    if (!(botonEnlace instanceof HTMLElement)) {
+      return;
+    }
+
+    const rect = botonEnlace.getBoundingClientRect();
+    const bubbleWidth = 280;
+    const bubbleHeight = 96;
+    const viewportMargin = 16;
+
+    const top = Math.max(viewportMargin, rect.top - bubbleHeight - 14);
+    const left = Math.min(
+      window.innerWidth - bubbleWidth - viewportMargin,
+      Math.max(viewportMargin, rect.left + (rect.width / 2) - (bubbleWidth / 2))
+    );
+
+    this.enlaceHintMensaje = this.getMensajeEnlaceListado(paciente);
+    this.enlaceHintTop = `${top}px`;
+    this.enlaceHintLeft = `${left}px`;
+    this.enlaceHintVisible = true;
+  }
+
+  ocultarHintEnlaceListado(): void {
+    this.enlaceHintVisible = false;
+  }
+
+  toggleBusquedaAuxiliarPaciente(): void {
+    this.mostrarBusquedaAuxiliarPaciente = !this.mostrarBusquedaAuxiliarPaciente;
+
+    if (!this.mostrarBusquedaAuxiliarPaciente) {
+      return;
+    }
+
+    const cedulaSugerida = this.obtenerCedulaSugeridaDesdeListado();
+    if (cedulaSugerida && !this.cedulaBusquedaPaciente) {
+      this.cedulaBusquedaPaciente = cedulaSugerida;
+    }
+  }
+
+  getEtiquetaSedeBusquedaPaciente(paciente: Paciente): string {
+    if (paciente?.disponibleEnSedeActual) {
+      return 'Disponible en esta sede';
+    }
+
+    return `Origen: ${this.getEtiquetaSedePaciente(paciente)}`;
+  }
+
+  pacientePuedeEditarEnSedeActiva(paciente: Paciente): boolean {
+    const sedeActiva = String(this.sedeActiva || '').trim().toLowerCase();
+    if (!sedeActiva) {
+      return false;
+    }
+
+    return this.pacienteCoincideConSede(paciente, sedeActiva);
+  }
+
+  debeMostrarBotonEnlazarListado(paciente: Paciente): boolean {
+    const sedeActiva = String(this.sedeActiva || '').trim().toLowerCase();
+    const mostrandoContextoGlobal = this.busquedaGlobalPorCedulaActiva || this.sedeFiltro === 'todas';
+
+    if (!sedeActiva || !mostrandoContextoGlobal) {
+      return false;
+    }
+
+    return !this.pacienteCoincideConSede(paciente, sedeActiva);
   }
 
   limpiarFormArray(formArray: FormArray): void {
@@ -1352,6 +1500,153 @@ export class VerPacientesComponent implements OnInit {
     );
 
     return camposModificados || redesModificadas;
+  }
+
+  private prepararFormularioNuevoPaciente(): void {
+    this.formPaciente.reset(this.crearPacienteVacio());
+
+    const redesFormArray = this.formPaciente.get('redesSociales') as FormArray;
+    this.limpiarFormArray(redesFormArray);
+
+    this.empresaEncontrada = false;
+    this.validandoEmpresa = false;
+    this.validacionEmpresaIntentada = false;
+    this.datosEmpresa = null;
+    this.rifAnterior = '';
+
+    this.nuevaRed = '';
+    this.nuevoUsuario = '';
+    this.usuarioInputHabilitado = false;
+  }
+
+  private resetearBusquedaPaciente(mantenerTipo: boolean = false): void {
+    this.tipoBusquedaPaciente = mantenerTipo ? this.tipoBusquedaPaciente : 'cedula';
+    this.cedulaBusquedaPaciente = '';
+    this.busquedaPacienteCargando = false;
+    this.busquedaPacienteRealizada = false;
+    this.estadoBusquedaPaciente = 'idle';
+    this.pacienteEncontradoBusqueda = null;
+    this.pacientesCoincidentesBusqueda = [];
+    this.mostrarBusquedaAuxiliarPaciente = false;
+    this.cedulaPrecargadaDesdeListado = false;
+    this.mostrarFormularioCreacionPaciente = false;
+  }
+
+  private obtenerCedulaSugeridaDesdeListado(): string {
+    const textoBusqueda = String(this.filtro || '').trim();
+    const soloNumeros = textoBusqueda.replace(/\D/g, '');
+
+    return /^\d{6,9}$/.test(soloNumeros) ? soloNumeros : '';
+  }
+
+  private transformarPacienteApi(pacienteApi: any): Paciente {
+    const info = pacienteApi?.informacionPersonal || {};
+    const historia = pacienteApi?.historiaClinica || {};
+    const empresa = pacienteApi?.informacionEmpresa;
+
+    return {
+      id: String(pacienteApi?.id || ''),
+      key: String(pacienteApi?.key || pacienteApi?.id || ''),
+      fechaRegistro: this.formatearFecha(pacienteApi?.created_at),
+      fechaRegistroRaw: pacienteApi?.created_at,
+      fechaActualizacion: this.formatearFecha(pacienteApi?.updated_at),
+      fechaActualizacionRaw: pacienteApi?.updated_at,
+      sede: String(pacienteApi?.sedeId || this.sedeActiva || 'sin-sede').trim().toLowerCase(),
+      sedesAsociadas: Array.isArray(pacienteApi?.sedesAsociadas)
+        ? pacienteApi.sedesAsociadas.map((sede: any) => ({
+          id: String(sede?.id || '').trim().toLowerCase(),
+          nombre: String(sede?.nombre || sede?.id || '').trim()
+        })).filter((sede: any) => sede.id)
+        : [],
+      disponibleEnSedeActual: Boolean(pacienteApi?.disponibleEnSedeActual),
+      redesSociales: pacienteApi?.redesSociales || [],
+      informacionEmpresa: empresa ? {
+        referidoEmpresa: empresa.referidoEmpresa || false,
+        empresaNombre: empresa.empresaNombre || '',
+        empresaRif: empresa.empresaRif || '',
+        empresaTelefono: empresa.empresaTelefono || '',
+        empresaDireccion: empresa.empresaDireccion || '',
+        empresaCorreo: empresa.empresaCorreo || ''
+      } : null,
+      informacionPersonal: {
+        esMenorSinCedula: info.esMenorSinCedula ?? false,
+        nombreCompleto: info.nombreCompleto,
+        cedula: info.cedula,
+        telefono: info.telefono,
+        email: info.email,
+        fechaNacimiento: info.fechaNacimiento,
+        edad: this.calcularEdad(info.fechaNacimiento),
+        ocupacion: info.ocupacion,
+        genero: info.genero === 'm' ? 'Masculino' : info.genero === 'f' ? 'Femenino' : 'Otro',
+        direccion: info.direccion
+      },
+      historiaClinica: {
+        usuarioLentes: historia.usuarioLentes ?? null,
+        tipoCristalActual: historia.tipoCristalActual ?? '',
+        ultimaGraduacion: historia.ultimaGraduacion ?? '',
+        fotofobia: historia.fotofobia ?? null,
+        traumatismoOcular: historia.traumatismoOcular ?? null,
+        traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion ?? '',
+        usoDispositivo: historia.usoDispositivo,
+        tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
+        cirugiaOcular: historia.cirugiaOcular ?? null,
+        cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion ?? '',
+        alergicoA: historia.alergicoA ?? null,
+        antecedentesPersonales: historia.antecedentesPersonales ?? [],
+        antecedentesFamiliares: historia.antecedentesFamiliares ?? [],
+        patologias: historia.patologias ?? []
+      }
+    };
+  }
+
+  private insertarOActualizarPacienteEnListado(paciente: Paciente): void {
+    const index = this.pacientes.findIndex(item => item.key === paciente.key);
+
+    if (index >= 0) {
+      const existente = this.pacientes[index];
+      this.pacientes[index] = {
+        ...existente,
+        ...paciente,
+        fechaRegistro: existente.fechaRegistro || paciente.fechaRegistro,
+        fechaRegistroRaw: existente.fechaRegistroRaw || paciente.fechaRegistroRaw
+      };
+    } else {
+      const fechaCreacion = new Date(paciente.fechaRegistroRaw || 0).getTime();
+      let posicionInsercion = 0;
+
+      for (let i = 0; i < this.pacientes.length; i++) {
+        const fechaExistente = new Date(this.pacientes[i].fechaRegistroRaw || 0).getTime();
+        if (fechaCreacion > fechaExistente) {
+          posicionInsercion = i;
+          break;
+        }
+        posicionInsercion = i + 1;
+      }
+
+      this.pacientes.splice(posicionInsercion, 0, paciente);
+    }
+
+    this.pacientes = [...this.pacientes];
+    this.actualizarPacientesPorSede();
+    this.cdRef.detectChanges();
+  }
+
+  private ofrecerCrearHistoriaDesdePaciente(paciente: Paciente, titulo: string, mensaje: string): void {
+    this.swalService.showSuccessWithAction(titulo, mensaje)
+      .then((result) => {
+        if (result && result.isConfirmed) {
+          try {
+            sessionStorage.removeItem('pacienteParaHistoriaProcesado');
+            sessionStorage.setItem('pacienteParaHistoria', JSON.stringify(paciente));
+            sessionStorage.setItem('desdePacientes', '1');
+          } catch (e) {
+            console.warn('No se pudo persistir paciente en sessionStorage', e);
+          }
+
+          this.router.navigate(['/pacientes-historias']);
+        }
+      })
+      .catch(() => undefined);
   }
 
   normalizarFechaParaComparar(fecha: string): string {
@@ -1396,10 +1691,17 @@ export class VerPacientesComponent implements OnInit {
     sessionStorage.setItem('pacientesListState', JSON.stringify({
       scrollPosition: window.scrollY,
       filtroActual: this.filtro,
+      sedeFiltro: this.sedeFiltro,
+      paginaActual: this.paginaActual,
+      registrosPorPagina: this.registrosPorPagina,
+      ordenActual: this.ordenActual,
+      ordenAscendente: this.ordenAscendente,
       desdePacientes: true
     }));
 
     sessionStorage.setItem('pacienteKey', paciente.key);
+    sessionStorage.setItem('desdePacientes', '1');
+    sessionStorage.setItem('historiaConsultaTransversal', '1');
 
     this.router.navigate(['/pacientes-historias', slug]);
   }
@@ -1429,6 +1731,51 @@ export class VerPacientesComponent implements OnInit {
   cambiarRegistrosPorPagina() {
     this.paginaActual = 1;
     this.calcularPaginacion();
+  }
+
+  private restaurarEstadoListadoSiExiste(): void {
+    if (!this.estadoListadoPendiente) {
+      return;
+    }
+
+    const estado = this.estadoListadoPendiente;
+    this.filtro = estado.filtroActual || '';
+
+    const sedeGuardada = String(estado.sedeFiltro || '').trim().toLowerCase();
+    const sedeValida = !sedeGuardada
+      || sedeGuardada === 'todas'
+      || this.sedesDisponibles.some((sede) => sede.key === sedeGuardada);
+
+    if (sedeValida && sedeGuardada) {
+      this.sedeFiltro = sedeGuardada;
+    }
+
+    if (typeof estado.registrosPorPagina === 'number' && estado.registrosPorPagina > 0) {
+      this.registrosPorPagina = estado.registrosPorPagina;
+    }
+
+    if (typeof estado.ordenActual === 'string' && estado.ordenActual.trim()) {
+      this.ordenActual = estado.ordenActual;
+    }
+
+    if (typeof estado.ordenAscendente === 'boolean') {
+      this.ordenAscendente = estado.ordenAscendente;
+    }
+
+    this.aplicarFiltroTexto();
+
+    if (typeof estado.paginaActual === 'number' && estado.paginaActual > 0) {
+      this.paginaActual = Math.min(estado.paginaActual, this.totalPaginas || 1);
+      this.calcularPaginacion();
+    }
+
+    const scrollPosition = Number(estado.scrollPosition || 0);
+    setTimeout(() => {
+      window.scrollTo({ top: scrollPosition, behavior: 'auto' });
+    }, 0);
+
+    this.estadoListadoPendiente = null;
+    sessionStorage.removeItem('pacientesListState');
   }
 
   // Método para ir a una página específica
@@ -2216,17 +2563,35 @@ export class VerPacientesComponent implements OnInit {
     ).length;
   }
 
+  manejarCambioBusquedaListado(): void {
+    const textoBusqueda = String(this.filtro || '').trim();
+
+    if (!textoBusqueda) {
+      this.sedeFiltro = this.sedeActiva || 'todas';
+    }
+
+    this.aplicarFiltroTexto();
+  }
+
+  limpiarBusquedaListado(): void {
+    this.filtro = '';
+    this.sedeFiltro = this.sedeActiva || 'todas';
+    this.aplicarFiltroTexto();
+  }
+
   aplicarFiltroTexto(): void {
     let pacientesFiltrados = [...this.pacientes];
+    this.busquedaGlobalPorCedulaActiva = false;
+    const textoBusqueda = this.filtro.toLowerCase().trim();
+    const hayBusquedaActiva = textoBusqueda.length > 0;
 
     // Primero aplicar filtro de texto
     if (this.filtro.trim()) {
-      const texto = this.filtro.toLowerCase().trim();
       pacientesFiltrados = pacientesFiltrados.filter(paciente =>
-        paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(texto) ||
-        paciente.informacionPersonal.cedula.toLowerCase().includes(texto) ||
-        paciente.informacionPersonal.telefono.toLowerCase().includes(texto) ||
-        (paciente.informacionEmpresa?.empresaNombre?.toLowerCase().includes(texto) || false)
+        paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(textoBusqueda) ||
+        paciente.informacionPersonal.cedula.toLowerCase().includes(textoBusqueda) ||
+        paciente.informacionPersonal.telefono.toLowerCase().includes(textoBusqueda) ||
+        (paciente.informacionEmpresa?.empresaNombre?.toLowerCase().includes(textoBusqueda) || false)
       );
     }
 
@@ -2240,7 +2605,11 @@ export class VerPacientesComponent implements OnInit {
     // Aplicar filtro por sede
     const sedeId = this.sedeFiltro?.trim().toLowerCase();
     if (sedeId && sedeId !== 'todas') {
-      pacientesFiltrados = pacientesFiltrados.filter(p => p.sede === sedeId);
+      if (hayBusquedaActiva) {
+        this.busquedaGlobalPorCedulaActiva = true;
+      } else {
+        pacientesFiltrados = pacientesFiltrados.filter(p => this.pacienteCoincideConSede(p, sedeId));
+      }
     }
 
     // Aplicar ordenamiento por defecto (fecha más reciente primero) cuando no hay otro orden
@@ -2288,6 +2657,45 @@ export class VerPacientesComponent implements OnInit {
   actualizarPacientesPorSede(): void {
     // Llama al método unificado de filtrado
     this.aplicarFiltroTexto();
+  }
+
+  private pacienteCoincideConSede(paciente: Paciente, sedeId: string): boolean {
+    const sedeNormalizada = String(sedeId || '').trim().toLowerCase();
+    if (!sedeNormalizada || sedeNormalizada === 'todas') {
+      return true;
+    }
+
+    const sedesAsociadas = Array.isArray(paciente?.sedesAsociadas) ? paciente.sedesAsociadas : [];
+    if (sedesAsociadas.some((sede) => String(sede?.id || '').trim().toLowerCase() === sedeNormalizada)) {
+      return true;
+    }
+
+    return String(paciente?.sede || '').trim().toLowerCase() === sedeNormalizada;
+  }
+
+  getEtiquetaSedePaciente(paciente: Paciente): string {
+    const sedeObjetivo = String(
+      this.sedeFiltro && this.sedeFiltro !== 'todas'
+        ? this.sedeFiltro
+        : this.sedeActiva
+    ).trim().toLowerCase();
+    const sedeOrigen = String(paciente?.sede || '').trim().toLowerCase();
+
+    if (!sedeObjetivo || !sedeOrigen || sedeOrigen === sedeObjetivo || !this.pacienteCoincideConSede(paciente, sedeObjetivo)) {
+      return this.obtenerNombreSedeParaEtiqueta(sedeOrigen);
+    }
+
+    return `Asociado desde ${this.obtenerNombreSedeParaEtiqueta(sedeOrigen)}`;
+  }
+
+  private obtenerNombreSedeParaEtiqueta(sedeId: string): string {
+    const sedeNormalizada = String(sedeId || '').trim().toLowerCase();
+    if (!sedeNormalizada) {
+      return 'Sin sede';
+    }
+
+    const nombreSede = this.sedesDisponibles.find((sede) => sede.key === sedeNormalizada)?.nombre || sedeNormalizada;
+    return nombreSede.replace(/^sede\s+/i, '').trim() || sedeNormalizada;
   }
 
   // En tu componente (pacientes.component.ts), agrega este método:

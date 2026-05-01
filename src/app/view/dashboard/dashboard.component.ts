@@ -201,7 +201,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.error('Error al cargar datos:', err);
           this.pacientes = [];
           this.totalHistorias = 0;
-          this.loader.forceHide();
+          this.loader.hide();
         }
       });
     } else {

@@ -286,6 +286,7 @@ export interface HistoriaMedica {
   fecha: string;
   horaEvaluacion: string;
   pacienteId: string;
+  sedeId?: string | null;
   ventaKey?: string | null;
   trazabilidadVenta?: TrazabilidadVentaHistoria | null;
 

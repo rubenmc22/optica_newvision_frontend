@@ -857,6 +857,55 @@
         }
     }
 
+    .formula-externa-header {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .formula-externa-selector {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .formula-origin-btn {
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #475569;
+        border-radius: 999px;
+        padding: 0.55rem 1rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+
+        &:hover:not(:disabled) {
+            border-color: #93c5fd;
+            color: #1d4ed8;
+            background: #eff6ff;
+        }
+
+        &.active {
+            border-color: #1d4ed8;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+        }
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    }
+
+    .formula-origin-help {
+        display: block;
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 0.82rem;
+        line-height: 1.4;
+    }
+
     .lensometria-scroll-fixed {
         overflow-x: auto;
         overflow-y: visible;
@@ -1059,6 +1108,15 @@
     color: #64748b;
     font-size: 12px;
     line-height: 1.2;
+}
+
+.referencia-bs--nota {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #7b8794;
+    max-width: 28rem;
 }
 
 .spin {

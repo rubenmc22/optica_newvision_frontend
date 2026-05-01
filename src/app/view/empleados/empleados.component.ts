@@ -73,11 +73,10 @@ export class EmpleadosComponent implements OnInit {
 
     Promise.allSettled(loadPromises).then((results) => {
       //console.log('Carga inicial completada', results);
-      // FALTA ESTA LÍNEA CRÍTICA:
-      this.loader.hide(); // ← AÑADIR ESTA LÍNEA
+      this.loader.hide();
     }).catch((error) => {
       console.error('Error en carga inicial:', error);
-      this.loader.forceHide();
+      this.loader.hide();
     });
   }
 

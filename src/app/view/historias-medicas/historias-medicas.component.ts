@@ -64,6 +64,9 @@ import {
 
 interface ProductoRecomendableOption extends Producto {
   disabled: boolean;
+  sedeNombre: string;
+  esOtraSede: boolean;
+  requiereTraslado: boolean;
 }
 
 interface OpcionPresupuestoImportableHistoria {
@@ -111,6 +114,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
   panelSuperiorColapsado = false;
   panelInferiorColapsado = false;
+  filtroHistorial = '';
 
   // Datos
   pacientes: Paciente[] = [];
@@ -123,6 +127,7 @@ export class HistoriasMedicasComponent implements OnInit {
   historiaSeleccionada: HistoriaMedica | null = null;
   pacienteIdSeleccionado: string | null = null;
   historial: HistoriaMedica[] = [];
+  consultaTransversalDesdePacientes = false;
   notaConformidad: string = 'PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE.';
   horaEvaluacion: string = '';
   mostrarBotonVolver = false;
@@ -238,6 +243,7 @@ export class HistoriasMedicasComponent implements OnInit {
   // ***************************
 
   ngOnInit(): void {
+    this.consultaTransversalDesdePacientes = sessionStorage.getItem('historiaConsultaTransversal') === '1';
     const idPaciente = this.obtenerIdPacienteDesdeRuta();
 
     if (idPaciente) {
@@ -295,7 +301,6 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   volverAlListado(): void {
-    sessionStorage.removeItem('pacientesListState');
     this.router.navigate(['/pacientes']);
   }
 
@@ -467,13 +472,18 @@ export class HistoriasMedicasComponent implements OnInit {
           )
         );
 
-      const sedeUsuario = (user?.sede ?? '').trim().toLowerCase();
+      const sedeUsuario = (
+        this.authService.currentUserValue?.sede?.key
+        || this.userStateService.getSedeActual()?.key
+        || user?.sede
+        || ''
+      ).trim().toLowerCase();
       const sedeValida = this.sedesDisponibles.some(s => s.key === sedeUsuario);
 
       this.sedeActiva = sedeValida ? sedeUsuario : '';
-      this.sedeFiltro = this.sedeActiva;
+      this.sedeFiltro = this.sedeActiva || 'todas';
       this.productosRecomendables = (productosResponse.productos ?? []).filter(producto =>
-        producto.activo !== false && (!this.sedeActiva || String(producto.sede || '').trim().toLowerCase() === this.sedeActiva)
+        producto.activo !== false
       );
       this.refrescarProductosCategoriasRecomendables();
 
@@ -498,7 +508,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.tareasPendientes--;
     if (this.tareasPendientes <= 0) {
-      setTimeout(() => this.loader.hide(), 300); // Delay visual
+      this.loader.hide();
       this.dataIsReady = true;
     }
   }
@@ -522,6 +532,14 @@ export class HistoriasMedicasComponent implements OnInit {
   // ***************************
 
   crearHistoriaNueva(): void {
+    if (this.pacienteSeleccionado && !this.puedeCrearHistoriaEnSedeActual) {
+      this.swalService.showWarning(
+        'Paciente no disponible en esta sede',
+        'Primero debes enlazar el paciente a la sede actual para crear una historia nueva aquí.'
+      );
+      return;
+    }
+
     this.historiaEnEdicion = this.generarHistoria('crear');
     this.modoEdicion = false;
     this.resetearImportacionPresupuestoHistoria();
@@ -538,6 +556,14 @@ export class HistoriasMedicasComponent implements OnInit {
   editarHistoria(historia: HistoriaMedica | null): void {
     if (!historia) {
       console.error('Error', 'No hay historia seleccionada para editar');
+      return;
+    }
+
+    if (!this.puedeEditarHistoria(historia)) {
+      this.swalService.showInfo(
+        'Historia en solo lectura',
+        `Esta historia pertenece a ${this.obtenerNombreSedeHistoria(historia.sedeId)}. Desde esta sede solo puedes consultarla e imprimirla.`
+      );
       return;
     }
 
@@ -974,24 +1000,12 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.cargando = true;
 
-    this.historiaService.getHistoriasPorPaciente(pacienteKey).subscribe({
+    this.historiaService.getHistoriasPorPaciente(pacienteKey, this.obtenerFiltroSedeHistorias()).subscribe({
       next: (historias: HistoriaMedica[]) => {
-        this.historial = historias.sort((a, b) => {
-          const fechaA = new Date(a.auditoria?.fechaCreacion || '').getTime();
-          const fechaB = new Date(b.auditoria?.fechaCreacion || '').getTime();
-
-          if (fechaA !== fechaB) return fechaB - fechaA;
-
-          const extraerSecuencia = (nHistoria: string): number => {
-            const partes = nHistoria?.split('-');
-            return partes?.length === 3 ? parseInt(partes[2], 10) : 0;
-          };
-
-          return extraerSecuencia(b.nHistoria) - extraerSecuencia(a.nHistoria);
-        });
+        this.historial = this.ordenarHistoriasPorRecencia(historias);
 
         const historiaActualizada = this.historial.find(h => h.id === idActual);
-        this.historiaSeleccionada = historiaActualizada || this.historial[0] || null;
+        this.historiaSeleccionada = historiaActualizada || this.obtenerHistoriaPredeterminada();
 
         this.setHoraEvaluacion();
         this.mostrarSinHistorial = this.historial.length === 0;
@@ -1421,7 +1435,7 @@ export class HistoriasMedicasComponent implements OnInit {
       observaciones: String(handoff.observaciones || '').trim(),
       formulaExterna: handoff.formulaExterna?.activa
         ? handoff.formulaExterna
-        : { activa: false, refraccionFinal: null },
+        : { activa: false, origen: null, refraccionFinal: null },
       origen: 'historia-medica',
       opcionPrincipalId: opcionPrincipal?.id || '',
       opciones,
@@ -1523,15 +1537,7 @@ export class HistoriasMedicasComponent implements OnInit {
           <div class="swal-history-flow-panel__text">Quedó asociado a esta historia con <strong>${etiquetaOpciones}</strong> para que el paciente pueda comparar recomendaciones.</div>
         </section>
       `
-      : totalOpciones > 0
-        ? `
-          <section class="swal-history-flow-panel swal-history-flow-panel--pending">
-            <div class="swal-history-flow-panel__eyebrow">Presupuesto pendiente</div>
-            <div class="swal-history-flow-panel__title">La historia quedó lista para continuar</div>
-            <div class="swal-history-flow-panel__text">Más adelante puedes generar un presupuesto con <strong>${etiquetaOpciones}</strong> desde este mismo caso si el paciente lo solicita.</div>
-          </section>
-        `
-        : '';
+      : '';
 
     return `
       <div class="swal-history-flow-card">
@@ -1581,6 +1587,12 @@ export class HistoriasMedicasComponent implements OnInit {
               id: String(p.id),
               fechaRegistro: this.formatearFecha(p.created_at),
               sede: sedePaciente,
+              sedesAsociadas: Array.isArray(p.sedesAsociadas)
+                ? p.sedesAsociadas.map((sede: any) => ({
+                  id: String(sede?.id || '').trim().toLowerCase(),
+                  nombre: String(sede?.nombre || sede?.id || '').trim()
+                })).filter((sede: any) => sede.id)
+                : [],
               redesSociales: p.redesSociales || [],
 
               informacionPersonal: {
@@ -1745,31 +1757,18 @@ export class HistoriasMedicasComponent implements OnInit {
     historiaIdSeleccionar?: string
   ): void {
     this.cargando = true;
+    this.filtroHistorial = '';
 
-    this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
+    this.historiaService.getHistoriasPorPaciente(pacienteId, this.obtenerFiltroSedeHistorias()).subscribe({
       next: (historias: HistoriaMedica[]) => {
-        // Ordenar historias por fecha (más reciente primero)
-        this.historial = historias.sort((a, b) => {
-          const fechaA = new Date(a.auditoria?.fechaCreacion || a.fecha || '').getTime();
-          const fechaB = new Date(b.auditoria?.fechaCreacion || b.fecha || '').getTime();
-
-          if (fechaA !== fechaB) return fechaB - fechaA;
-
-          // Si tienen la misma fecha, ordenar por número de historia
-          const extraerSecuencia = (nHistoria: string): number => {
-            const partes = nHistoria?.split('-');
-            return partes?.length === 3 ? parseInt(partes[2], 10) : 0;
-          };
-
-          return extraerSecuencia(b.nHistoria) - extraerSecuencia(a.nHistoria);
-        });
+        this.historial = this.ordenarHistoriasPorRecencia(historias);
 
         // Seleccionar la historia adecuada
         if (historiaIdSeleccionar) {
           const encontrada = this.historial.find(h => h.id === historiaIdSeleccionar);
-          this.historiaSeleccionada = encontrada || this.historial[0] || null;
+          this.historiaSeleccionada = encontrada || this.obtenerHistoriaPredeterminada();
         } else {
-          this.historiaSeleccionada = this.historial[0] || null;
+          this.historiaSeleccionada = this.obtenerHistoriaPredeterminada();
         }
 
         this.setHoraEvaluacion();
@@ -1803,6 +1802,79 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
+  private obtenerFiltroSedeHistorias(): string | null {
+    const sedeFiltro = String(this.sedeFiltro || '').trim().toLowerCase();
+
+    if (!sedeFiltro || sedeFiltro === 'todas') {
+      return 'todas';
+    }
+
+    return sedeFiltro;
+  }
+
+  get historiasSedeActual(): HistoriaMedica[] {
+    return this.historial.filter((historia) => this.historiaPerteneceASedeActual(historia));
+  }
+
+  get historiasOtrasSedes(): HistoriaMedica[] {
+    return this.historial.filter((historia) => !this.historiaPerteneceASedeActual(historia));
+  }
+
+  get historiasSedeActualVisibles(): HistoriaMedica[] {
+    return this.historiasSedeActual.filter((historia) => this.historiaCoincideConFiltro(historia));
+  }
+
+  get historiasOtrasSedesVisibles(): HistoriaMedica[] {
+    return this.historiasOtrasSedes.filter((historia) => this.historiaCoincideConFiltro(historia));
+  }
+
+  get totalHistoriasVisibles(): number {
+    return this.historiasSedeActualVisibles.length + this.historiasOtrasSedesVisibles.length;
+  }
+
+  get hayFiltroHistorialActivo(): boolean {
+    return !!String(this.filtroHistorial || '').trim();
+  }
+
+  get historiaSeleccionadaSoloLectura(): boolean {
+    return !this.puedeEditarHistoria(this.historiaSeleccionada);
+  }
+
+  get puedeCrearHistoriaEnSedeActual(): boolean {
+    if (!this.pacienteSeleccionado || !this.sedeActiva) {
+      return true;
+    }
+
+    return this.pacienteCoincideConSede(this.pacienteSeleccionado, this.sedeActiva);
+  }
+
+  get mostrarAvisoConsultaCruzada(): boolean {
+    return !!this.pacienteSeleccionado && this.historiasOtrasSedes.length > 0;
+  }
+
+  get mostrarAvisoPacienteNoEnlazado(): boolean {
+    return !!this.pacienteSeleccionado && !this.puedeCrearHistoriaEnSedeActual && !this.mostrarSinHistorial;
+  }
+
+  manejarCambioFiltroHistorial(): void {
+    const historiaActual = this.historiaSeleccionada;
+    const historiasVisibles = [...this.historiasSedeActualVisibles, ...this.historiasOtrasSedesVisibles];
+
+    if (!historiasVisibles.length) {
+      this.historiaSeleccionada = null;
+      return;
+    }
+
+    if (!historiaActual || !historiasVisibles.some((historia) => historia.id === historiaActual.id)) {
+      this.historiaSeleccionada = historiasVisibles[0];
+    }
+  }
+
+  limpiarFiltroHistorial(): void {
+    this.filtroHistorial = '';
+    this.manejarCambioFiltroHistorial();
+  }
+
   async seleccionarHistoriasPorPaciente(paciente: Paciente | null): Promise<void> {
     if (!paciente) {
       this.limpiarDatos();
@@ -1812,6 +1884,8 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.pacienteSeleccionado = paciente;
     this.sedePacienteSeleccionado = this.obtenerSedeDesdePaciente(paciente);
+
+    this.sedeFiltro = this.sedeActiva || 'todas';
 
     this.cargarHistoriasMedicas(paciente.key, () => {
       this.cdr.detectChanges();
@@ -2524,6 +2598,7 @@ export class HistoriasMedicasComponent implements OnInit {
       },
       formulaExterna: formulaExternaActiva ? {
         activa: true,
+        origen: 'externa',
         refraccionFinal: {
           od: {
             esfera: this.historiaForm.get('ref_final_esf_od')?.value || null,
@@ -2957,6 +3032,19 @@ export class HistoriasMedicasComponent implements OnInit {
     return stock > 0 ? `Stock: ${stock}` : 'Sin stock disponible';
   }
 
+  esProductoRecomendadoOtraSede(producto: Producto | ProductoRecomendadoHistoria | null | undefined): boolean {
+    const sedeProducto = this.normalizarClaveSedeProductoRecomendado(producto?.sede);
+    return !!sedeProducto && !!this.sedeActiva && sedeProducto !== this.sedeActiva;
+  }
+
+  getMensajeTrasladoProductoRecomendado(producto: Producto | ProductoRecomendadoHistoria | null | undefined): string {
+    if (!this.esProductoRecomendadoOtraSede(producto)) {
+      return '';
+    }
+
+    return `Pertenece a ${this.obtenerNombreSedeProductoRecomendado(producto?.sede)} y requiere traslado hacia ${this.nombreSedeActivaRecomendaciones}.`;
+  }
+
   esProductoRecomendadoSinStock(producto: Producto | ProductoRecomendadoHistoria | null | undefined): boolean {
     return Number(producto?.stock ?? 0) <= 0;
   }
@@ -3092,13 +3180,24 @@ export class HistoriasMedicasComponent implements OnInit {
     const productos = this.getProductosPorCategoriaRecomendada(indexRecomendacion, indexCategoria);
     const categoria = this.obtenerCategoriaDesdeControl(indexRecomendacion, indexCategoria);
     const labelCategoria = this.getLabelCategoriaRecomendable(categoria).toLowerCase();
+    const productosDisponibles = productos.filter(producto => !producto.disabled);
+    const disponiblesSedeActual = productosDisponibles.filter(producto => !producto.esOtraSede);
+    const disponiblesOtrasSedes = productosDisponibles.filter(producto => producto.esOtraSede);
 
     if (productos.length === 0) {
-      return `No hay productos de ${labelCategoria} disponibles en esta sede.`;
+      return `No hay productos de ${labelCategoria} disponibles en el catálogo.`;
     }
 
-    if (!productos.some(producto => !producto.disabled)) {
+    if (productosDisponibles.length === 0) {
       return `No hay productos de ${labelCategoria} con stock disponible actualmente.`;
+    }
+
+    if (disponiblesSedeActual.length === 0 && disponiblesOtrasSedes.length > 0) {
+      return `Hay productos de ${labelCategoria} disponibles en otras sedes. Si seleccionas uno, se registrará como traslado hacia ${this.nombreSedeActivaRecomendaciones}.`;
+    }
+
+    if (disponiblesOtrasSedes.length > 0) {
+      return `También hay productos de ${labelCategoria} en otras sedes. Si seleccionas uno, requerirá traslado hacia ${this.nombreSedeActivaRecomendaciones}.`;
     }
 
     return 'Solo se pueden seleccionar productos con stock disponible.';
@@ -3168,9 +3267,15 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   private mapProductoRecomendableOption(producto: Producto): ProductoRecomendableOption {
+    const sedeProducto = this.normalizarClaveSedeProductoRecomendado(producto.sede);
+    const esOtraSede = !!sedeProducto && !!this.sedeActiva && sedeProducto !== this.sedeActiva;
+
     return {
       ...producto,
       disabled: Number(producto.stock ?? 0) <= 0,
+      sedeNombre: this.obtenerNombreSedeProductoRecomendado(producto.sede),
+      esOtraSede,
+      requiereTraslado: esOtraSede && Number(producto.stock ?? 0) > 0,
     };
   }
 
@@ -3180,8 +3285,27 @@ export class HistoriasMedicasComponent implements OnInit {
         return Number(productoA.disabled) - Number(productoB.disabled);
       }
 
+      if (productoA.esOtraSede !== productoB.esOtraSede) {
+        return Number(productoA.esOtraSede) - Number(productoB.esOtraSede);
+      }
+
       return String(productoA.nombre || '').localeCompare(String(productoB.nombre || ''), 'es', { sensitivity: 'base' });
     });
+  }
+
+  private normalizarClaveSedeProductoRecomendado(sede: string | null | undefined): string {
+    return String(sede || '').trim().toLowerCase();
+  }
+
+  private obtenerNombreSedeProductoRecomendado(sede: string | null | undefined): string {
+    const sedeNormalizada = this.normalizarClaveSedeProductoRecomendado(sede);
+    const sedeInfo = sedeNormalizada ? this.userStateService.getSedePorKey(sedeNormalizada) : null;
+    const nombreBase = sedeInfo?.nombre || sedeNormalizada || 'Sede no definida';
+    return nombreBase.replace(/^sede\s+/i, '').replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  get nombreSedeActivaRecomendaciones(): string {
+    return this.obtenerNombreSedeProductoRecomendado(this.sedeActiva) || 'la sede actual';
   }
 
   private getCatalogoCategoriasRecomendables(): OpcionSelect[] {
@@ -3498,16 +3622,119 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   actualizarPacientesPorSede(): void {
-    this.limpiarDatos();
+    const pacienteActual = this.pacienteSeleccionado;
 
     const sedeId = this.sedeFiltro?.trim().toLowerCase();
     this.pacientesFiltradosPorSede = !sedeId
       ? [...this.pacientes]
-      : this.pacientes.filter(p => p.sede === sedeId);
+      : this.pacientes.filter(p => this.pacienteCoincideConSede(p, sedeId));
+
+    if (pacienteActual) {
+      const pacienteVisible = this.pacientesFiltradosPorSede.find((paciente) =>
+        this.compararPacientes(paciente, pacienteActual)
+      );
+
+      if (pacienteVisible) {
+        this.pacienteSeleccionado = pacienteVisible;
+        this.pacienteParaNuevaHistoria = pacienteVisible;
+        this.sedePacienteSeleccionado = this.obtenerSedeDesdePaciente(pacienteVisible);
+        this.cargarHistoriasMedicas(pacienteVisible.key);
+        return;
+      }
+    }
+
+    this.limpiarDatos();
   }
 
   obtenerSedeDesdePaciente(paciente: Paciente): string {
     return paciente?.sede?.toLowerCase() || '';
+  }
+
+  obtenerNombreSedeHistoria(sedeId: string | null | undefined): string {
+    const sedeNormalizada = String(sedeId || '').trim().toLowerCase();
+    if (!sedeNormalizada) {
+      return 'otra sede';
+    }
+
+    const sede = this.sedesDisponibles.find((item) => item.key === sedeNormalizada);
+    return sede?.nombre || sedeNormalizada;
+  }
+
+  historiaPerteneceASedeActual(historia: HistoriaMedica | null | undefined): boolean {
+    const sedeHistoria = String(historia?.sedeId || '').trim().toLowerCase();
+    const sedeActual = String(this.sedeActiva || '').trim().toLowerCase();
+
+    if (!sedeHistoria || !sedeActual) {
+      return false;
+    }
+
+    return sedeHistoria === sedeActual;
+  }
+
+  puedeEditarHistoria(historia: HistoriaMedica | null | undefined): boolean {
+    return !!historia && this.historiaPerteneceASedeActual(historia);
+  }
+
+  private obtenerHistoriaPredeterminada(): HistoriaMedica | null {
+    return this.historiasSedeActual[0] || this.historiasOtrasSedes[0] || null;
+  }
+
+  private historiaCoincideConFiltro(historia: HistoriaMedica): boolean {
+    const termino = String(this.filtroHistorial || '').trim().toLowerCase();
+
+    if (!termino) {
+      return true;
+    }
+
+    const motivo = Array.isArray(historia.datosConsulta?.motivo)
+      ? historia.datosConsulta.motivo.join(' ')
+      : '';
+
+    const textoBusqueda = [
+      historia.nHistoria,
+      motivo,
+      historia.datosConsulta?.otroMotivo,
+      this.formatearFecha(historia.auditoria?.fechaCreacion || historia.fecha || ''),
+      this.obtenerNombreMedicoEspecialista(historia),
+      this.obtenerNombreSedeHistoria(historia.sedeId),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return textoBusqueda.includes(termino);
+  }
+
+  private ordenarHistoriasPorRecencia(historias: HistoriaMedica[]): HistoriaMedica[] {
+    return [...historias].sort((a, b) => {
+      const fechaA = new Date(a.auditoria?.fechaCreacion || a.fecha || '').getTime();
+      const fechaB = new Date(b.auditoria?.fechaCreacion || b.fecha || '').getTime();
+
+      if (fechaA !== fechaB) {
+        return fechaB - fechaA;
+      }
+
+      const extraerSecuencia = (nHistoria: string): number => {
+        const partes = nHistoria?.split('-');
+        return partes?.length === 3 ? parseInt(partes[2], 10) : 0;
+      };
+
+      return extraerSecuencia(b.nHistoria) - extraerSecuencia(a.nHistoria);
+    });
+  }
+
+  private pacienteCoincideConSede(paciente: Paciente, sedeId: string): boolean {
+    const sedeNormalizada = String(sedeId || '').trim().toLowerCase();
+    if (!sedeNormalizada || sedeNormalizada === 'todas') {
+      return true;
+    }
+
+    const sedesAsociadas = Array.isArray(paciente?.sedesAsociadas) ? paciente.sedesAsociadas : [];
+    if (sedesAsociadas.some((sede) => String(sede?.id || '').trim().toLowerCase() === sedeNormalizada)) {
+      return true;
+    }
+
+    return String(paciente?.sede || '').trim().toLowerCase() === sedeNormalizada;
   }
 
   actualizarFiltroTexto(event: { term: string; items: any[] }): void {
@@ -3519,7 +3746,7 @@ export class HistoriasMedicasComponent implements OnInit {
     const sedeFiltrada = this.sedeFiltro?.trim().toLowerCase();
 
     const pacientesFiltrados = this.pacientes.filter(paciente => {
-      const coincideConSede = !sedeFiltrada || paciente.sede === sedeFiltrada;
+      const coincideConSede = !sedeFiltrada || this.pacienteCoincideConSede(paciente, sedeFiltrada);
       const coincideConBusqueda =
         !term.trim() ||
         paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(term.toLowerCase()) ||
@@ -3546,13 +3773,12 @@ export class HistoriasMedicasComponent implements OnInit {
       const info = paciente.informacionPersonal;
       const nombre = normalizar(info?.nombreCompleto || '');
       const cedula = normalizar(String(info?.cedula || ''));
-      const sedePaciente = normalizar(paciente.sede || 'sin-sede');
 
       const coincideTexto = !filtroTexto || (
         nombre.includes(filtroTexto) || cedula.includes(filtroTexto)
       );
 
-      const coincideSede = sedeFiltro === 'todas' || sedePaciente === sedeFiltro;
+      const coincideSede = sedeFiltro === 'todas' || this.pacienteCoincideConSede(paciente, sedeFiltro);
 
       return coincideSede && coincideTexto;
     });

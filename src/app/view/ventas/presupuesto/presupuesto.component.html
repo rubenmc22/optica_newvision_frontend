@@ -440,6 +440,7 @@
                                         [(ngModel)]="clienteSinPaciente.cedula"
                                         [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese la cédula' : 'Ingrese el RIF'"
                                         (blur)="onCedulaBlur()" (input)="onCedulaChange()"
+                                        (keydown.enter)="onCedulaEnter($event)"
                                         (focus)="onCampoEditadoManualmente()" [disabled]="validandoCliente">
 
                                     <!-- Botón de validación compacto y con estados -->
@@ -560,25 +561,44 @@
             </div>
         </div>
 
-        <div class="info-card" *ngIf="mostrarFormulaExternaDetalle()">
+        <div class="info-card" *ngIf="!puedeMostrarSeccionesPosterioresNuevo()">
+            <div class="info-header">
+                <i class="bi bi-shield-lock"></i>
+                <h4>Validación requerida</h4>
+            </div>
+            <div class="info-content">
+                <p class="text-muted mb-0">
+                    Valida primero el cliente indicado para desbloquear fórmula, productos, observaciones y la generación del presupuesto.
+                </p>
+            </div>
+        </div>
+
+        <ng-container *ngIf="puedeMostrarSeccionesPosterioresNuevo()">
+        <div class="info-card info-card--formula-externa" *ngIf="mostrarFormulaExternaNuevo()">
             <div class="info-header">
                 <i class="bi bi-journal-medical"></i>
-                <h4>Fórmula externa</h4>
+                <h4>{{ getTituloBloqueFormulaNuevo() }}</h4>
             </div>
             <div class="info-content formula-externa-section">
                 <div class="formula-externa-header">
-                    <div class="formula-externa-switch">
-                        <label class="switch-moderno">
-                            <input
-                                type="checkbox"
-                                [ngModel]="esFormulaExternaActivaNuevo()"
-                                (ngModelChange)="onCambioFormulaExternaNuevo($event)">
-                            <span class="slider-moderno round"></span>
-                        </label>
-                        <span class="switch-label" [class.text-primary]="esFormulaExternaActivaNuevo()">
-                            <i class="bi bi-box-arrow-up-right"></i>
-                            Este presupuesto se basa en fórmula externa del paciente
+                    <div class="formula-externa-selector">
+                        <button type="button" class="formula-origin-btn"
+                            [class.active]="esOrigenFormulaNuevo('externa')"
+                            (click)="seleccionarOrigenFormulaNuevo('externa')">
+                            Fórmula externa
+                        </button>
+                        <button type="button" class="formula-origin-btn"
+                            [class.active]="esOrigenFormulaNuevo('interna')"
+                            (click)="seleccionarOrigenFormulaNuevo('interna')">
+                            Fórmula interna
+                        </button>
+                    </div>
+                    <div class="formula-externa-switch" *ngIf="esFormulaExternaActivaNuevo()">
+                        <span class="switch-label text-primary">
+                            <i class="bi" [class.bi-box-arrow-up-right]="esOrigenFormulaNuevo('externa')" [class.bi-clock-history]="esOrigenFormulaNuevo('interna')"></i>
+                            {{ getEtiquetaOrigenFormulaNuevo() }}
                         </span>
+                        <small class="formula-origin-help">{{ getDescripcionOrigenFormulaNuevo() }}</small>
                     </div>
                 </div>
 
@@ -740,6 +760,9 @@
                             <div class="presupuesto-opcion-card__total-item presupuesto-opcion-card__total-item--highlight">
                                 <span class="label">Total</span>
                                 <strong>{{ formatMoneda(opcion.total) }}</strong>
+                                <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                    Ref. {{ formatMoneda(obtenerReferenciaBs(opcion.total), 'VES') }}
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -775,7 +798,6 @@
                             <strong>{{ obtenerNombreVisibleProducto(producto) }}</strong>
                             <small>
                                 <span>{{ producto.codigo }} • {{ formatMoneda(producto.precio) }}</span>
-                                <span *ngIf="debeMostrarReferenciaBs()">• Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}</span>
                             </small>
                         </div>
                         <button class="btn-agregar" (click)="agregarProducto(producto)">
@@ -823,16 +845,10 @@
                                 <div class="monto-celda" *ngIf="esLineaConsulta(producto); else precioSoloLecturaNuevo">
                                     <input type="number" [(ngModel)]="producto.precio" (change)="actualizarProducto(i)"
                                         min="0" step="0.01" class="precio-input">
-                                    <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                        Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
-                                    </small>
                                 </div>
                                 <ng-template #precioSoloLecturaNuevo>
                                     <div class="monto-celda monto-celda--compacta">
                                         <span>{{ formatMoneda(producto.precio) }}</span>
-                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                            Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
-                                        </small>
                                     </div>
                                 </ng-template>
                             </td>
@@ -896,6 +912,7 @@
                     rows="3" class="form-control"></textarea>
             </div>
         </div>
+        </ng-container>
     </div>
 
     <div class="modal-actions">
@@ -963,7 +980,6 @@
                     <small>
                         <span>{{ producto.codigo || ('ID ' + producto.id) }} • {{ producto.categoria || 'Sin categoria' }}</span>
                         <span>• {{ formatMoneda(producto.precio) }}</span>
-                        <span *ngIf="debeMostrarReferenciaBs()">• Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}</span>
                         <span class="catalogo-tag catalogo-tag--ok" *ngIf="obtenerCantidadProductoEnContextoCatalogo(producto.id) > 0">
                             En presupuesto: {{ obtenerCantidadProductoEnContextoCatalogo(producto.id) }}
                         </span>
@@ -1139,26 +1155,33 @@
             </div>
         </div>
 
-        <div class="info-card" *ngIf="mostrarFormulaExternaDetalle()">
+        <div class="info-card info-card--formula-externa" *ngIf="mostrarFormulaExternaDetalle()">
             <div class="info-header">
                 <i class="bi bi-journal-medical"></i>
-                <h4>Fórmula externa</h4>
+                <h4>{{ getTituloBloqueFormulaDetalle() }}</h4>
             </div>
             <div class="info-content formula-externa-section">
                 <div class="formula-externa-header">
-                    <div class="formula-externa-switch">
-                        <label class="switch-moderno">
-                            <input
-                                type="checkbox"
-                                [ngModel]="esFormulaExternaActivaDetalle()"
-                                (ngModelChange)="onCambioFormulaExternaDetalle($event)"
-                                [disabled]="!modoEditable">
-                            <span class="slider-moderno round"></span>
-                        </label>
-                        <span class="switch-label" [class.text-primary]="esFormulaExternaActivaDetalle()">
-                            <i class="bi bi-box-arrow-up-right"></i>
-                            Este presupuesto se basa en fórmula externa del paciente
+                    <div class="formula-externa-selector">
+                        <button type="button" class="formula-origin-btn"
+                            [class.active]="esOrigenFormulaDetalle('externa')"
+                            (click)="seleccionarOrigenFormulaDetalle('externa')"
+                            [disabled]="!modoEditable">
+                            Fórmula externa
+                        </button>
+                        <button type="button" class="formula-origin-btn"
+                            [class.active]="esOrigenFormulaDetalle('interna')"
+                            (click)="seleccionarOrigenFormulaDetalle('interna')"
+                            [disabled]="!modoEditable">
+                            Fórmula interna
+                        </button>
+                    </div>
+                    <div class="formula-externa-switch" *ngIf="esFormulaExternaActivaDetalle()">
+                        <span class="switch-label text-primary">
+                            <i class="bi" [class.bi-box-arrow-up-right]="esOrigenFormulaDetalle('externa')" [class.bi-clock-history]="esOrigenFormulaDetalle('interna')"></i>
+                            {{ getEtiquetaOrigenFormulaDetalle() }}
                         </span>
+                        <small class="formula-origin-help">{{ getDescripcionOrigenFormulaDetalle() }}</small>
                     </div>
                 </div>
 
@@ -1344,6 +1367,9 @@
                                 <div class="presupuesto-opcion-card__total-item presupuesto-opcion-card__total-item--highlight">
                                     <span class="label">Total</span>
                                     <strong>{{ formatMoneda(opcion.total) }}</strong>
+                                    <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                        Ref. {{ formatMoneda(obtenerReferenciaBs(opcion.total), 'VES') }}
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -1378,7 +1404,6 @@
                                 <strong>{{ obtenerNombreVisibleProducto(producto) }}</strong>
                                 <small>
                                     <span>{{ producto.codigo }} • {{ formatMoneda(producto.precio) }}</span>
-                                    <span *ngIf="debeMostrarReferenciaBs()">• Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}</span>
                                 </small>
                             </div>
                             <button class="btn-agregar" type="button" (click)="agregarProductoDetalle(producto)">
@@ -1418,9 +1443,6 @@
                                 <td class="text-center">
                                     <div class="monto-celda monto-celda--compacta">
                                         <span>{{ formatMoneda(producto.precio) }}</span>
-                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                            Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
-                                        </small>
                                     </div>
                                 </td>
                                 <td class="text-center">{{ producto.cantidad }}</td>
@@ -1469,16 +1491,10 @@
                                     <div class="monto-celda" *ngIf="esLineaConsulta(producto); else precioSoloLecturaDetalle">
                                         <input type="number" [(ngModel)]="producto.precio" (change)="actualizarProductoDetalle(i)"
                                             min="0" step="0.01" class="precio-input">
-                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                            Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
-                                        </small>
                                     </div>
                                     <ng-template #precioSoloLecturaDetalle>
                                         <div class="monto-celda monto-celda--compacta">
                                             <span>{{ formatMoneda(producto.precio) }}</span>
-                                            <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                                Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
-                                            </small>
                                         </div>
                                     </ng-template>
                                 </td>

@@ -12,20 +12,21 @@ export class LoaderService {
   public loading$ = this.loadingSubject.asObservable();
   public message$ = this.messageSubject.asObservable();
 
-  private minLoadingTime = 1000;
-  private loadingStartTime = 0;
   private isCurrentlyLoading = false;
+  private activeRequests = 0;
 
   // Método para mostrar loader con mensaje
   showWithMessage(message: string = 'Cargando...') {
     this.messageSubject.next(message);
-    this.loadingStartTime = Date.now();
+    this.activeRequests++;
+
+    if (this.isCurrentlyLoading) {
+      return;
+    }
+
     this.isCurrentlyLoading = true;
     this.lockScroll();
-    
-    setTimeout(() => {
-      this.loadingSubject.next(true);
-    });
+    this.loadingSubject.next(true);
   }
 
   // Método para actualizar mensaje sin cambiar estado
@@ -38,40 +39,27 @@ export class LoaderService {
   }
 
   hide() {
-    if (!this.isCurrentlyLoading) return;
-
-    const elapsedTime = Date.now() - this.loadingStartTime;
-    const remainingTime = this.minLoadingTime - elapsedTime;
-
-    if (remainingTime > 0) {
-      setTimeout(() => {
-        this.isCurrentlyLoading = false;
-        this.unlockScroll();
-        
-        setTimeout(() => {
-          this.loadingSubject.next(false);
-          this.messageSubject.next('Cargando...');
-        });
-      }, remainingTime);
-    } else {
-      this.isCurrentlyLoading = false;
-      this.unlockScroll();
-      
-      setTimeout(() => {
-        this.loadingSubject.next(false);
-        this.messageSubject.next('Cargando...');
-      });
+    if (this.activeRequests > 0) {
+      this.activeRequests--;
     }
+
+    if (!this.isCurrentlyLoading || this.activeRequests > 0) {
+      return;
+    }
+
+    this.isCurrentlyLoading = false;
+    this.unlockScroll();
+    this.loadingSubject.next(false);
+    this.messageSubject.next('Cargando...');
   }
 
   forceHide() {
+    this.activeRequests = 0;
     this.isCurrentlyLoading = false;
     this.unlockScroll();
-    
-    setTimeout(() => {
-      this.loadingSubject.next(false);
-      this.messageSubject.next('Cargando...');
-    });
+
+    this.loadingSubject.next(false);
+    this.messageSubject.next('Cargando...');
   }
 
   isLoading(): boolean {

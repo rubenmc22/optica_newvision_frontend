@@ -271,8 +271,6 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     private cargarDatosIniciales(): void {
-        this.iniciarCarga();
-        this.tareaIniciada();
         this.obtenerConfiguracionSistema();
         this.cargarProductosYSedes();
     }
@@ -1186,7 +1184,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     private tareaFinalizada(): void {
         this.tareasPendientes--;
         if (this.tareasPendientes <= 0) {
-            setTimeout(() => this.loader.hide(), 300);
+            this.loader.hide();
             this.dataIsReady = true;
         }
     }

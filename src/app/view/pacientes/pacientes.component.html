@@ -43,8 +43,19 @@
             </label>
             <div class="search-container">
               <input type="text" class="form-control modern-input" placeholder="Nombre, cédula..." [(ngModel)]="filtro"
-                (input)="aplicarFiltroTexto()" (keyup.enter)="aplicarFiltroTexto()">
-              <i class="bi bi-search search-icon"></i>
+                (input)="manejarCambioBusquedaListado()" (keyup.enter)="manejarCambioBusquedaListado()">
+              <button
+                *ngIf="filtro?.trim(); else iconoBusquedaPacientes"
+                type="button"
+                class="search-action search-action--clear"
+                (click)="limpiarBusquedaListado()"
+                aria-label="Limpiar buscador de pacientes"
+                title="Limpiar buscador">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <ng-template #iconoBusquedaPacientes>
+                <i class="bi bi-search search-icon"></i>
+              </ng-template>
             </div>
           </div>
 
@@ -83,6 +94,14 @@
           <div class="alert-content">
             <strong>Visualizando pacientes de otra sede</strong>
             <span>Las acciones de edición y eliminación están deshabilitadas.</span>
+          </div>
+        </div>
+
+        <div *ngIf="busquedaGlobalPorCedulaActiva" class="alert-moderno alert-info alert-moderno--compact alert-moderno--search">
+          <i class="bi bi-search"></i>
+          <div class="alert-content">
+            <strong>Búsqueda global activa</strong>
+            <span>Mientras uses el buscador, los resultados se muestran sin restringirse por sede. Si el paciente pertenece a otra sede, usa el botón de enlazar.</span>
           </div>
         </div>
 
@@ -140,7 +159,9 @@
               </thead>
 
               <tbody>
-                <tr *ngFor="let paciente of pacientesPaginados" class="paciente-row">
+                <tr *ngFor="let paciente of pacientesPaginados" class="paciente-row"
+                  (mouseenter)="mostrarHintEnlaceListado($any($event.currentTarget), paciente)"
+                  (mouseleave)="ocultarHintEnlaceListado()">
                   <!-- Columna Paciente con indicador compacto de empresa -->
                   <td class="paciente-info text-left">
                     <div class="paciente-avatar">
@@ -199,7 +220,7 @@
               'badge-guarenas': paciente.sede === 'guarenas'
             }">
                       <i class="bi bi-geo-alt"></i>
-                      {{ paciente.sede | titlecase }}
+                      {{ getEtiquetaSedePaciente(paciente) }}
                     </span>
                   </td>
                   <td class="text-center acciones">
@@ -209,7 +230,17 @@
                         <i class="bi bi-eye"></i>
                       </button>
 
-                      <ng-container *ngIf="paciente.sede === sedeActiva">
+                      <button class="btn btn-accion btn-enlazar"
+                        *ngIf="debeMostrarBotonEnlazarListado(paciente)"
+                        [disabled]="cargando"
+                        (focus)="mostrarHintEnlaceListado($any($event.currentTarget), paciente)"
+                        (blur)="ocultarHintEnlaceListado()"
+                        (click)="ocultarHintEnlaceListado(); enlazarPacienteEncontrado(paciente)"
+                        title="Enlazar a esta sede">
+                        <i class="bi bi-link-45deg"></i>
+                      </button>
+
+                      <ng-container *ngIf="pacientePuedeEditarEnSedeActiva(paciente)">
                         <button class="btn btn-accion btn-editar" (click)="editarPaciente(paciente)"
                           title="Editar paciente">
                           <i class="bi bi-pencil"></i>
@@ -222,10 +253,14 @@
                 <!-- Estado vacío -->
                 <tr *ngIf="dataIsReady && pacientesFiltradosPorSede.length === 0">
                   <td colspan="8" class="estado-vacio">
-                    <div class="empty-state">
-                      <i class="bi bi-person-x"></i>
-                      <h4>No se encontraron pacientes</h4>
-                      <p>No hay pacientes que coincidan con el filtro aplicado.</p>
+                    <div class="empty-state empty-state--compacta">
+                      <div class="empty-state__copy">
+                        <i class="bi bi-person-x"></i>
+                        <div>
+                          <h4>No se encontraron pacientes</h4>
+                          <p>No hay pacientes que coincidan con el filtro aplicado.</p>
+                        </div>
+                      </div>
                       <button class="btn btn-agregar-vacio" (click)="abrirModalAgregarPaciente()">
                         <i class="bi bi-person-plus"></i>
                         Agregar primer paciente
@@ -235,6 +270,13 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <div class="link-hint-floating" *ngIf="enlaceHintVisible"
+            [style.top]="enlaceHintTop"
+            [style.left]="enlaceHintLeft">
+            <i class="bi bi-cloud-arrow-up"></i>
+            <span>{{ enlaceHintMensaje }}</span>
           </div>
 
           <!-- Controles de paginación -->
@@ -302,6 +344,190 @@
       <!-- Body moderno -->
       <div class="modal-body-moderno">
         <form [formGroup]="formPaciente" class="form-moderno">
+          <div class="patient-create-intro" *ngIf="!modoEdicion">
+            <div class="patient-create-intro__copy">
+              <strong>Registro directo</strong>
+              <span>Completa el formulario y usa el buscador auxiliar solo si necesitas verificar otra sede o buscar por representante.</span>
+            </div>
+
+            <button type="button" class="btn btn-outline-secondary patient-create-intro__toggle"
+              (click)="toggleBusquedaAuxiliarPaciente()">
+              <i class="bi" [ngClass]="mostrarBusquedaAuxiliarPaciente ? 'bi-chevron-up' : 'bi-search'"></i>
+              {{ getTextoBusquedaAuxiliarPaciente() }}
+            </button>
+          </div>
+
+          <div class="alert-moderno alert-info patient-create-intro__alert" *ngIf="!modoEdicion && cedulaPrecargadaDesdeListado">
+            <i class="bi bi-magic"></i>
+            <div class="alert-content">
+              <strong>Cédula precargada desde el buscador principal</strong>
+              <span>Puedes continuar el registro manual o abrir el buscador auxiliar para validar si ese paciente ya existe en otra sede.</span>
+            </div>
+          </div>
+
+          <div class="form-section patient-search-section" *ngIf="!modoEdicion && mostrarBusquedaAuxiliarPaciente">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-search"></i>
+              </div>
+              <div>
+                <h6 class="section-title">Buscador auxiliar del paciente</h6>
+                <p class="patient-search-section__subtitle">Úsalo cuando quieras confirmar si el paciente ya existe en otra sede antes de terminar el registro.</p>
+              </div>
+            </div>
+
+            <div class="section-content">
+              <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-sliders me-2"></i>
+                      Tipo de búsqueda
+                    </label>
+                    <select class="form-control-moderno" [(ngModel)]="tipoBusquedaPaciente"
+                      [ngModelOptions]="{standalone: true}" (change)="cambiarTipoBusquedaPaciente()">
+                      <option value="cedula">Cédula del paciente</option>
+                      <option value="representante">Cédula del representante</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="col-md-5">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-card-text me-2"></i>
+                      {{ tipoBusquedaPaciente === 'representante' ? 'Cédula del representante' : 'Cédula del paciente' }}
+                    </label>
+                    <input type="text" class="form-control-moderno" [(ngModel)]="cedulaBusquedaPaciente"
+                      [ngModelOptions]="{standalone: true}" placeholder="Ej: 12345678" maxlength="9"
+                      (keyup.enter)="buscarPacienteAntesDeCrear()">
+                  </div>
+                </div>
+
+                <div class="col-md-3 patient-search-section__action-col">
+                  <div class="form-group-moderno patient-search-section__action-group">
+                  
+                    <button type="button" class="btn btn-primary-moderno patient-search-section__button"
+                      [disabled]="busquedaPacienteCargando || !cedulaBusquedaPaciente.trim()" (click)="buscarPacienteAntesDeCrear()">
+                      <i class="bi bi-search me-2"></i>
+                      Buscar
+                      <span *ngIf="busquedaPacienteCargando" class="spinner-border spinner-border-sm ms-2"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="patient-search-section__help">
+                <i class="bi bi-info-circle me-2"></i>
+                {{ getTextoAyudaBusquedaPaciente() }}
+              </div>
+
+              <div class="patient-search-result" *ngIf="busquedaPacienteRealizada">
+                <div class="alert-moderno alert-warning" *ngIf="estadoBusquedaPaciente === 'no_encontrado'">
+                  <i class="bi bi-person-plus"></i>
+                  <div class="alert-content">
+                    <strong>Sin coincidencias</strong>
+                    <span>No se encontró un registro previo con esa identificación. Puedes continuar con el registro manual.</span>
+                  </div>
+                </div>
+
+                <div class="alert-moderno alert-info" *ngIf="estadoBusquedaPaciente === 'coincidencias'">
+                  <i class="bi bi-people"></i>
+                  <div class="alert-content">
+                    <strong>Coincidencias encontradas</strong>
+                    <span>Selecciona el paciente correcto antes de enlazar o crear un nuevo registro.</span>
+                  </div>
+                </div>
+
+                <div class="alert-moderno alert-warning" *ngIf="estadoBusquedaPaciente === 'error'">
+                  <i class="bi bi-exclamation-triangle"></i>
+                  <div class="alert-content">
+                    <strong>No se pudo completar la búsqueda</strong>
+                    <span>Intenta nuevamente en unos segundos.</span>
+                  </div>
+                </div>
+
+                <div class="patient-match-card" *ngIf="pacienteEncontradoBusqueda as pacienteBusqueda">
+                  <div class="patient-match-card__header">
+                    <div>
+                      <strong>{{ pacienteBusqueda.informacionPersonal.nombreCompleto }}</strong>
+                      <div class="patient-match-card__meta">
+                        <span>{{ pacienteBusqueda.informacionPersonal.esMenorSinCedula ? 'Representante' : 'Cédula' }}: {{ pacienteBusqueda.informacionPersonal.cedula }}</span>
+                        <span *ngIf="pacienteBusqueda.informacionPersonal.telefono">Tel: {{ pacienteBusqueda.informacionPersonal.telefono }}</span>
+                      </div>
+                    </div>
+                    <span class="patient-match-card__badge" [ngClass]="{
+                      'patient-match-card__badge--success': estadoBusquedaPaciente === 'asociado_sede_actual',
+                      'patient-match-card__badge--info': estadoBusquedaPaciente === 'disponible_en_otra_sede'
+                    }">
+                      {{ getEtiquetaSedeBusquedaPaciente(pacienteBusqueda) }}
+                    </span>
+                  </div>
+
+                  <div class="patient-match-card__body">
+                    <div><strong>Fecha de nacimiento:</strong> {{ pacienteBusqueda.informacionPersonal.fechaNacimiento || 'No disponible' }}</div>
+                    <div><strong>Sedes asociadas:</strong> {{ pacienteBusqueda.sedesAsociadas?.length || 1 }}</div>
+                  </div>
+
+                  <div class="patient-match-card__actions">
+                    <button type="button" class="btn btn-outline-secondary" *ngIf="estadoBusquedaPaciente === 'asociado_sede_actual'"
+                      (click)="editarPacienteDesdeBusqueda(pacienteBusqueda)">
+                      <i class="bi bi-pencil-square me-2"></i>
+                      Actualizar datos
+                    </button>
+
+                    <button type="button" class="btn btn-primary-moderno" *ngIf="estadoBusquedaPaciente === 'disponible_en_otra_sede'"
+                      [disabled]="cargando" (click)="enlazarPacienteEncontrado(pacienteBusqueda)">
+                      <i class="bi bi-link-45deg me-2"></i>
+                      Enlazar a esta sede
+                    </button>
+                  </div>
+                </div>
+
+                <div class="patient-match-list" *ngIf="estadoBusquedaPaciente === 'coincidencias'">
+                  <div class="patient-match-card" *ngFor="let pacienteCoincidente of pacientesCoincidentesBusqueda">
+                    <div class="patient-match-card__header">
+                      <div>
+                        <strong>{{ pacienteCoincidente.informacionPersonal.nombreCompleto }}</strong>
+                        <div class="patient-match-card__meta">
+                          <span>Representante: {{ pacienteCoincidente.informacionPersonal.cedula }}</span>
+                          <span *ngIf="pacienteCoincidente.informacionPersonal.fechaNacimiento">F. nac.: {{ pacienteCoincidente.informacionPersonal.fechaNacimiento }}</span>
+                        </div>
+                      </div>
+                      <span class="patient-match-card__badge" [ngClass]="{
+                        'patient-match-card__badge--success': pacienteCoincidente.disponibleEnSedeActual,
+                        'patient-match-card__badge--info': !pacienteCoincidente.disponibleEnSedeActual
+                      }">
+                        {{ getEtiquetaSedeBusquedaPaciente(pacienteCoincidente) }}
+                      </span>
+                    </div>
+
+                    <div class="patient-match-card__actions">
+                      <button type="button" class="btn btn-outline-secondary" *ngIf="pacienteCoincidente.disponibleEnSedeActual"
+                        (click)="editarPacienteDesdeBusqueda(pacienteCoincidente)">
+                        <i class="bi bi-pencil-square me-2"></i>
+                        Actualizar datos
+                      </button>
+                      <button type="button" class="btn btn-primary-moderno" *ngIf="!pacienteCoincidente.disponibleEnSedeActual"
+                        [disabled]="cargando" (click)="enlazarPacienteEncontrado(pacienteCoincidente)">
+                        <i class="bi bi-link-45deg me-2"></i>
+                        Enlazar a esta sede
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="patient-search-result__actions" *ngIf="estadoBusquedaPaciente === 'no_encontrado' || estadoBusquedaPaciente === 'coincidencias'">
+                  <button type="button" class="btn btn-outline-primary" (click)="habilitarFormularioCreacionPaciente()">
+                    <i class="bi bi-person-plus me-2"></i>
+                    Continuar con registro manual
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <ng-container *ngIf="modoEdicion || mostrarFormularioCreacionPaciente">
 
           <!-- Sección: Datos Personales -->
           <div class="form-section">
@@ -814,6 +1040,7 @@
               <span>Por favor complete todos los campos obligatorios.</span>
             </div>
           </div>
+          </ng-container>
         </form>
       </div>
 
@@ -823,8 +1050,13 @@
           <i class="bi bi-x-circle me-2"></i>
           Cancelar
         </button>
+        <button type="button" class="btn btn-outline-secondary" *ngIf="!modoEdicion"
+          (click)="toggleBusquedaAuxiliarPaciente()">
+          <i class="bi" [ngClass]="mostrarBusquedaAuxiliarPaciente ? 'bi-chevron-up' : 'bi-search'"></i>
+          {{ getTextoBusquedaAuxiliarPaciente() }}
+        </button>
         <button type="button" class="btn btn-primary-moderno"
-          [disabled]="cargando || !formularioModificado() || formPaciente.invalid" (click)="guardarPaciente()">
+          [disabled]="cargando || (!modoEdicion && !mostrarFormularioCreacionPaciente) || !formularioModificado() || formPaciente.invalid" (click)="guardarPaciente()">
           <i class="bi bi-check-circle me-2"></i>
           {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
           <span *ngIf="cargando" class="spinner-border spinner-border-sm ms-2"></span>

@@ -60,7 +60,7 @@ export class TasaComponent implements OnInit {
       this.loader.hide();
     }).catch((error) => {
       console.error('Error en carga inicial:', error);
-      this.loader.forceHide();
+      this.loader.hide();
     });
   }
 

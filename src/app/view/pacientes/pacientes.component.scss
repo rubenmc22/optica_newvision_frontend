@@ -356,6 +356,37 @@
         color: #6c757d;
         pointer-events: none;
     }
+
+    .search-action {
+        position: absolute;
+        right: 0.65rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 2rem;
+        height: 2rem;
+        border: none;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        color: #5f6f82;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: #edf2f7;
+            color: #1f2d3d;
+        }
+
+        &:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.18);
+        }
+
+        i {
+            font-size: 0.95rem;
+        }
+    }
 }
 
 /* Alertas modernas */
@@ -392,6 +423,34 @@
             font-size: 0.875rem;
             opacity: 0.9;
         }
+    }
+
+    &.alert-moderno--compact {
+        padding: 0.75rem 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        i {
+            font-size: 1rem;
+            margin-top: 0;
+        }
+
+        .alert-content {
+            gap: 0.1rem;
+
+            strong {
+                font-size: 0.95rem;
+            }
+
+            span {
+                font-size: 0.82rem;
+            }
+        }
+    }
+
+    &.alert-moderno--search {
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(25, 118, 210, 0.08);
     }
 }
 
@@ -467,11 +526,13 @@
 
     tbody {
         .paciente-row {
+            position: relative;
             border-bottom: 1px solid #f1f3f4;
             transition: background-color 0.2s ease;
 
             &:hover {
                 background-color: #f8f9fa;
+                z-index: 4;
             }
 
             &:last-child {
@@ -479,6 +540,7 @@
             }
 
             td {
+                position: relative;
                 padding: 1.25rem 0.75rem;
                 vertical-align: middle;
                 text-align: center;
@@ -615,6 +677,102 @@
     justify-content: center;
 }
 
+.acciones {
+    position: relative;
+}
+
+.link-hint-floating {
+    position: fixed;
+    width: min(280px, calc(100vw - 2rem));
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.85rem 1rem;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #fffef5 0%, #fff6d9 100%);
+    color: #7c5a00;
+    border: 1px solid rgba(234, 179, 8, 0.28);
+    box-shadow: 0 18px 34px rgba(148, 113, 0, 0.18);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    text-align: left;
+    pointer-events: none;
+    z-index: 1200;
+
+    i {
+        font-size: 0.95rem;
+        color: #d97706;
+        margin-top: 0.12rem;
+        flex-shrink: 0;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: calc(100% - 7px);
+        width: 14px;
+        height: 14px;
+        background: #fff7dc;
+        border-right: 1px solid rgba(234, 179, 8, 0.28);
+        border-bottom: 1px solid rgba(234, 179, 8, 0.28);
+        transform: translateX(-50%) rotate(45deg);
+    }
+}
+
+.empty-state--compacta {
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 2.5rem 1.5rem;
+    max-width: 620px;
+    margin: 0 auto;
+    border-radius: 20px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+.empty-state__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    text-align: center;
+    max-width: 460px;
+
+    i {
+        width: 72px;
+        height: 72px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        font-size: 2rem;
+        color: #93a4b8;
+        background: linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        flex-shrink: 0;
+    }
+
+    h4 {
+        margin: 0;
+        color: #334155;
+        font-size: 1.9rem;
+        font-weight: 700;
+    }
+
+    p {
+        margin: 0;
+        color: #64748b;
+        font-size: 1rem;
+        line-height: 1.55;
+    }
+}
+
 .btn-accion {
     width: 36px;
     height: 36px;
@@ -641,6 +799,16 @@
 
         &:hover {
             background: #f57c00;
+            color: white;
+        }
+    }
+
+    &.btn-enlazar {
+        background: #ecfdf5;
+        color: #059669;
+
+        &:hover {
+            background: #059669;
             color: white;
         }
     }
@@ -675,17 +843,18 @@
     background: var(--degradado-color);
     border: none;
     color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 500;
+    padding: 0.9rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 700;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     transition: all 0.3s ease;
+    box-shadow: 0 12px 26px rgba(37, 99, 235, 0.18);
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 16px 30px rgba(37, 99, 235, 0.24);
     }
 }
 
@@ -2380,4 +2549,157 @@ textarea.form-control-moderno {
             }
         }
     }
+}
+
+.patient-search-section__subtitle {
+    margin: 0.2rem 0 0;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.patient-create-intro {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1rem;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid #dbe7f3;
+}
+
+.patient-create-intro__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    color: #475569;
+
+    strong {
+        color: #1e293b;
+        font-size: 0.96rem;
+    }
+
+    span {
+        font-size: 0.88rem;
+        line-height: 1.45;
+    }
+}
+
+.patient-create-intro__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.patient-create-intro__alert {
+    margin-bottom: 1rem;
+}
+
+.patient-search-section__action-col {
+    display: flex;
+}
+
+.patient-search-section__action-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: 100%;
+    margin-bottom: 22px;
+}
+
+.patient-search-section__action-label {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.patient-search-section__button {
+    width: 100%;
+    min-height: 48px;
+}
+
+.patient-search-section__help {
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    background: #f8fbff;
+    border: 1px solid #d9e8f7;
+    color: #33506b;
+    font-size: 0.9rem;
+}
+
+.patient-search-result {
+    margin-top: 1rem;
+}
+
+.patient-search-result__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.patient-match-list {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.patient-match-card {
+    margin-top: 1rem;
+    border: 1px solid #dbe7f3;
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.patient-match-card__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.patient-match-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+    color: #64748b;
+    font-size: 0.88rem;
+}
+
+.patient-match-card__badge {
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: #e2e8f0;
+    color: #334155;
+    white-space: nowrap;
+}
+
+.patient-match-card__badge--success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.patient-match-card__badge--info {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.patient-match-card__body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.65rem;
+    margin-top: 0.85rem;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.patient-match-card__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
 }
