@@ -169,6 +169,10 @@
                             (click)="$event.stopPropagation(); imprimirPresupuesto(presupuesto)">
                             <i class="bi bi-printer"></i>
                         </button>
+                        <button class="btn-action btn-whatsapp" type="button" title="Compartir por WhatsApp"
+                            (click)="$event.stopPropagation(); compartirPresupuestoPorWhatsApp(presupuesto)">
+                            <i class="bi bi-whatsapp"></i>
+                        </button>
                         <button class="btn-action btn-success"
                             type="button"
                             [disabled]="!puedeConvertirPresupuesto(presupuesto)"
@@ -267,6 +271,10 @@
                     </div>
 
                     <div class="presupuesto-actions">
+                        <button class="btn-action btn-whatsapp" type="button" title="Compartir por WhatsApp"
+                            (click)="$event.stopPropagation(); compartirPresupuestoPorWhatsApp(presupuesto)">
+                            <i class="bi bi-whatsapp"></i>
+                        </button>
                         <button class="btn-action btn-warning" type="button" title="Renovar"
                             (click)="$event.stopPropagation(); renovarPresupuesto(presupuesto)">
                             <i class="bi bi-arrow-clockwise"></i>
@@ -1586,6 +1594,12 @@
                         (click)="imprimirPresupuesto(presupuestoSeleccionado); cerrarMenuAccionesDetalleInmediato()">
                         <i class="bi bi-printer"></i>
                         Imprimir
+                    </button>
+
+                    <button class="dropdown-item" type="button"
+                        (click)="compartirPresupuestoPorWhatsApp(presupuestoSeleccionado); cerrarMenuAccionesDetalleInmediato()">
+                        <i class="bi bi-whatsapp"></i>
+                        Compartir por WhatsApp
                     </button>
 
                     <button class="dropdown-item" type="button"

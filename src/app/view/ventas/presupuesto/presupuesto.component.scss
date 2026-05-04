@@ -1819,6 +1819,17 @@
                 }
             }
 
+            &.btn-whatsapp {
+                border-color: #25d366;
+                color: #25d366;
+
+                &:hover {
+                    background: #25d366;
+                    border-color: #25d366;
+                    color: white;
+                }
+            }
+
             &.btn-danger {
                 border-color: var(--color-vencido);
                 color: var(--color-vencido);

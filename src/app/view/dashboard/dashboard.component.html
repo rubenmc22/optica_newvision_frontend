@@ -25,6 +25,99 @@
       </div>
     </section>
 
+    <div class="row mt-4 dashboard-shortcuts-row">
+      <div class="col-12">
+        <section class="surface-card quick-surface">
+          <div class="surface-header surface-header--tight">
+            <div class="quick-surface__heading">
+              <span class="surface-eyebrow">Atajos</span>
+              <h3 class="surface-title">Flujo diario</h3>
+              <p class="surface-subtitle quick-surface__subtitle">Accesos rápidos para el trabajo operativo más frecuente del equipo.</p>
+            </div>
+            <div class="quick-surface__meta">
+              <span class="quick-surface__meta-pill">Uso continuo</span>
+            </div>
+          </div>
+
+          <div class="surface-body">
+            <div class="quick-actions-grid">
+              <button class="quick-action-btn quick-action-btn--primary quick-action-btn--teal" (click)="nuevoPaciente()">
+                <div class="action-icon"><i class="fas fa-user-plus"></i></div>
+                <div class="quick-action-copy">
+                  <span>Nuevo paciente</span>
+                  <small>Registro inicial</small>
+                </div>
+                <div class="quick-action-tail">
+                  <span>Ir ahora</span>
+                  <i class="fas fa-arrow-right"></i>
+                </div>
+              </button>
+
+              <button class="quick-action-btn quick-action-btn--primary quick-action-btn--cyan" (click)="nuevaHistoria()">
+                <div class="action-icon"><i class="fas fa-file-medical"></i></div>
+                <div class="quick-action-copy">
+                  <span>Historias médicas</span>
+                  <small>Consulta y seguimiento</small>
+                </div>
+                <div class="quick-action-tail">
+                  <span>Ir ahora</span>
+                  <i class="fas fa-arrow-right"></i>
+                </div>
+              </button>
+
+              <button class="quick-action-btn quick-action-btn--primary quick-action-btn--blue" (click)="irAVentas()">
+                <div class="action-icon"><i class="fas fa-cash-register"></i></div>
+                <div class="quick-action-copy">
+                  <span>Nueva venta</span>
+                  <small>Registro comercial</small>
+                </div>
+                <div class="quick-action-tail">
+                  <span>Ir ahora</span>
+                  <i class="fas fa-arrow-right"></i>
+                </div>
+              </button>
+
+              <button class="quick-action-btn quick-action-btn--violet" (click)="irAOrdenes()">
+                <div class="action-icon"><i class="fas fa-clipboard-list"></i></div>
+                <div class="quick-action-copy">
+                  <span>Órdenes de trabajo</span>
+                  <small>Laboratorio y entrega</small>
+                </div>
+                <div class="quick-action-tail">
+                  <span>Abrir módulo</span>
+                  <i class="fas fa-arrow-right"></i>
+                </div>
+              </button>
+
+              <button class="quick-action-btn quick-action-btn--emerald" (click)="irAInventario()">
+                <div class="action-icon"><i class="fas fa-box-open"></i></div>
+                <div class="quick-action-copy">
+                  <span>Inventario</span>
+                  <small>Productos y stock</small>
+                </div>
+                <div class="quick-action-tail">
+                  <span>Abrir módulo</span>
+                  <i class="fas fa-arrow-right"></i>
+                </div>
+              </button>
+
+              <button class="quick-action-btn quick-action-btn--secondary quick-action-btn--amber" (click)="irATasa()">
+                <div class="action-icon"><i class="fas fa-coins"></i></div>
+                <div class="quick-action-copy">
+                  <span>Tipo de cambio</span>
+                  <small>Referencia operativa</small>
+                </div>
+                <div class="quick-action-tail">
+                  <span>Consultar</span>
+                  <i class="fas fa-arrow-right"></i>
+                </div>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
     <section class="kpi-grid mb-4">
       <article class="kpi-card kpi-card--sales">
         <div class="kpi-card__header">
@@ -246,59 +339,6 @@
 
           <div class="surface-body surface-body--chart surface-body--compact">
             <app-grafico-comparativa-sedes [data]="datosComparativa"></app-grafico-comparativa-sedes>
-          </div>
-        </section>
-      </div>
-    </div>
-
-    <div class="row mt-4" *ngIf="hayDatos">
-      <div class="col-12">
-        <section class="surface-card quick-surface">
-          <div class="surface-header surface-header--tight">
-            <div>
-              <span class="surface-eyebrow">Atajos</span>
-              <h3 class="surface-title">Flujo diario</h3>
-            </div>
-          </div>
-
-          <div class="surface-body">
-            <div class="quick-actions-grid">
-              <button class="quick-action-btn" (click)="nuevoPaciente()">
-                <div class="action-icon"><i class="fas fa-user-plus"></i></div>
-                <span>Nuevo paciente</span>
-                <small>Registro inicial</small>
-              </button>
-
-              <button class="quick-action-btn" (click)="nuevaHistoria()">
-                <div class="action-icon"><i class="fas fa-file-medical"></i></div>
-                <span>Historias médicas</span>
-                <small>Consulta y seguimiento</small>
-              </button>
-
-              <button class="quick-action-btn" (click)="irAVentas()">
-                <div class="action-icon"><i class="fas fa-cash-register"></i></div>
-                <span>Nueva venta</span>
-                <small>Registro comercial</small>
-              </button>
-
-              <button class="quick-action-btn" (click)="irAOrdenes()">
-                <div class="action-icon"><i class="fas fa-clipboard-list"></i></div>
-                <span>Órdenes de trabajo</span>
-                <small>Laboratorio y entrega</small>
-              </button>
-
-              <button class="quick-action-btn" (click)="irAInventario()">
-                <div class="action-icon"><i class="fas fa-box-open"></i></div>
-                <span>Inventario</span>
-                <small>Productos y stock</small>
-              </button>
-
-              <button class="quick-action-btn quick-action-btn--secondary" (click)="irATasa()">
-                <div class="action-icon"><i class="fas fa-coins"></i></div>
-                <span>Tipo de cambio</span>
-                <small>Referencia operativa</small>
-              </button>
-            </div>
           </div>
         </section>
       </div>

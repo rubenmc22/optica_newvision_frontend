@@ -3306,6 +3306,214 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     }
   }
 
+  compartirPresupuestoPorWhatsApp(presupuesto: any): void {
+    try {
+      const presupuestoCompartir = this.normalizarPresupuestoPersistido(
+        JSON.parse(JSON.stringify(presupuesto || {}))
+      );
+      const telefonoInicial = String(presupuestoCompartir?.cliente?.telefono || '').trim();
+      const codigoPresupuesto = this.escaparHtml(String(presupuestoCompartir?.codigo || 'este presupuesto'));
+      const nombreCliente = this.escaparHtml(String(presupuestoCompartir?.cliente?.nombreCompleto || 'el paciente'));
+
+      this.swalService.showInfo(
+        'Compartir por WhatsApp',
+        `<div class="text-start">
+          <p class="mb-2">Se abrirá WhatsApp con un resumen del presupuesto <strong>${codigoPresupuesto}</strong>.</p>
+          <p class="mb-0 text-muted">Puedes ajustar el número de <strong>${nombreCliente}</strong> antes de continuar.</p>
+        </div>`,
+        {
+          input: 'text',
+          inputLabel: 'Número de WhatsApp',
+          inputValue: telefonoInicial,
+          inputPlaceholder: 'Ej: 4121234567 o +58 4121234567',
+          showCancelButton: true,
+          confirmButtonText: 'Abrir WhatsApp',
+          cancelButtonText: 'Cancelar',
+          focusConfirm: false,
+          customClass: {
+            actions: 'swal-modern-actions swal-modern-actions--presupuesto-select'
+          },
+          didOpen: () => {
+            const input = document.querySelector('.swal2-input') as HTMLInputElement | null;
+            if (input) {
+              input.focus();
+              input.select();
+            }
+          },
+          inputValidator: (value) => {
+            const telefono = String(value || '').trim();
+            if (!telefono) {
+              return 'Debes ingresar un número de teléfono';
+            }
+
+            if (!this.validarTelefono(telefono)) {
+              return this.getMensajeErrorTelefono();
+            }
+
+            return null;
+          }
+        }
+      ).then((result) => {
+        if (!result.isConfirmed) {
+          return;
+        }
+
+        const telefonoNormalizado = this.normalizarTelefonoParaWhatsApp(String(result.value || ''));
+
+        if (!telefonoNormalizado) {
+          this.swalService.showError('Número inválido', this.getMensajeErrorTelefono());
+          return;
+        }
+
+        this.abrirWhatsAppPresupuesto(telefonoNormalizado, presupuestoCompartir);
+      });
+    } catch (error) {
+      console.error('Error al compartir presupuesto por WhatsApp:', error);
+      this.swalService.showError('Error', 'No se pudo abrir WhatsApp para compartir el presupuesto.');
+    }
+  }
+
+  private abrirWhatsAppPresupuesto(telefono: string, presupuesto: any): void {
+    const mensaje = this.construirMensajeWhatsAppPresupuesto(presupuesto);
+    const urlWhatsApp = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+
+    window.open(urlWhatsApp, '_blank');
+
+    this.swalService.showSuccess('WhatsApp', 'Redirigiendo a WhatsApp para compartir el presupuesto.');
+  }
+
+  private construirMensajeWhatsAppPresupuesto(presupuesto: any): string {
+    const presupuestoCompartir = this.normalizarPresupuestoPersistido(
+      JSON.parse(JSON.stringify(presupuesto || {}))
+    );
+    const datosSede = this.obtenerDatosSedeImpresion();
+    const opciones = this.asegurarOpcionesPresupuesto(presupuestoCompartir);
+    const opcionPrincipal = this.obtenerOpcionPresupuesto(presupuestoCompartir, presupuestoCompartir?.opcionPrincipalId)
+      || opciones[0]
+      || null;
+    const productos = Array.isArray(opcionPrincipal?.productos) && opcionPrincipal.productos.length
+      ? opcionPrincipal.productos
+      : (Array.isArray(presupuestoCompartir?.productos) ? presupuestoCompartir.productos : []);
+    const fechaVencimiento = this.formatearFechaWhatsApp(presupuestoCompartir?.fechaVencimiento);
+    const totalPresupuesto = Number(opcionPrincipal?.total ?? presupuestoCompartir?.total ?? 0);
+    const lineasProductos = productos
+      .slice(0, 6)
+      .map((producto: any) => {
+        const descripcion = this.limpiarTextoWhatsApp(
+          this.obtenerDescripcionVisibleProducto(producto) || producto?.descripcion || producto?.nombre || 'Producto'
+        );
+        const cantidad = Number(producto?.cantidad || 1);
+        return `• ${descripcion}${cantidad > 1 ? ` x${cantidad}` : ''}`;
+      })
+      .join('\n');
+    const productosRestantes = productos.length > 6 ? `\n• y ${productos.length - 6} producto(s) más` : '';
+    const observaciones = this.limpiarTextoWhatsApp(
+      this.obtenerObservacionesSinFormulaParaImpresion(presupuestoCompartir?.observaciones)
+    );
+    const referenciaBs = this.debeMostrarReferenciaBs()
+      ? this.formatMoneda(this.obtenerReferenciaBs(totalPresupuesto), 'VES')
+      : '';
+
+    let mensaje = `*${this.limpiarTextoWhatsApp(datosSede.nombreOptica)}*\n\n`;
+    mensaje += `Hola ${this.limpiarTextoWhatsApp(presupuestoCompartir?.cliente?.nombreCompleto || 'cliente')}, compartimos su presupuesto óptico.\n\n`;
+    mensaje += `*Código:* ${this.limpiarTextoWhatsApp(presupuestoCompartir?.codigo || 'N/A')}\n`;
+
+    if (presupuestoCompartir?.cliente?.cedula) {
+      mensaje += `*Cédula/RIF:* ${this.limpiarTextoWhatsApp(presupuestoCompartir.cliente.cedula)}\n`;
+    }
+
+    if (fechaVencimiento) {
+      mensaje += `*Válido hasta:* ${fechaVencimiento}\n`;
+    }
+
+    if (opciones.length > 1) {
+      mensaje += `*Opciones incluidas:* ${opciones.length}\n`;
+    }
+
+    mensaje += `*Total:* ${this.formatMoneda(totalPresupuesto)}\n`;
+
+    if (referenciaBs) {
+      mensaje += `*Referencia en Bs:* ${referenciaBs}\n`;
+    }
+
+    if (lineasProductos) {
+      mensaje += `\n*Productos:*\n${lineasProductos}${productosRestantes}\n`;
+    }
+
+    if (observaciones) {
+      mensaje += `\n*Observaciones:* ${observaciones}\n`;
+    }
+
+    mensaje += `\nSi deseas confirmar este presupuesto, puedes responder por esta vía.\n\n`;
+    mensaje += `📍 *${this.limpiarTextoWhatsApp(datosSede.nombreOptica)}*\n`;
+
+    if (datosSede.direccion && datosSede.direccion !== 'Dirección no disponible') {
+      mensaje += `${this.limpiarTextoWhatsApp(datosSede.direccion)}\n`;
+    }
+
+    if (datosSede.telefono && datosSede.telefono !== 'Sin teléfono') {
+      mensaje += `📞 ${this.limpiarTextoWhatsApp(datosSede.telefono)}\n`;
+    }
+
+    if (datosSede.email && datosSede.email !== 'Sin correo') {
+      mensaje += `✉️ ${this.limpiarTextoWhatsApp(datosSede.email)}\n`;
+    }
+
+    return mensaje.trim();
+  }
+
+  private normalizarTelefonoParaWhatsApp(telefono: string): string | null {
+    const telefonoBase = String(telefono || '').trim();
+    if (!telefonoBase || !this.validarTelefono(telefonoBase)) {
+      return null;
+    }
+
+    let telefonoLimpio = telefonoBase.replace(/\D/g, '');
+
+    if (!telefonoLimpio) {
+      return null;
+    }
+
+    if (telefonoLimpio.startsWith('00')) {
+      telefonoLimpio = telefonoLimpio.slice(2);
+    }
+
+    if (telefonoLimpio.length === 11 && telefonoLimpio.startsWith('0')) {
+      telefonoLimpio = `58${telefonoLimpio.slice(1)}`;
+    } else if (telefonoLimpio.length === 10) {
+      telefonoLimpio = `58${telefonoLimpio}`;
+    }
+
+    if (telefonoLimpio.length < 11 || telefonoLimpio.length > 15) {
+      return null;
+    }
+
+    return telefonoLimpio;
+  }
+
+  private formatearFechaWhatsApp(fecha: string | Date | null | undefined): string {
+    if (!fecha) {
+      return '';
+    }
+
+    const fechaNormalizada = new Date(fecha);
+    if (Number.isNaN(fechaNormalizada.getTime())) {
+      return '';
+    }
+
+    return fechaNormalizada.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  }
+
+  private limpiarTextoWhatsApp(valor: unknown): string {
+    return String(valor ?? '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   // Método auxiliar para calcular porcentaje de descuento
   calcularPorcentajeDescuento(presupuesto: any): number {
     if (!presupuesto || !presupuesto.subtotal || presupuesto.subtotal === 0) return 0;
