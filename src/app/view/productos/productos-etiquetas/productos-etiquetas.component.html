@@ -1,0 +1,288 @@
+<div *ngIf="dataIsReady" class="labels-shell fade-in mb-5">
+  <div class="labels-panel">
+    <a class="boton-flotante-regreso" routerLink="/productos-inventario"
+      title="Volver al inventario"
+      aria-label="Volver al inventario conservando el contexto actual">
+      <span class="boton-flotante-icono">
+        <i class="bi bi-arrow-left-circle"></i>
+      </span>
+      <span class="boton-flotante-contenido">
+        <span class="boton-flotante-titulo">Volver a inventario</span>
+        <span class="boton-flotante-subtitulo">Regresar al módulo principal</span>
+      </span>
+    </a>
+
+    <section class="labels-hero surface-panel">
+      <div class="labels-hero__main">
+        <span class="labels-eyebrow">Inventario / Etiquetas</span>
+        <h3>Centro de impresión de etiquetas</h3>
+        <p>Filtra productos de tu sede, configura el formato y prepara la impresión desde una sola vista más limpia y rápida de operar.</p>
+      </div>
+
+      <div class="labels-hero__aside">
+        <div class="labels-hero__stats">
+          <article class="hero-stat hero-stat--accent">
+            <span>Seleccionados</span>
+            <strong>{{ totalProductosSeleccionados }}</strong>
+          </article>
+          <article class="hero-stat">
+            <span>Campos activos</span>
+            <strong>{{ camposActivos.length }}</strong>
+          </article>
+          <article class="hero-stat">
+            <span>Columnas</span>
+            <strong>{{ configuracion.columns }}</strong>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="labels-toolbar surface-panel">
+      <div class="toolbar-grid">
+        <label class="toolbar-card toolbar-card--search">
+          <span class="toolbar-card__label">Buscar producto</span>
+          <input type="text" [(ngModel)]="filtroBusqueda" placeholder="Nombre, código, marca o modelo">
+        </label>
+
+        <label class="toggle-card toggle-card--compact">
+          <span class="toggle-card__label">Estado</span>
+          <span class="toggle-card__row">
+            <input class="toggle-card__input" type="checkbox" [(ngModel)]="soloActivos">
+            <span class="toggle-card__switch" aria-hidden="true"></span>
+            <span class="toggle-card__text">Solo activos</span>
+          </span>
+        </label>
+
+        <label class="toolbar-card toolbar-card--qty">
+          <span class="toolbar-card__label">Cantidad masiva</span>
+          <div class="qty-stepper">
+            <button type="button" class="qty-stepper__button" (click)="ajustarCantidadMasiva(-1)" aria-label="Disminuir cantidad masiva">
+              <i class="bi bi-dash"></i>
+            </button>
+            <input class="toolbar-card__input toolbar-card__input--centered" type="number" min="1"
+              [(ngModel)]="cantidadMasiva" (ngModelChange)="aplicarCantidadMasiva($event)">
+            <button type="button" class="qty-stepper__button" (click)="ajustarCantidadMasiva(1)" aria-label="Aumentar cantidad masiva">
+              <i class="bi bi-plus"></i>
+            </button>
+          </div>
+        </label>
+      </div>
+
+      <div class="toolbar-row">
+        <div class="toolbar-categories" *ngIf="categoriasDisponibles.length">
+          <span class="toolbar-categories__label">Categorías</span>
+          <div class="toolbar-chips">
+            <button type="button" class="filter-chip" [class.filter-chip--active]="!categoriaSeleccionada"
+              (click)="seleccionarCategoria('')">
+              Todas
+            </button>
+            <button type="button" class="filter-chip" *ngFor="let categoria of categoriasDisponibles"
+              [class.filter-chip--active]="categoriaSeleccionada === categoria.toLowerCase()"
+              (click)="seleccionarCategoria(categoria.toLowerCase())">
+              {{ categoria }}
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-actions">
+          <button class="btn btn-outline-secondary" type="button" (click)="toggleSeleccionFiltrados()">
+            {{ todosLosFiltradosSeleccionados ? 'Desmarcar todo' : 'Seleccionar todo' }}
+          </button>
+          <button class="btn btn-outline-secondary" type="button" (click)="limpiarFiltros()">
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <div class="labels-content">
+      <aside class="labels-sidebar surface-panel">
+        <div class="panel-head">
+          <div>
+            <span class="labels-eyebrow">Personalización</span>
+            <h4>Formato de etiqueta</h4>
+          </div>
+          <span class="panel-stamp">{{ configuracion.updatedAt | date:'short' }}</span>
+        </div>
+
+        <div class="labels-sidebar__body">
+          <div class="settings-grid">
+            <label class="setting-field">
+              <span>Columnas</span>
+              <input type="number" min="1" max="4" [(ngModel)]="configuracion.columns">
+            </label>
+            <label class="setting-field">
+              <span>Ancho (mm)</span>
+              <input type="number" min="35" max="100" [(ngModel)]="configuracion.labelWidthMm">
+            </label>
+            <label class="setting-field">
+              <span>Alto (mm)</span>
+              <input type="number" min="20" max="80" [(ngModel)]="configuracion.labelHeightMm">
+            </label>
+            <label class="toggle-card toggle-card--field">
+              <span class="toggle-card__label">Acabado</span>
+              <span class="toggle-card__row">
+                <input class="toggle-card__input" type="checkbox" [(ngModel)]="configuracion.showBorder">
+                <span class="toggle-card__switch" aria-hidden="true"></span>
+                <span class="toggle-card__text">Mostrar borde</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="panel-block">
+            <div class="panel-block__head">
+              <h5>Campos visibles</h5>
+              <span>{{ camposActivos.length }}/{{ configuracion.fields.length }}</span>
+            </div>
+
+            <div class="field-stack">
+              <div class="field-card" *ngFor="let campo of configuracion.fields">
+                <label class="field-card__toggle">
+                  <input type="checkbox" [checked]="campo.enabled" (change)="toggleCampo(campo)">
+                  <span>{{ campo.label }}</span>
+                </label>
+                <div class="field-card__actions">
+                  <button type="button" class="btn-icon" (click)="moverCampo(campo, -1)" aria-label="Subir campo">
+                    <i class="bi bi-arrow-up"></i>
+                  </button>
+                  <button type="button" class="btn-icon" (click)="moverCampo(campo, 1)" aria-label="Bajar campo">
+                    <i class="bi bi-arrow-down"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-block panel-block--summary">
+            <div>
+              <span class="summary-label">Formato actual</span>
+              <strong>{{ configuracion.columns }} col · {{ configuracion.labelWidthMm }} x {{ configuracion.labelHeightMm }} mm</strong>
+            </div>
+            <small>{{ configuracion.showBorder ? 'Con borde visible' : 'Sin borde visible' }}</small>
+          </div>
+        </div>
+
+        <div class="labels-sidebar__actions">
+          <button class="btn btn-outline-secondary" type="button" (click)="restablecerConfiguracion()">
+            Restablecer
+          </button>
+          <button class="btn btn-primary" type="button" (click)="guardarConfiguracion()">
+            Guardar
+          </button>
+        </div>
+      </aside>
+
+      <section class="labels-products surface-panel" *ngIf="productosFiltrados.length; else emptyStateTpl">
+        <div class="panel-head">
+          <div>
+            <span class="labels-eyebrow">Selección</span>
+            <h4>Productos listos para etiquetar</h4>
+          </div>
+          <div class="panel-head__actions">
+            <span class="panel-count">{{ totalProductosFiltrados }} items</span>
+            <button class="btn btn-primary" type="button" (click)="imprimirEtiquetas()" [disabled]="!itemsImpresion.length">
+              <i class="bi bi-printer"></i>
+              Imprimir etiquetas
+            </button>
+          </div>
+        </div>
+
+        <div class="labels-products__list">
+          <article class="product-card" *ngFor="let producto of productosFiltrados; trackBy: trackByProducto">
+            <label class="product-card__check">
+              <input type="checkbox" [checked]="isSelected(producto.id)" (change)="toggleProducto(producto, $any($event.target).checked)">
+            </label>
+
+            <div class="product-card__main">
+              <div class="product-card__top">
+                <strong>{{ getNombreProductoDisplay(producto) }}</strong>
+              </div>
+
+              <div class="product-card__meta">
+                <span class="product-pill">{{ producto.categoria }}</span>
+                <span class="product-meta" *ngIf="producto.marca">{{ producto.marca }}</span>
+                <span class="product-meta" *ngIf="producto.modelo">{{ producto.modelo }}</span>
+                <span class="product-code">{{ producto.codigo }}</span>
+              </div>
+            </div>
+
+            <div class="product-card__price">{{ formatearPrecio(producto) }}</div>
+
+            <label class="product-card__qty">
+              <span>Cant.</span>
+              <div class="product-qty-stepper">
+                <button type="button" class="product-qty-stepper__button"
+                  (click)="ajustarCantidadProducto(producto, -1)"
+                  aria-label="Disminuir cantidad del producto">
+                  <i class="bi bi-dash"></i>
+                </button>
+                <input class="qty-input" type="number" min="1"
+                  [value]="getCantidadVisible(producto)"
+                  (input)="actualizarCantidad(producto, $any($event.target).value)">
+                <button type="button" class="product-qty-stepper__button"
+                  (click)="ajustarCantidadProducto(producto, 1)"
+                  aria-label="Aumentar cantidad del producto">
+                  <i class="bi bi-plus"></i>
+                </button>
+              </div>
+            </label>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <section class="labels-preview surface-panel" *ngIf="productoVistaPrevia as previewProducto">
+      <button class="panel-head preview-head" type="button" (click)="togglePreviewCollapsed()"
+        [attr.aria-expanded]="!previewCollapsed">
+        <div>
+          <span class="labels-eyebrow">Vista previa impresion</span>
+        </div>
+        <div class="panel-head__actions">
+          <span class="preview-toggle" aria-hidden="true">
+            <span>{{ previewCollapsed ? 'Desplegar' : 'Ocultar' }}</span>
+            <i class="bi" [ngClass]="previewCollapsed ? 'bi-chevron-down' : 'bi-chevron-up'"></i>
+          </span>
+        </div>
+      </button>
+
+      <div class="preview-grid" *ngIf="!previewCollapsed"
+        [style.gridTemplateColumns]="'repeat(' + configuracion.columns + ', minmax(0, ' + configuracion.labelWidthMm + 'mm))'">
+        <article class="preview-label"
+          [style.minHeight]="configuracion.labelHeightMm + 'mm'"
+          [class.preview-label--dense]="etiquetaCompacta"
+          [class.preview-label--borderless]="!configuracion.showBorder">
+          <div class="preview-line preview-line--primary" *ngIf="hasCampo('codigo') || hasCampo('precio')">
+            <strong class="preview-line__code" *ngIf="hasCampo('codigo')">{{ obtenerValorCampo(previewProducto, 'codigo') }}</strong>
+            <strong class="preview-line__price" *ngIf="hasCampo('precio')">{{ obtenerValorCampo(previewProducto, 'precio') }}</strong>
+          </div>
+          <div class="preview-line preview-line--name" *ngIf="getNombreEtiquetaPrincipal(previewProducto)">
+            <strong>{{ getNombreEtiquetaPrincipal(previewProducto) }}</strong>
+          </div>
+          <div class="preview-line preview-line--name preview-line--name-secondary" *ngIf="getNombreEtiquetaSecundario(previewProducto)">
+            <strong>{{ getNombreEtiquetaSecundario(previewProducto) }}</strong>
+          </div>
+          <div class="preview-line preview-line--secondary" *ngIf="getMarcaEtiqueta(previewProducto)">
+            {{ getMarcaEtiqueta(previewProducto) }}
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+</div>
+
+<ng-template #emptyStateTpl>
+  <section class="labels-products surface-panel labels-products--empty">
+    <div class="panel-head">
+      <div>
+        <span class="labels-eyebrow">Selección</span>
+        <h4>Productos listos para etiquetar</h4>
+      </div>
+    </div>
+
+    <div class="empty-state">
+      <i class="bi bi-tags"></i>
+      <h4>No hay productos para este filtro</h4>
+      <p>Ajusta la búsqueda o cambia la categoría para preparar las etiquetas que necesites.</p>
+    </div>
+  </section>
+</ng-template>

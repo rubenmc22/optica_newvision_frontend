@@ -2315,6 +2315,210 @@ CONFIGURACION GENERAL - METODOS DE PAGO
 }
 
 
+CONFIGURACION GENERAL - ETIQUETAS DE PRODUCTOS
+
+// nota funcional para backend:
+// - esta configuracion debe precargarse y persistirse por sede
+// - todos los usuarios de la misma sede comparten la misma configuracion
+// - cantidadMasivaDefault es nullable
+// - si cantidadMasivaDefault tiene valor, debe aplicarse a productos ya seleccionados y tambien a los que se seleccionen despues
+// - si cantidadMasivaDefault llega null, vacio o no existe, el frontend debe volver a usar el stock de cada producto como cantidad sugerida
+// - fields solo admite: codigo, nombre, marca, precio
+
+//obtener configuracion precargada de etiquetas
+//GET /configuracion/etiquetas_productos-get?sede=guatire
+{
+    "message": "Configuración de etiquetas obtenida correctamente",
+    "configuracion": {
+        "sede": "guatire",
+        "fields": [
+            {
+                "key": "codigo",
+                "label": "Codigo",
+                "enabled": true,
+                "order": 0
+            },
+            {
+                "key": "nombre",
+                "label": "Nombre",
+                "enabled": true,
+                "order": 1
+            },
+            {
+                "key": "marca",
+                "label": "Marca",
+                "enabled": false,
+                "order": 2
+            },
+            {
+                "key": "precio",
+                "label": "Precio",
+                "enabled": true,
+                "order": 3
+            }
+        ],
+        "columns": 3,
+        "labelWidthMm": 63,
+        "labelHeightMm": 34,
+        "showBorder": true,
+        "cantidadMasivaDefault": 2,
+        "updatedAt": "2026-05-04T14:25:00.000Z"
+    }
+}
+
+//guardar configuracion inicial de etiquetas
+//POST /configuracion/etiquetas_productos-save
+{
+    "sede": "guatire",
+    "fields": [
+        {
+            "key": "codigo",
+            "label": "Codigo",
+            "enabled": true,
+            "order": 0
+        },
+        {
+            "key": "nombre",
+            "label": "Nombre",
+            "enabled": true,
+            "order": 1
+        },
+        {
+            "key": "marca",
+            "label": "Marca",
+            "enabled": true,
+            "order": 2
+        },
+        {
+            "key": "precio",
+            "label": "Precio",
+            "enabled": true,
+            "order": 3
+        }
+    ],
+    "columns": 2,
+    "labelWidthMm": 50,
+    "labelHeightMm": 30,
+    "showBorder": true,
+    "cantidadMasivaDefault": 3
+}
+
+{
+    "message": "Configuración de etiquetas guardada correctamente",
+    "configuracion": {
+        "sede": "guatire",
+        "fields": [
+            {
+                "key": "codigo",
+                "label": "Codigo",
+                "enabled": true,
+                "order": 0
+            },
+            {
+                "key": "nombre",
+                "label": "Nombre",
+                "enabled": true,
+                "order": 1
+            },
+            {
+                "key": "marca",
+                "label": "Marca",
+                "enabled": true,
+                "order": 2
+            },
+            {
+                "key": "precio",
+                "label": "Precio",
+                "enabled": true,
+                "order": 3
+            }
+        ],
+        "columns": 2,
+        "labelWidthMm": 50,
+        "labelHeightMm": 30,
+        "showBorder": true,
+        "cantidadMasivaDefault": 3,
+        "updatedAt": "2026-05-04T14:30:00.000Z"
+    }
+}
+
+//actualizar configuracion de etiquetas
+//PUT /configuracion/etiquetas_productos-update
+{
+    "sede": "guatire",
+    "fields": [
+        {
+            "key": "codigo",
+            "label": "Codigo",
+            "enabled": true,
+            "order": 0
+        },
+        {
+            "key": "nombre",
+            "label": "Nombre",
+            "enabled": true,
+            "order": 1
+        },
+        {
+            "key": "marca",
+            "label": "Marca",
+            "enabled": false,
+            "order": 2
+        },
+        {
+            "key": "precio",
+            "label": "Precio",
+            "enabled": true,
+            "order": 3
+        }
+    ],
+    "columns": 3,
+    "labelWidthMm": 63,
+    "labelHeightMm": 34,
+    "showBorder": false,
+    "cantidadMasivaDefault": null
+}
+
+{
+    "message": "Configuración de etiquetas actualizada correctamente",
+    "configuracion": {
+        "sede": "guatire",
+        "fields": [
+            {
+                "key": "codigo",
+                "label": "Codigo",
+                "enabled": true,
+                "order": 0
+            },
+            {
+                "key": "nombre",
+                "label": "Nombre",
+                "enabled": true,
+                "order": 1
+            },
+            {
+                "key": "marca",
+                "label": "Marca",
+                "enabled": false,
+                "order": 2
+            },
+            {
+                "key": "precio",
+                "label": "Precio",
+                "enabled": true,
+                "order": 3
+            }
+        ],
+        "columns": 3,
+        "labelWidthMm": 63,
+        "labelHeightMm": 34,
+        "showBorder": false,
+        "cantidadMasivaDefault": null,
+        "updatedAt": "2026-05-04T14:45:00.000Z"
+    }
+}
+
+
 CONFIGURACION GENERAL - CIERRE DE CAJA
 
 // [version nueva cierre de caja]

@@ -15,6 +15,7 @@ import { TasaComponent } from './view/tasa-cambiaria/tasa.component';
 import { VerPacientesComponent } from './view/pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './view/historias-medicas/historias-medicas.component';
 import { ProductosListComponent } from './view/productos/productos-list/productos-list.component';
+import { ProductosEtiquetasComponent } from './view/productos/productos-etiquetas/productos-etiquetas.component';
 import { VentasDashboardComponent } from './view/ventas/ventas-dashboard.component';
 import { RendimientoComercialComponent } from './view/ventas/rendimiento-comercial/rendimiento-comercial.component';
 import { SystemConfigComponent } from './view/system-config/system-config.component';
@@ -104,6 +105,11 @@ export const appRoutes: Routes = [
         path: 'productos-inventario',
         component: ProductosListComponent,
         title: getFullTitle('Catálogo de productos')
+      },
+      {
+        path: 'productos-inventario/etiquetas',
+        component: ProductosEtiquetasComponent,
+        title: getFullTitle('Etiquetas de productos')
       },
       {
         path: 'ventas/rendimiento-comercial',

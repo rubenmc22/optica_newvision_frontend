@@ -13,10 +13,16 @@
             <div class="header-subtitle">Controla referencias físicas y configura cristales completos desde una sola ficha de producto.</div>
           </div>
         </div>
-        <button class="btn btn-agregar-producto" (click)="abrirModal('agregar')">
-          <i class="bi bi-plus-circle"></i>
-          Agregar Producto
-        </button>
+        <div class="header-actions">
+          <a class="btn btn-etiquetas-producto" routerLink="/productos-inventario/etiquetas">
+            <i class="bi bi-tags"></i>
+            Imprimir Etiquetas
+          </a>
+          <button class="btn btn-agregar-producto" (click)="abrirModal('agregar')">
+            <i class="bi bi-plus-circle"></i>
+            Agregar Producto
+          </button>
+        </div>
       </div>
 
       <!-- Cuerpo modernizado -->

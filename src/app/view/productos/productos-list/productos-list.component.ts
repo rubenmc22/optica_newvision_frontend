@@ -243,12 +243,14 @@ export class ProductosListComponent implements OnInit, OnDestroy {
 
     // =========== LIFECYCLE HOOKS ===========
     ngOnInit(): void {
+        this.toggleMobileShellFooter(true);
         this.cargarDatosIniciales();
         this.suscribirCambiosConfiguracion();
         this.productoOriginal = { ...this.producto };
     }
 
     ngOnDestroy(): void {
+        this.toggleMobileShellFooter(false);
         if (this.configSubscription) {
             this.configSubscription.unsubscribe();
         }
@@ -278,6 +280,14 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     private obtenerConfiguracionSistema(): void {
         this.monedaSistema = this.systemConfigService.getMonedaPrincipal();
         this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal();
+    }
+
+    private toggleMobileShellFooter(active: boolean): void {
+        if (typeof document === 'undefined') {
+            return;
+        }
+
+        document.body.classList.toggle('labels-hide-mobile-shell-footer', active);
     }
 
     // =========== GESTIÓN DE DATOS ===========

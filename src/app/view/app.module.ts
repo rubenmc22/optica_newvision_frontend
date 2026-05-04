@@ -30,6 +30,7 @@ import { TasaComponent } from './tasa-cambiaria/tasa.component';
 import { VerPacientesComponent } from './pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './historias-medicas/historias-medicas.component';
 import { ProductosListComponent } from './productos/productos-list/productos-list.component';
+import { ProductosEtiquetasComponent } from './productos/productos-etiquetas/productos-etiquetas.component';
 import { GenerarVentaComponent } from './ventas/generar-venta/generar-venta.component';
 import { VentasDashboardComponent } from './ventas/ventas-dashboard.component';
 import { HistorialVentasComponent } from './ventas/historial-ventas/historial-ventas.component';
@@ -78,6 +79,7 @@ import { RefOptionAutocompleteComponent } from '../shared/ref-option-autocomplet
     GraficoTotalSedeComponent,
     GraficoPacientesPorMesComponent,
     ProductosListComponent,
+    ProductosEtiquetasComponent,
     LoaderComponent,
     GenerarVentaComponent,
     HistorialVentasComponent,
