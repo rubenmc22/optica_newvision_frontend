@@ -1,0 +1,23 @@
+<div class="public-pdf-shell" *ngIf="cargando">
+  <div class="public-pdf-state-card">
+    <strong>Preparando documento</strong>
+    <p>Generando la vista pública del cierre de caja...</p>
+  </div>
+</div>
+
+<div class="public-pdf-shell public-pdf-shell--error" *ngIf="!cargando && error">
+  <div class="public-pdf-state-card">
+    <strong>No se pudo abrir el documento</strong>
+    <p>{{ error }}</p>
+  </div>
+</div>
+
+<ng-container *ngIf="!cargando && !error">
+  <div class="public-pdf-toolbar">
+    <button type="button" class="public-pdf-toolbar__button" (click)="imprimir()">
+      Imprimir / Guardar PDF
+    </button>
+  </div>
+
+  <div class="public-pdf-content" [innerHTML]="reporteHtml"></div>
+</ng-container>

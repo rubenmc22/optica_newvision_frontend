@@ -1312,6 +1312,12 @@ export class CierreCajaService {
         return this.http.post(`${this.apiUrl}/cierre-caja/cerrar`, payload);
     }
 
+    obtenerResumenPublico(token: string): Observable<any> {
+        return this.http.get(`${this.apiUrl}/cierre-caja/publico`, {
+            params: { token: String(token || '').trim() }
+        });
+    }
+
     guardarCierre(cierre: CierreDiario): Observable<any> {
         if (this.usarDummy) {
             this.cierres.set(cierre.id, cierre);

@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef } from '@
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { Subject, forkJoin, of } from 'rxjs';
+import { Subject, forkJoin, of, firstValueFrom } from 'rxjs';
 import { takeUntil, debounceTime, catchError, map } from 'rxjs/operators';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -22,6 +22,13 @@ import {
   VentaPaymentMethodOption,
   VentaReceiverAccountOption
 } from '../shared/payment-catalog.util';
+import {
+  buildCierreCajaReportDocument,
+  buildCierreCajaReportMarkup,
+  CierreCajaReporteDocumento,
+  encodeCierreCajaPublicToken,
+  getCierreCajaReportStyles
+} from './cierre-caja-report.util';
 import * as bootstrap from 'bootstrap';
 
 
@@ -1506,8 +1513,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       zelleReal: [null],
       notasCierre: [''],
       imprimirResumen: [false],
-      enviarEmail: [false],
-      adjuntarComprobantes: [true]
+      enviarEmail: [true]
     });
 
     this.configurarValidadoresFormularioCierre();
@@ -1563,7 +1569,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   private inicializarMontosFormularioCierre(): void {
     const controlesRequeridos = new Set(this.obtenerControlesMontoRequeridosCierre());
-    const controlesNoMonetarios = new Set(['notasCierre', 'imprimirResumen', 'enviarEmail', 'adjuntarComprobantes']);
+    const controlesNoMonetarios = new Set(['notasCierre', 'imprimirResumen', 'enviarEmail']);
 
     Object.keys(this.cierreForm.controls).forEach((controlName) => {
       if (controlesNoMonetarios.has(controlName)) {
@@ -1627,7 +1633,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const controlesNoMonetarios = new Set(['notasCierre', 'imprimirResumen', 'enviarEmail', 'adjuntarComprobantes']);
+    const controlesNoMonetarios = new Set(['notasCierre', 'imprimirResumen', 'enviarEmail']);
 
     Object.keys(this.cierreForm.controls).forEach((controlName) => {
       if (controlesNoMonetarios.has(controlName)) {
@@ -1654,7 +1660,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.sanitizarValoresMonetariosFormularioCierre();
 
     const controlesRequeridos = new Set(this.obtenerControlesMontoRequeridosCierre());
-    const controlesNoMonetarios = new Set(['notasCierre', 'imprimirResumen', 'enviarEmail', 'adjuntarComprobantes']);
+    const controlesNoMonetarios = new Set(['notasCierre', 'imprimirResumen', 'enviarEmail']);
 
     Object.keys(this.cierreForm.controls).forEach((controlName) => {
       if (controlesNoMonetarios.has(controlName)) {
@@ -3058,16 +3064,16 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     });
   }
 
-  private guardarCierreEnBackend(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!this.cierreActual) {
-        reject('No hay cierre para guardar');
-        return;
-      }
+  private async guardarCierreEnBackend(): Promise<void> {
+    if (!this.cierreActual) {
+      throw new Error('No hay cierre para guardar');
+    }
 
-      this.guardandoCierre = true;
+    this.guardandoCierre = true;
 
+    try {
       const formValue = this.cierreForm.getRawValue();
+      const documentoPdf = await this.construirDocumentoPublicoCierreSeguro();
       const payload = {
         cierreId: this.cierreActual.id,
         fecha: this.datePipe.transform(this.fechaSeleccionada, 'yyyy-MM-dd'),
@@ -3092,24 +3098,33 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         notasCierre: formValue.notasCierre || '',
         opciones: {
           imprimirResumen: !!formValue.imprimirResumen,
-          enviarEmail: !!formValue.enviarEmail,
-          adjuntarComprobantes: !!formValue.adjuntarComprobantes
-        }
+          enviarEmail: !!formValue.enviarEmail
+        },
+        documentoPdf
       };
 
-      this.cierreCajaService.cerrarCaja(payload).subscribe({
-        next: () => {
-          this.guardandoCierre = false;
-          this.cargarDatosFecha();
-          resolve();
-        },
-        error: (error) => {
-          this.guardandoCierre = false;
-          console.error('Error al guardar cierre:', error);
-          reject(error);
-        }
-      });
-    });
+      await firstValueFrom(this.cierreCajaService.cerrarCaja(payload));
+      this.cargarDatosFecha();
+    } catch (error) {
+      console.error('Error al guardar cierre:', error);
+      throw error;
+    } finally {
+      this.guardandoCierre = false;
+    }
+  }
+
+  private async construirDocumentoPublicoCierreSeguro(): Promise<{ modulo: string; renderer: string; publicUrl: string; publicPrintUrl: string } | null> {
+    try {
+      return await Promise.race([
+        this.construirDocumentoPublicoCierre(),
+        new Promise<null>((resolve) => {
+          setTimeout(() => resolve(null), 1200);
+        })
+      ]);
+    } catch (error) {
+      console.warn('No se adjuntó la vista pública del PDF al cierre. El cierre continuará sin ese adjunto.', error);
+      return null;
+    }
   }
 
   private calcularMetodosPagoDetallados(): any[] {
@@ -4383,8 +4398,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         zelleReal: 0,
         notasCierre: '',
         imprimirResumen: false,
-        enviarEmail: false,
-        adjuntarComprobantes: true
+        enviarEmail: true
       }, { emitEvent: false });
 
       this.limpiarControlesBancos();
@@ -6238,25 +6252,12 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     `;
   }
 
-  private generarContenidoReporte(reporteBase?: any): string {
-    const reporte = reporteBase || this.construirReporteEstructurado();
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Cierre de Caja - ${this.escapeHtml(reporte.fecha)}</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-        <style>${this.obtenerEstilosReporte()}</style>
-      </head>
-      <body>
-        ${this.generarCuerpoReporte(reporte)}
-      </body>
-      </html>
-    `;
+  private generarContenidoReporte(reporteBase?: CierreCajaReporteDocumento): string {
+    const reporte = (reporteBase || this.construirReporteEstructurado()) as CierreCajaReporteDocumento;
+    return buildCierreCajaReportDocument(reporte);
   }
 
-  private crearContenedorTemporalReporte(reporte: any): HTMLDivElement {
+  private crearContenedorTemporalReporte(reporte: CierreCajaReporteDocumento): HTMLDivElement {
     const contenedor = document.createElement('div');
     contenedor.style.position = 'absolute';
     contenedor.style.left = '-20000px';
@@ -6267,8 +6268,39 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     contenedor.style.opacity = '1';
     contenedor.style.pointerEvents = 'none';
     contenedor.style.overflow = 'visible';
-    contenedor.innerHTML = `<style>${this.obtenerEstilosReporte()}</style>${this.generarCuerpoReporte(reporte)}`;
+    contenedor.innerHTML = `<style>${getCierreCajaReportStyles()}</style>${buildCierreCajaReportMarkup(reporte)}`;
     return contenedor;
+  }
+
+  private async construirDocumentoPublicoCierre(): Promise<{ modulo: string; renderer: string; publicUrl: string; publicPrintUrl: string } | null> {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    try {
+      const fecha = this.datePipe.transform(this.fechaSeleccionada, 'yyyy-MM-dd');
+      const sede = String(this.sedeActual?.key || this.cierreActual?.sede || '').trim().toLowerCase();
+
+      if (!fecha || !sede) {
+        return null;
+      }
+
+      const token = encodeCierreCajaPublicToken({ sede, fecha });
+      const query = `token=${encodeURIComponent(token)}`;
+      const baseUrl = `${window.location.origin}/PDF/cierre-caja`;
+      const publicUrl = `${baseUrl}?${query}`;
+      const publicPrintUrl = `${baseUrl}?${query}&autoprint=1`;
+
+      return {
+        modulo: 'cierre-caja',
+        renderer: 'frontend-public-report-token',
+        publicUrl,
+        publicPrintUrl
+      };
+    } catch (error) {
+      console.warn('No se pudo construir la URL pública del PDF de cierre de caja:', error);
+      return null;
+    }
   }
 
   private normalizarTextoArchivo(valor: string): string {

@@ -1956,10 +1956,37 @@
             <div class="invalid-feedback" *ngIf="comentarioRequerido && cierreForm.get('notasCierre')?.invalid && cierreForm.get('notasCierre')?.touched">
               Debes explicar la diferencia antes de cerrar la caja.
             </div>
-            <div class="checkbox-option mt-2">
-              <input type="checkbox" formControlName="imprimirResumen" id="imprimirResumen">
-              <label for="imprimirResumen">
-                <i class="bi bi-printer"></i> Imprimir resumen después del cierre
+            <div class="cierre-acciones-preferencias mt-3">
+              <label class="toggle-option" for="imprimirResumen">
+                <div class="toggle-option__content">
+                  <div class="toggle-option__icon">
+                    <i class="bi bi-printer"></i>
+                  </div>
+                  <div class="toggle-option__text">
+                    <span>Imprimir resumen después del cierre</span>
+                    <small>Abre de inmediato la vista de impresión cuando el cierre se complete.</small>
+                  </div>
+                </div>
+                <div class="toggle-option__control">
+                  <input type="checkbox" formControlName="imprimirResumen" id="imprimirResumen">
+                  <span class="toggle-option__track"></span>
+                </div>
+              </label>
+
+              <label class="toggle-option" for="enviarEmailCierre">
+                <div class="toggle-option__content">
+                  <div class="toggle-option__icon">
+                    <i class="bi bi-envelope-check"></i>
+                  </div>
+                  <div class="toggle-option__text">
+                    <span>Enviar cierre por correo</span>
+                    <small>Se enviará el enlace del formato de impresión al completar el cierre.</small>
+                  </div>
+                </div>
+                <div class="toggle-option__control">
+                  <input type="checkbox" formControlName="enviarEmail" id="enviarEmailCierre">
+                  <span class="toggle-option__track"></span>
+                </div>
               </label>
             </div>
           </div>

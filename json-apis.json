@@ -304,8 +304,7 @@
     "opcionPrincipalId": "opcion-2",
     "opciones": [
         {
-            "id": "opcion-1",
-            "nombre": "Opcion 1",
+            "enviarEmail": true
             "observaciones": "Montura demo con progresivo digital intermedio.",
             "esPrincipal": false,
             "subtotal": 93.1,
@@ -2744,8 +2743,13 @@ CONFIGURACION GENERAL - CIERRE DE CAJA
     "notasCierre": "Se detecta diferencia por voucher pendiente de conciliacion.",
     "opciones": {
         "imprimirResumen": true,
-        "enviarEmail": false,
-        "adjuntarComprobantes": true
+        "enviarEmail": false
+    },
+    "documentoPdf": {
+        "modulo": "cierre-caja",
+        "renderer": "frontend-public-report-token",
+        "publicUrl": "https://tu-frontend.com/PDF/cierre-caja?token=eyJzZWRlIjoiZ3VhdGlyZSIsImZlY2hhIjoiMjAyNi0wNC0xNCJ9",
+        "publicPrintUrl": "https://tu-frontend.com/PDF/cierre-caja?token=eyJzZWRlIjoiZ3VhdGlyZSIsImZlY2hhIjoiMjAyNi0wNC0xNCJ9&autoprint=1"
     },
     "resumen": {
         "ingresos": 840.52,
