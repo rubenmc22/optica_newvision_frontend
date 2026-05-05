@@ -15,6 +15,21 @@ import { environment } from 'src/environments/environment';
 import { ErrorHandlerService } from './../../core/services/errorHandlerService';
 import { normalizarClasificacionProducto } from './producto-classification.catalog';
 import { parseDescripcionProductoCristal } from './producto-cristal-config.util';
+import type { ProductLabelSettings } from './productos-etiquetas/productos-etiquetas.config';
+
+interface ProductLabelSettingsResponse {
+  message: string;
+  configuracion: ProductLabelSettings;
+}
+
+interface UpdateProductLabelSettingsPayload {
+  fields: ProductLabelSettings['fields'];
+  columns: number;
+  labelWidthMm: number;
+  labelHeightMm: number;
+  showBorder: boolean;
+  cantidadMasivaDefault: number | null;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ProductoService {
@@ -46,6 +61,20 @@ export class ProductoService {
    ======================== */
   getProductosPorPagina(pagina: number, limite: number): Observable<Producto[]> {
     return this.http.get<Producto[]>(`/api/productos?page=${pagina}&limit=${limite}`);
+  }
+
+  getEtiquetaProductoConfig(): Observable<ProductLabelSettingsResponse> {
+    return this.http.get<ProductLabelSettingsResponse>(`${environment.apiUrl}/configuracion/etiquetas_productos-get`).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
+  }
+
+  updateEtiquetaProductoConfig(payload: UpdateProductLabelSettingsPayload): Observable<ProductLabelSettingsResponse> {
+    return this.http.put<ProductLabelSettingsResponse>(`${environment.apiUrl}/configuracion/etiquetas_productos-update`, payload).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
   }
 
   /** =======================

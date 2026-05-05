@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { forkJoin, of } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
 import { catchError, take } from 'rxjs/operators';
 import { UserStateService } from '../../../core/services/userState/user-state-service';
 import { ProductoService } from '../producto.service';
@@ -148,6 +148,7 @@ export class ProductosEtiquetasComponent implements OnInit, OnDestroy {
           .filter((producto) => this.debeMostrarProducto(producto))
           .filter((producto) => !this.sedeActiva || String(producto.sede ?? '').trim().toLowerCase() === this.sedeActiva);
         this.dataIsReady = true;
+        this.cargarConfiguracionRemota();
       },
       error: () => {
         this.snackBar.open('No se pudieron cargar los productos para etiquetas.', 'Cerrar', {
@@ -261,16 +262,66 @@ export class ProductosEtiquetasComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.configuracion = {
+    this.guardarConfiguracionInterna(true).subscribe();
+  }
+
+  private guardarConfiguracionInterna(mostrarFeedback: boolean): Observable<void> {
+    if (!this.camposActivos.length) {
+      return of(void 0);
+    }
+
+    const configuracionNormalizada = {
       ...normalizeProductLabelSettings(this.configuracion),
       cantidadMasivaDefault: this.cantidadMasiva,
       updatedAt: new Date().toISOString()
     };
-    this.persistirConfiguracionLocal();
-    this.ultimaConfiguracionGuardada = this.clonarConfiguracion(this.configuracion);
-    this.snackBar.open('Configuración de etiquetas guardada.', 'Cerrar', {
-      duration: 2500,
-      panelClass: ['snackbar-success']
+
+    this.configuracion = configuracionNormalizada;
+
+    if (!this.sedeActiva) {
+      this.persistirConfiguracionLocal();
+      this.ultimaConfiguracionGuardada = this.clonarConfiguracion(this.configuracion);
+      if (mostrarFeedback) {
+        this.snackBar.open('Configuración de etiquetas guardada localmente.', 'Cerrar', {
+          duration: 2500,
+          panelClass: ['snackbar-success']
+        });
+      }
+      return of(void 0);
+    }
+
+    return new Observable<void>((observer) => {
+      this.productoService.updateEtiquetaProductoConfig({
+        fields: configuracionNormalizada.fields,
+        columns: configuracionNormalizada.columns,
+        labelWidthMm: configuracionNormalizada.labelWidthMm,
+        labelHeightMm: configuracionNormalizada.labelHeightMm,
+        showBorder: configuracionNormalizada.showBorder,
+        cantidadMasivaDefault: configuracionNormalizada.cantidadMasivaDefault
+      }).pipe(take(1)).subscribe({
+        next: (response) => {
+          this.aplicarConfiguracion(response.configuracion, true);
+          if (mostrarFeedback) {
+            this.snackBar.open('Configuración de etiquetas guardada.', 'Cerrar', {
+              duration: 2500,
+              panelClass: ['snackbar-success']
+            });
+          }
+          observer.next();
+          observer.complete();
+        },
+        error: () => {
+          this.persistirConfiguracionLocal();
+          this.ultimaConfiguracionGuardada = this.clonarConfiguracion(this.configuracion);
+          if (mostrarFeedback) {
+            this.snackBar.open('No se pudo sincronizar con el servidor. Se conservó localmente.', 'Cerrar', {
+              duration: 4000,
+              panelClass: ['snackbar-warning']
+            });
+          }
+          observer.error(new Error('No se pudo sincronizar la configuración de etiquetas.'));
+        }
+      });
     });
   }
 
@@ -352,6 +403,18 @@ export class ProductosEtiquetasComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.tieneCambiosConfiguracionPendientes()) {
+      this.guardarConfiguracionInterna(false).subscribe({
+        next: () => this.abrirVentanaImpresion(),
+        error: () => this.abrirVentanaImpresion()
+      });
+      return;
+    }
+
+    this.abrirVentanaImpresion();
+  }
+
+  private abrirVentanaImpresion(): void {
     const popup = window.open('', '_blank', 'width=1200,height=900');
     if (!popup) {
       this.snackBar.open('El navegador bloqueó la ventana de impresión.', 'Cerrar', {
@@ -431,6 +494,70 @@ export class ProductosEtiquetasComponent implements OnInit, OnDestroy {
     }
 
     localStorage.setItem(PRODUCT_LABEL_STORAGE_KEY, JSON.stringify(this.configuracion));
+  }
+
+  private cargarConfiguracionRemota(): void {
+    if (!this.sedeActiva) {
+      return;
+    }
+
+    this.productoService.getEtiquetaProductoConfig().pipe(take(1)).subscribe({
+      next: (response) => {
+        this.aplicarConfiguracion(response.configuracion, true);
+      },
+      error: () => {
+        this.snackBar.open('No se pudo cargar la configuración guardada de etiquetas. Se usará la local.', 'Cerrar', {
+          duration: 4000,
+          panelClass: ['snackbar-warning']
+        });
+      }
+    });
+  }
+
+  private aplicarConfiguracion(configuracion: ProductLabelSettings, persistirLocal: boolean): void {
+    this.configuracion = this.clonarConfiguracion(configuracion);
+    this.ultimaConfiguracionGuardada = this.clonarConfiguracion(this.configuracion);
+    this.cantidadMasiva = this.configuracion.cantidadMasivaDefault;
+
+    if (this.cantidadMasiva === null) {
+      this.restablecerCantidadesSeleccionadasPorStock();
+    } else {
+      this.seleccionados.forEach((productoId) => {
+        this.cantidades[productoId] = this.cantidadMasiva as number;
+      });
+    }
+
+    if (persistirLocal) {
+      this.persistirConfiguracionLocal();
+    }
+  }
+
+  private tieneCambiosConfiguracionPendientes(): boolean {
+    const actual = this.serializarConfiguracionComparable({
+      ...normalizeProductLabelSettings(this.configuracion),
+      cantidadMasivaDefault: this.normalizarCantidadMasiva(this.cantidadMasiva),
+      updatedAt: this.ultimaConfiguracionGuardada.updatedAt
+    });
+    const guardada = this.serializarConfiguracionComparable(this.ultimaConfiguracionGuardada);
+    return actual !== guardada;
+  }
+
+  private serializarConfiguracionComparable(configuracion: ProductLabelSettings): string {
+    return JSON.stringify({
+      fields: [...configuracion.fields]
+        .sort((a, b) => a.order - b.order)
+        .map((field) => ({
+          key: field.key,
+          label: field.label,
+          enabled: field.enabled,
+          order: field.order
+        })),
+      columns: configuracion.columns,
+      labelWidthMm: configuracion.labelWidthMm,
+      labelHeightMm: configuracion.labelHeightMm,
+      showBorder: configuracion.showBorder,
+      cantidadMasivaDefault: this.normalizarCantidadMasiva(configuracion.cantidadMasivaDefault)
+    });
   }
 
   private formatearNombreSede(value: string | undefined): string {
