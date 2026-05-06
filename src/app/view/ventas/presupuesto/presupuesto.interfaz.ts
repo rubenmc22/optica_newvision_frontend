@@ -1,7 +1,17 @@
 export interface Presupuesto {
     id?: number;
+    presupuestoKey?: string;
     codigo: string;
     cliente: Cliente;
+    sede?: {
+        id?: string | null;
+        nombre?: string | null;
+        nombreOptica?: string | null;
+        rif?: string | null;
+        direccion?: string | null;
+        telefono?: string | null;
+        email?: string | null;
+    } | null;
     historiaMedicaId?: string | number | null;
     historiaNumero?: string | null;
     pacienteKeyOrigen?: string | null;
@@ -20,6 +30,7 @@ export interface Presupuesto {
     productos: ProductoPresupuesto[];
     subtotal: number;
     descuentoTotal?: number;
+    moneda?: string;
     ivaPorcentaje?: number;
     iva: number;
     total: number;

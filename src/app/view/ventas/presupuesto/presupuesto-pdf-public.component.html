@@ -1,0 +1,27 @@
+<div class="public-pdf-shell" *ngIf="cargando">
+  <div class="public-pdf-state-card">
+    <strong>Preparando documento</strong>
+    <p>Generando la vista pública del presupuesto...</p>
+  </div>
+</div>
+
+<div class="public-pdf-shell public-pdf-shell--error" *ngIf="!cargando && error">
+  <div class="public-pdf-state-card">
+    <strong>No se pudo abrir el documento</strong>
+    <p>{{ error }}</p>
+  </div>
+</div>
+
+<ng-container *ngIf="!cargando && !error">
+  <button type="button" class="public-pdf-floating-print no-print" (click)="imprimir()">
+    Imprimir / Guardar PDF
+  </button>
+
+  <div class="public-pdf-content">
+    <iframe
+      #reportFrame
+      class="public-pdf-frame"
+      title="Presupuesto público"
+      (load)="onFrameLoad()"></iframe>
+  </div>
+</ng-container>

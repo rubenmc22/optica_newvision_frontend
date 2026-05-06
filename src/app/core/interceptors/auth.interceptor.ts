@@ -7,6 +7,7 @@ import { catchError, throwError } from 'rxjs';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
+  const isLoginRoute = router.url.startsWith('/login');
 
   // Lista de endpoints públicos que no requieren token
   const PUBLIC_ENDPOINTS = [
@@ -14,6 +15,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     '/auth/register',
     '/auth/forgot-password',
     '/cierre-caja/publico',
+    '/presupuestos/publico',
+    '/get-tasa-bcv',
     '/sedes-get',
     '/public/',
     '/assets/'
@@ -31,11 +34,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = authService.getToken();
 
   if (!token) {
-    authService.logout();
-    router.navigate(['/login'], {
-      queryParams: { sessionExpired: true },
-      replaceUrl: true
-    });
+    if (!isLoginRoute) {
+      authService.logout();
+      router.navigate(['/login'], {
+        queryParams: { sessionExpired: true },
+        replaceUrl: true
+      });
+    }
     return throwError(() => new Error('Authentication required'));
   }
 
@@ -64,7 +69,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       console.error('[Interceptor] Error en la solicitud:', error);
 
-      if (error.status === 401) {
+      if (error.status === 401 && !isLoginRoute) {
         authService.logout();
         router.navigate(['/login'], {
           replaceUrl: true,

@@ -169,6 +169,10 @@
                             (click)="$event.stopPropagation(); imprimirPresupuesto(presupuesto)">
                             <i class="bi bi-printer"></i>
                         </button>
+                        <button class="btn-action btn-action-mail" type="button" title="Enviar por correo"
+                            (click)="$event.stopPropagation(); enviarPresupuestoPorCorreo(presupuesto)">
+                            <i class="bi bi-envelope"></i>
+                        </button>
                         <button class="btn-action btn-whatsapp" type="button" title="Compartir por WhatsApp"
                             (click)="$event.stopPropagation(); compartirPresupuestoPorWhatsApp(presupuesto)">
                             <i class="bi bi-whatsapp"></i>
@@ -920,6 +924,51 @@
                     rows="3" class="form-control"></textarea>
             </div>
         </div>
+
+        <div class="info-card info-card--correo-presupuesto">
+            <div class="info-header">
+                <i class="bi bi-envelope-paper"></i>
+                <h4>Envío por correo</h4>
+            </div>
+            <div class="info-content">
+                <div class="presupuesto-correo-preferencias">
+                    <label class="toggle-option" for="presupuestoEnviarCorreo">
+                        <div class="toggle-option__content">
+                            <div class="toggle-option__icon">
+                                <i class="bi bi-envelope-check"></i>
+                            </div>
+                            <div class="toggle-option__text">
+                                <span>Enviar presupuesto por correo al crear</span>
+                                <small>Se enviará automáticamente al cliente apenas se complete la creación.</small>
+                            </div>
+                        </div>
+                        <div class="toggle-option__control">
+                            <input type="checkbox" id="presupuestoEnviarCorreo"
+                                [(ngModel)]="nuevoPresupuesto.opcionesCorreo.enviarEmail"
+                                (ngModelChange)="onToggleCorreoPresupuesto()">
+                            <span class="toggle-option__track"></span>
+                        </div>
+                    </label>
+
+                    <div class="presupuesto-correo-destino" *ngIf="nuevoPresupuesto.opcionesCorreo.enviarEmail">
+                        <div class="presupuesto-correo-destino__header">
+                            <div class="presupuesto-correo-destino__icon">
+                                <i class="bi bi-at"></i>
+                            </div>
+                            <div class="presupuesto-correo-destino__text">
+                                <span>Correo destino</span>
+                                <small>Se precarga con el email del cliente y puedes ajustarlo antes de generar.</small>
+                            </div>
+                        </div>
+
+                        <input type="email" class="form-control modern-input presupuesto-correo-destino__input"
+                            [(ngModel)]="nuevoPresupuesto.opcionesCorreo.correoDestino"
+                            placeholder="cliente@correo.com"
+                            (input)="onCorreoDestinoPresupuestoChange()">
+                    </div>
+                </div>
+            </div>
+        </div>
         </ng-container>
     </div>
 
@@ -928,9 +977,9 @@
             <i class="bi bi-x-circle"></i>
             Cancelar
         </button>
-        <button class="btn btn-success btn-generar-presupuesto" (click)="generarPresupuesto()" [disabled]="!puedeGenerarPresupuesto()">
-            <i class="bi bi-check-circle"></i>
-            Generar Presupuesto
+        <button class="btn btn-success btn-generar-presupuesto" (click)="generarPresupuesto()" [disabled]="!puedeGenerarPresupuesto() || generandoPresupuesto">
+            <i class="bi" [ngClass]="generandoPresupuesto ? 'bi-arrow-repeat spin' : 'bi-check-circle'"></i>
+            {{ generandoPresupuesto ? 'Generando...' : 'Generar Presupuesto' }}
         </button>
     </div>
 </div>

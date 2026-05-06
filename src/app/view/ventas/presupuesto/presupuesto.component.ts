@@ -25,9 +25,10 @@ import {
   HistoriaPresupuestoHandoff,
   PresupuestoHistoriaReturnDraft
 } from '../shared/historia-presupuesto-handoff.util';
-import { PresupuestoService } from './presupuesto.service';
+import { CrearPresupuestoResponse, PresupuestoService } from './presupuesto.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { OpcionPresupuesto, OrigenFormulaPresupuesto, Presupuesto } from './presupuesto.interfaz';
+import { buildPresupuestoReportDocument } from './presupuesto-report.util';
 import { SwalService } from '../../../core/services/swal/swal.service';
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
 import { PacientesService } from '../../../core/services/pacientes/pacientes.service';
@@ -55,6 +56,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   mostrarModalConversionPresupuesto: boolean = false;
   mostrarModalRenovarPresupuesto: boolean = false;
   modoEditable: boolean = false;
+  generandoPresupuesto: boolean = false;
   filtroBusqueda: string = '';
   filtroEstado: string = '';
   tabActiva: string = 'vigentes';
@@ -98,6 +100,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     subtotal: 0,
     iva: 0,
     total: 0,
+    opcionesCorreo: {
+      enviarEmail: true,
+      correoDestino: ''
+    },
     observaciones: '',
     estado: 'vigente',
     formulaExterna: {
@@ -214,6 +220,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   empleadosDisponibles: Empleado[] = [];
 
   private configSubscription?: Subscription;
+  private correoPresupuestoEditadoManualmente = false;
 
   // Estadísticas
   estadisticas = {
@@ -789,6 +796,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   private sincronizarClienteFormularioConPresupuesto(): void {
+    const emailAnterior = String(this.nuevoPresupuesto?.cliente?.email || '').trim().toLowerCase();
     const cliente = {
       ...this.getClienteVacio(),
       ...(this.nuevoPresupuesto?.cliente || {}),
@@ -803,6 +811,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
     this.clienteSinPaciente = { ...cliente };
     this.nuevoPresupuesto.cliente = { ...cliente };
+    this.sincronizarOpcionesCorreoPresupuesto(emailAnterior);
   }
 
   private sincronizarClienteFormularioDesdePresupuesto(): void {
@@ -810,6 +819,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       ...this.getClienteVacio(),
       ...(this.nuevoPresupuesto?.cliente || {})
     };
+    this.sincronizarOpcionesCorreoPresupuesto();
   }
 
   private limpiarContenidoDependienteNuevoPresupuesto(): void {
@@ -853,6 +863,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       fechaVencimiento,
       diasVencimiento,
       diasRestantes: this.calcularDiasRestantesParaFecha(fechaVencimiento),
+      opcionesCorreo: this.asegurarOpcionesCorreoPresupuesto(this.nuevoPresupuesto),
       formulaExterna: {
         activa: false,
         origen: null,
@@ -961,6 +972,21 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   onCampoEditadoManualmente(): void {
     this.sincronizarClienteFormularioConPresupuesto();
+  }
+
+  onCorreoDestinoPresupuestoChange(): void {
+    this.correoPresupuestoEditadoManualmente = true;
+    const opcionesCorreo = this.asegurarOpcionesCorreoPresupuesto();
+    opcionesCorreo.correoDestino = String(opcionesCorreo.correoDestino || '').trim().toLowerCase();
+  }
+
+  onToggleCorreoPresupuesto(): void {
+    const opcionesCorreo = this.asegurarOpcionesCorreoPresupuesto();
+    opcionesCorreo.enviarEmail = opcionesCorreo.enviarEmail !== false;
+
+    if (opcionesCorreo.enviarEmail && !String(opcionesCorreo.correoDestino || '').trim()) {
+      this.sincronizarOpcionesCorreoPresupuesto();
+    }
   }
 
   onCedulaChange(): void {
@@ -1284,7 +1310,13 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   private construirPayloadPresupuesto(presupuesto: any): any {
+    if (!String(presupuesto?.presupuestoKey || '').trim()) {
+      presupuesto.presupuestoKey = this.generarPresupuestoKeyCliente();
+    }
+
     const cliente = presupuesto?.cliente || this.getClienteVacio();
+    const opcionesCorreo = this.asegurarOpcionesCorreoPresupuesto(presupuesto);
+    const documentoPdf = this.construirDocumentoPublicoPresupuestoPayload(presupuesto);
     const tipoPersona = cliente?.tipoPersona === 'juridica' ? 'juridica' : 'natural';
     const pacienteKey = String(
       cliente?.pacienteKey
@@ -1321,6 +1353,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     const productosPrincipal = opcionPrincipal?.productos || [];
 
     return {
+      presupuestoKey: String(presupuesto?.presupuestoKey || '').trim(),
       codigo: String(presupuesto?.codigo || '').trim(),
       cliente: {
         tipoPersona,
@@ -1348,6 +1381,11 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       formulaExterna: this.normalizarFormulaExternaPersistida(presupuesto?.formulaExterna),
       estado: String(presupuesto?.estado || 'vigente').trim(),
       ivaPorcentaje: this.ivaPorcentaje,
+      opcionesCorreo: {
+        enviarEmail: opcionesCorreo.enviarEmail,
+        correoDestino: String(opcionesCorreo.correoDestino || '').trim().toLowerCase()
+      },
+      documentoPdf,
       opcionPrincipalId: opcionPrincipal?.id || '',
       opciones,
       productos: productosPrincipal.map((producto: any) => this.construirPayloadProductoPresupuesto(producto))
@@ -1364,6 +1402,64 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     return Math.ceil((fechaComparar.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
   }
 
+  private asegurarOpcionesCorreoPresupuesto(presupuesto: any = this.nuevoPresupuesto): { enviarEmail: boolean; correoDestino: string } {
+    const opcionesCorreo = {
+      enviarEmail: presupuesto?.opcionesCorreo?.enviarEmail !== false,
+      correoDestino: String(presupuesto?.opcionesCorreo?.correoDestino || '').trim().toLowerCase()
+    };
+
+    if (presupuesto) {
+      presupuesto.opcionesCorreo = opcionesCorreo;
+    }
+
+    return opcionesCorreo;
+  }
+
+  private sincronizarOpcionesCorreoPresupuesto(emailAnterior: string = ''): void {
+    const opcionesCorreo = this.asegurarOpcionesCorreoPresupuesto();
+    const correoCliente = String(this.nuevoPresupuesto?.cliente?.email || '').trim().toLowerCase();
+    const correoActual = String(opcionesCorreo.correoDestino || '').trim().toLowerCase();
+    const correoClienteAnterior = String(emailAnterior || '').trim().toLowerCase();
+    const puedeAutosincronizar = !this.correoPresupuestoEditadoManualmente || !correoActual || correoActual === correoClienteAnterior;
+
+    if (puedeAutosincronizar) {
+      opcionesCorreo.correoDestino = correoCliente;
+      this.nuevoPresupuesto.opcionesCorreo = opcionesCorreo;
+    }
+  }
+
+  private codificarTokenPublicoPresupuesto(payload: { presupuestoKey: string }): string {
+    const json = JSON.stringify(payload);
+    const encoded = btoa(unescape(encodeURIComponent(json)));
+    return encoded.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  private generarPresupuestoKeyCliente(): string {
+    return `PTO-${Date.now()}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+  }
+
+  private construirDocumentoPublicoPresupuestoPayload(presupuesto: any = this.nuevoPresupuesto): { modulo: string; renderer: string; publicUrl: string; publicPrintUrl: string } | null {
+    if (typeof window === 'undefined' || !window.location?.origin) {
+      return null;
+    }
+
+    const presupuestoKey = String(presupuesto?.presupuestoKey || '').trim();
+    if (!presupuestoKey) {
+      return null;
+    }
+
+    const token = this.codificarTokenPublicoPresupuesto({ presupuestoKey });
+    const query = `token=${encodeURIComponent(token)}`;
+    const baseUrl = `${window.location.origin}/PDF/presupuesto`;
+
+    return {
+      modulo: 'presupuesto',
+      renderer: 'frontend-public-report-token',
+      publicUrl: `${baseUrl}?${query}`,
+      publicPrintUrl: `${baseUrl}?${query}&autoprint=1`
+    };
+  }
+
   inicializarNuevoPresupuesto() {
     this.sincronizarContextoUsuario();
 
@@ -1372,6 +1468,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     fechaVencimiento.setDate(fechaVencimiento.getDate() + 7);
 
     this.nuevoPresupuesto = {
+      presupuestoKey: this.generarPresupuestoKeyCliente(),
       codigo: '',
       cliente: this.getClienteVacio(),
       historiaMedicaId: null,
@@ -1393,6 +1490,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       estado: 'vigente',
       estadoColor: 'vigente',
       diasRestantes: this.calcularDiasRestantesParaFecha(fechaVencimiento),
+      opcionesCorreo: {
+        enviarEmail: true,
+        correoDestino: ''
+      },
       formulaExterna: {
         activa: false,
         origen: null,
@@ -1402,6 +1503,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.historiaPresupuestoHandoffActivo = null;
 
     this.asegurarOpcionesPresupuesto(this.nuevoPresupuesto);
+    this.correoPresupuestoEditadoManualmente = false;
+    this.asegurarOpcionesCorreoPresupuesto(this.nuevoPresupuesto);
     this.sincronizarOpcionActivaNuevo(this.nuevoPresupuesto.opcionPrincipalId);
 
     this.sincronizarClienteFormularioDesdePresupuesto();
@@ -2087,6 +2190,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   async generarPresupuesto() {
     this.sincronizarClienteFormularioConPresupuesto();
+    const opcionesCorreo = this.asegurarOpcionesCorreoPresupuesto();
 
     if (!this.puedeGenerarPresupuesto()) {
       if (!this.nuevoPresupuesto?.cliente?.cedula || !this.nuevoPresupuesto?.cliente?.nombreCompleto) {
@@ -2128,11 +2232,27 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (opcionesCorreo.enviarEmail && !this.validarEmail(opcionesCorreo.correoDestino)) {
+      this.snackBar.open('Indique un correo válido para enviar el presupuesto o desactive el envío por correo.', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    if (this.generandoPresupuesto) {
+      return;
+    }
+
     try {
+      this.generandoPresupuesto = true;
       const handoffHistoria = this.historiaPresupuestoHandoffActivo;
-      const presupuestoNuevo = await lastValueFrom(
+      const resultadoCreacion: CrearPresupuestoResponse = await lastValueFrom(
         this.presupuestoService.crearPresupuesto(this.construirPayloadPresupuesto(this.nuevoPresupuesto))
       );
+      const presupuestoNuevo = resultadoCreacion.presupuesto;
+      const resultadoCorreo = resultadoCreacion.correo;
+
       await this.cargarPresupuestosDesdeApi(false);
       this.cerrarModalNuevoPresupuesto();
 
@@ -2140,16 +2260,36 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
         this.historiaPresupuestoHandoffActivo = null;
       }
 
-      this.snackBar.open(`Presupuesto ${presupuestoNuevo.codigo} generado exitosamente`, 'Cerrar', {
+      const mensajeCorreo = resultadoCorreo?.enviado
+        ? ` y enviado a ${resultadoCorreo.destinatarios?.join(', ')}`
+        : '';
+      this.snackBar.open(`Presupuesto ${presupuestoNuevo.codigo} generado exitosamente${mensajeCorreo}`, 'Cerrar', {
         duration: 4000,
         panelClass: ['snackbar-success']
       });
+
+      if (opcionesCorreo.enviarEmail && resultadoCorreo && !resultadoCorreo.enviado) {
+        const motivo = String(resultadoCorreo.motivo || '').trim();
+        const detalle = String(resultadoCorreo.detalle || '').trim();
+        const mensajeErrorCorreo = detalle
+          || (motivo === 'correo-destino-invalido' ? 'El correo del paciente es inválido o está vacío.'
+            : motivo === 'url-publica-no-disponible' ? 'No se pudo construir la ruta pública del presupuesto.'
+            : motivo === 'opcion-deshabilitada' ? 'La opción de envío por correo estaba deshabilitada.'
+            : 'El presupuesto se creó, pero no se pudo enviar por correo.');
+
+        this.snackBar.open(mensajeErrorCorreo, 'Cerrar', {
+          duration: 4500,
+          panelClass: ['snackbar-info']
+        });
+      }
 
       if (handoffHistoria) {
         await this.gestionarRetornoAHistoriaTrasCrearPresupuesto(handoffHistoria, presupuestoNuevo);
       }
     } catch (error) {
       console.error('Error creando presupuesto:', error);
+    } finally {
+      this.generandoPresupuesto = false;
     }
   }
 
@@ -2826,467 +2966,16 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     const presupuestoImpresion = this.normalizarPresupuestoPersistido(
       JSON.parse(JSON.stringify(presupuesto || {}))
     );
-
-    const datosSede = this.obtenerDatosSedeImpresion();
-    const nombreAsesor = this.obtenerNombreAsesor(presupuestoImpresion?.vendedor);
-    const opcionesImpresion = this.asegurarOpcionesPresupuesto(presupuestoImpresion);
-    const opcionPrincipal = this.obtenerOpcionPresupuesto(presupuestoImpresion, presupuestoImpresion?.opcionPrincipalId);
-    const tieneMultiplesOpciones = opcionesImpresion.length > 1;
-    const tituloPresupuestoImpresion = [
-      String(presupuestoImpresion?.codigo || '').trim(),
-      String(presupuestoImpresion?.cliente?.nombreCompleto || '').trim()
-    ].filter(Boolean).join(' - ');
-
-    if (!presupuestoImpresion.descuentoTotal) {
-      presupuestoImpresion.descuentoTotal = this.calcularDescuentoTotalPresupuestoParaImpresion(presupuestoImpresion);
-    }
-
-    const resumenOpcionesHtml = tieneMultiplesOpciones
-      ? opcionesImpresion.map((opcion: OpcionPresupuesto, index: number) =>
-        this.construirTarjetaResumenImpresionOpcionPresupuesto(opcion, index, presupuestoImpresion?.opcionPrincipalId)
-      ).join('')
-      : '';
-    const seccionesOpcionesHtml = opcionesImpresion.map((opcion: OpcionPresupuesto, index: number) =>
-      this.construirSeccionImpresionOpcionPresupuesto(
-        opcion,
-        index,
-        presupuestoImpresion?.opcionPrincipalId,
-        opcionesImpresion.length
-      )
-    ).join('');
-
-    const fechaActual = new Date();
-    const fechaEmision = fechaActual.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    const contenidoHTML = buildPresupuestoReportDocument(presupuestoImpresion, {
+      datosSede: this.obtenerDatosSedeImpresion(),
+      monedaSistema: this.monedaSistema,
+      simboloMonedaSistema: this.simboloMonedaSistema,
+      nombreAsesor: this.obtenerNombreAsesor(presupuestoImpresion?.vendedor),
+      resolverReferenciaBs: (monto: number, moneda: string) => this.obtenerReferenciaBs(monto, moneda),
+      mostrarReferenciaBs: this.debeMostrarReferenciaBs(presupuestoImpresion?.moneda || this.monedaSistema),
+      autoPrint: true,
+      autoCloseAfterPrint: true
     });
-    const horaEmision = fechaActual.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    const fechaVencimiento = new Date(presupuestoImpresion.fechaVencimiento).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-
-    const estadoTexto = this.getEstadoTexto(presupuestoImpresion.estadoColor);
-    const diasInfo = presupuestoImpresion.diasRestantes >= 0
-      ? `${presupuestoImpresion.diasRestantes} días restantes`
-      : `Vencido hace ${Math.abs(presupuestoImpresion.diasRestantes)} días`;
-    const observacionesImpresion = this.obtenerObservacionesSinFormulaParaImpresion(presupuestoImpresion?.observaciones);
-
-    const contactoSede = [
-      datosSede.telefono && datosSede.telefono !== 'Sin teléfono' ? `Tel: ${this.escaparHtml(datosSede.telefono)}` : '',
-      datosSede.email && datosSede.email !== 'Sin correo' ? `Email: ${this.escaparHtml(datosSede.email)}` : ''
-    ].filter(Boolean).join(' | ');
-
-    const direccionSede = datosSede.direccion && datosSede.direccion !== 'Dirección no disponible'
-      ? this.escaparHtml(datosSede.direccion)
-      : '';
-
-    const contenidoHTML = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>${this.escaparHtml(tituloPresupuestoImpresion || String(presupuestoImpresion.codigo || 'Presupuesto'))}</title>
-        <meta charset="UTF-8">
-        <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                font-size: 11px;
-                line-height: 1.3;
-                color: #1f2937;
-                background: #f8fafc;
-                padding: 10mm 8mm;
-            }
-            @media print {
-                @page { margin: 10mm 8mm; size: A4 portrait; }
-                body { padding: 0; }
-            }
-            .presupuesto-container {
-                max-width: 190mm;
-                margin: 0 auto;
-                background: #ffffff;
-                border: 1px solid #dbe4f0;
-                border-radius: 10px;
-                box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-                padding: 10px 12px;
-            }
-            .header-compact {
-                display: grid;
-                grid-template-columns: 1fr auto;
-                gap: 15px;
-                margin-bottom: 12px;
-                padding-bottom: 10px;
-                border-bottom: 2px solid #1f4e79;
-            }
-            .empresa-nombre-compact {
-                font-size: 16px;
-                font-weight: 700;
-                color: #1f4e79;
-                margin-bottom: 2px;
-            }
-            .empresa-datos-compact { font-size: 9px; color: #666; line-height: 1.3; }
-            .logo-mini {
-                width: 60px; height: 60px;
-                background: linear-gradient(135deg, #1f4e79, #2f6ea3);
-                border-radius: 50%;
-                display: flex; align-items: center; justify-content: center;
-                color: #fff; font-weight: bold; font-size: 20px;
-            }
-            .titulo-principal {
-                text-align: center;
-                margin: 10px 0 15px 0;
-                padding: 8px;
-                background: linear-gradient(135deg, #1f4e79, #2f6ea3);
-                color: white;
-                border-radius: 6px;
-            }
-            .titulo-principal h1 { font-size: 16px; font-weight: 700; }
-            .metadata-grid {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 8px;
-                margin-bottom: 12px;
-            }
-            .metadata-card {
-                background: #f8fbff;
-                border: 1px solid #d9e8f7;
-                border-radius: 8px;
-                padding: 6px 8px;
-                text-align: center;
-            }
-            .metadata-label {
-                font-size: 8px; color: #6c757d; font-weight: 600;
-                text-transform: uppercase; margin-bottom: 2px; display: block;
-            }
-            .metadata-valor { font-size: 10px; font-weight: 600; color: #1f4e79; }
-            .estado-badge { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 8px; font-weight: 600; }
-            .estado-vigente { background: #d4edda; color: #155724; }
-            .estado-proximo { background: #fff3cd; color: #856404; }
-            .estado-hoy { background: #cce5ff; color: #004085; }
-            .estado-vencido { background: #f8d7da; color: #721c24; }
-            .cliente-compact {
-                background: #f8f9fa;
-                border-radius: 6px;
-                padding: 10px;
-                margin-bottom: 12px;
-                border: 1px solid #dee2e6;
-            }
-            .cliente-header {
-                display: flex; justify-content: space-between; align-items: center;
-                margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #dee2e6;
-            }
-            .cliente-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 10px; }
-            .cliente-item { display: flex; align-items: flex-start; }
-            .cliente-label { font-weight: 600; color: #495057; min-width: 70px; margin-right: 5px; }
-            .cliente-valor { color: #212529; flex: 1; }
-            .comparativo-section {
-              margin-bottom: 12px;
-            }
-            .comparativo-section h3 {
-              font-size: 10px;
-              color: #1f4e79;
-              margin-bottom: 6px;
-            }
-            .opciones-comparativo-grid {
-              display: grid;
-              grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-              gap: 8px;
-            }
-            .opcion-resumen-card {
-              background: #f8fbff;
-              border: 1px solid #d9e8f7;
-              border-radius: 8px;
-              padding: 8px;
-            }
-            .opcion-resumen-card--principal {
-              background: #ebf4ff;
-              border-color: #1f4e79;
-            }
-            .opcion-resumen-card__header {
-              display: flex;
-              align-items: flex-start;
-              justify-content: space-between;
-              gap: 8px;
-              margin-bottom: 4px;
-            }
-            .opcion-resumen-card__title {
-              font-size: 10px;
-              font-weight: 700;
-              color: #1f4e79;
-            }
-            .opcion-resumen-card__meta {
-              font-size: 8px;
-              color: #64748b;
-            }
-            .opcion-resumen-card__total {
-              margin-top: 6px;
-              text-align: right;
-              font-size: 11px;
-              font-weight: 700;
-              color: #0f172a;
-            }
-            .opcion-badge {
-              display: inline-flex;
-              align-items: center;
-              padding: 2px 6px;
-              border-radius: 999px;
-              background: #1f4e79;
-              color: #fff;
-              font-size: 8px;
-              font-weight: 700;
-              text-transform: uppercase;
-              letter-spacing: 0.03em;
-            }
-            .opcion-seccion {
-              background: #ffffff;
-              border: 1px solid #dbe4f0;
-              border-radius: 8px;
-              padding: 10px;
-              margin-bottom: 10px;
-            }
-            .opcion-seccion__header {
-              display: flex;
-              align-items: flex-start;
-              justify-content: space-between;
-              gap: 10px;
-              margin-bottom: 8px;
-            }
-            .opcion-seccion__titulo {
-              font-size: 12px;
-              font-weight: 700;
-              color: #1f4e79;
-            }
-            .opcion-seccion__subtitulo {
-              font-size: 9px;
-              color: #64748b;
-              margin-top: 2px;
-            }
-            .resumen-compacto--opcion {
-              margin-bottom: 0;
-            }
-            .tabla-compacta {
-                width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9px;
-            }
-            .tabla-compacta thead { background: #1f4e79; color: white; }
-            .tabla-compacta th {
-                padding: 6px 4px; font-weight: 600; text-align: center; font-size: 9px;
-            }
-            .tabla-compacta td {
-                padding: 5px 4px; text-align: center; border-bottom: 1px solid #e9ecef; vertical-align: middle;
-            }
-            .tabla-compacta tbody tr:nth-child(even) { background-color: #f8f9fa; }
-            .tabla-compacta .descripcion { text-align: left; font-size: 9.5px; max-width: 120px; }
-            .tabla-compacta .precio, .tabla-compacta .total { text-align: center; min-width: 60px; font-weight: 600; }
-            .tabla-compacta tbody tr.fila-consulta {
-              background: linear-gradient(90deg, #eff6ff, #f8fbff) !important;
-            }
-            .tabla-compacta tbody tr.fila-consulta td {
-              border-bottom: 1px solid #bfdbfe;
-            }
-            .servicio-badge {
-              display: inline-flex;
-              align-items: center;
-              gap: 4px;
-              margin-top: 4px;
-              padding: 2px 6px;
-              border-radius: 999px;
-              background: #dbeafe;
-              color: #1d4ed8;
-              font-size: 8px;
-              font-weight: 700;
-              text-transform: uppercase;
-              letter-spacing: 0.04em;
-            }
-            .servicio-badge::before {
-              content: '';
-              width: 6px;
-              height: 6px;
-              border-radius: 999px;
-              background: #2563eb;
-              display: inline-block;
-            }
-            .codigo-servicio {
-              color: #1d4ed8;
-              font-weight: 700;
-            }
-            .resumen-compacto { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 12px; }
-            .resumen-compacto--solo-info { grid-template-columns: 1fr; }
-            .totales-compactos {
-                background: #f8f9fa; border-radius: 6px; padding: 10px; border: 1px solid #dee2e6;
-            }
-            .total-line { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
-            .total-line:not(:last-child) { border-bottom: 1px dashed #dee2e6; }
-            .total-label { font-size: 10px; color: #495057; }
-            .total-valor { font-weight: 600; font-size: 10px; }
-            .total-final {
-                background: #ebf4ff; border-radius: 4px; padding: 6px 8px; margin-top: 6px; border-left: 3px solid #1f4e79;
-            }
-            .total-final .total-label,
-            .total-final .total-valor { color: #1f4e79; font-weight: 700; }
-            .info-lateral {
-                background: #fff9db; border: 1px solid #ffeaa7; border-radius: 6px; padding: 10px;
-            }
-            .info-lateral h4 {
-                font-size: 10px; color: #856404; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #ffeaa7;
-            }
-            .info-item { font-size: 9px; margin-bottom: 4px; }
-            .info-item--consulta {
-              background: #eff6ff;
-              border: 1px solid #bfdbfe;
-              border-radius: 6px;
-              padding: 6px;
-              color: #1e3a8a;
-            }
-            .obs-section {
-                background: #f1f5f9; border-radius: 6px; padding: 8px; border: 1px solid #dee2e6; margin-bottom: 10px;
-            }
-            .obs-section h4 { font-size: 10px; color: #1f4e79; margin-bottom: 6px; }
-            .obs-content { font-size: 9px; color: #495057; line-height: 1.3; }
-            .resumen-impresion-simple {
-              display: grid;
-              grid-template-columns: repeat(4, minmax(0, 1fr));
-              gap: 8px;
-              margin-bottom: 12px;
-            }
-            .resumen-impresion-simple__item {
-              background: #f8fbff;
-              border: 1px solid #d9e8f7;
-              border-radius: 8px;
-              padding: 8px;
-            }
-            .resumen-impresion-simple__label {
-              display: block;
-              font-size: 8px;
-              font-weight: 700;
-              color: #6c757d;
-              text-transform: uppercase;
-              margin-bottom: 4px;
-            }
-            .resumen-impresion-simple__value {
-              font-size: 10px;
-              font-weight: 700;
-              color: #1f4e79;
-            }
-            .footer-compacto {
-                text-align: center;
-                font-size: 8px;
-                color: #4b5563;
-                padding: 8px;
-                border-top: 1px solid #dbe2ea;
-                background: #f8fbff;
-                border-radius: 8px;
-                line-height: 1.35;
-            }
-            .footer-brand { font-size: 9px; font-weight: 700; color: #1f4e79; margin-bottom: 3px; }
-        </style>
-    </head>
-    <body>
-        <div class="presupuesto-container">
-            <div class="header-compact">
-                <div>
-                    <div class="empresa-nombre-compact">${this.escaparHtml(datosSede.nombreOptica)}</div>
-                    <div class="empresa-datos-compact">
-                        ${datosSede.rif ? `RIF: ${this.escaparHtml(datosSede.rif)}<br>` : ''}
-                        ${this.escaparHtml(datosSede.direccion)}<br>
-                        ${this.escaparHtml(datosSede.telefono)} | ${this.escaparHtml(datosSede.email)}
-                    </div>
-                </div>
-                <div class="logo-mini">${this.escaparHtml(datosSede.iniciales)}</div>
-            </div>
-
-            <div class="titulo-principal">
-              <h1>${this.escaparHtml(tituloPresupuestoImpresion || String(presupuestoImpresion.codigo || ''))}</h1>
-            </div>
-
-            <div class="metadata-grid">
-                <div class="metadata-card">
-                    <span class="metadata-label">EMISIÓN</span>
-                    <span class="metadata-valor">${fechaEmision} ${horaEmision}</span>
-                </div>
-                <div class="metadata-card">
-                    <span class="metadata-label">VENCIMIENTO</span>
-                    <span class="metadata-valor">${fechaVencimiento}</span>
-                </div>
-                <div class="metadata-card">
-                    <span class="metadata-label">VENDEDOR</span>
-                    <span class="metadata-valor">${this.escaparHtml(nombreAsesor)}</span>
-                </div>
-                <div class="metadata-card">
-                    <span class="metadata-label">ESTADO</span>
-                  <span class="metadata-valor"><span class="estado-badge estado-${presupuestoImpresion.estadoColor}">${estadoTexto}</span></span>
-                </div>
-            </div>
-
-            <div class="cliente-compact">
-                <div class="cliente-header">
-                    <h3>CLIENTE</h3>
-                    <div style="font-size: 9px; color: #6c757d;">${diasInfo}</div>
-                </div>
-                <div class="cliente-grid">
-                  <div class="cliente-item"><span class="cliente-label">Nombre:</span><span class="cliente-valor">${this.escaparHtml(presupuestoImpresion.cliente.nombreCompleto)}</span></div>
-                  <div class="cliente-item"><span class="cliente-label">${presupuestoImpresion.cliente.tipoPersona === 'juridica' ? 'RIF:' : 'Cédula:'}</span><span class="cliente-valor">${this.escaparHtml(presupuestoImpresion.cliente.cedula)}</span></div>
-                  <div class="cliente-item"><span class="cliente-label">Teléfono:</span><span class="cliente-valor">${this.escaparHtml(presupuestoImpresion.cliente.telefono || 'N/A')}</span></div>
-                  <div class="cliente-item"><span class="cliente-label">Email:</span><span class="cliente-valor">${this.escaparHtml(presupuestoImpresion.cliente.email || 'N/A')}</span></div>
-                </div>
-            </div>
-
-            <div class="resumen-impresion-simple">
-                <div class="resumen-impresion-simple__item">
-                    <span class="resumen-impresion-simple__label">Vendedor</span>
-                    <span class="resumen-impresion-simple__value">${this.escaparHtml(nombreAsesor)}</span>
-                </div>
-                <div class="resumen-impresion-simple__item">
-                    <span class="resumen-impresion-simple__label">Validez</span>
-                    <span class="resumen-impresion-simple__value">${presupuestoImpresion.diasVencimiento || 7} días</span>
-                </div>
-                <div class="resumen-impresion-simple__item">
-                    <span class="resumen-impresion-simple__label">Opciones</span>
-                    <span class="resumen-impresion-simple__value">${opcionesImpresion.length}</span>
-                </div>
-                <div class="resumen-impresion-simple__item">
-                    <span class="resumen-impresion-simple__label">Opción principal</span>
-                    <span class="resumen-impresion-simple__value">${this.escaparHtml(opcionPrincipal?.nombre || 'N/A')}</span>
-                </div>
-            </div>
-
-              ${tieneMultiplesOpciones ? `<div class="comparativo-section">
-                <h3>Opciones para comparar</h3>
-                <div class="opciones-comparativo-grid">
-                  ${resumenOpcionesHtml}
-                </div>
-              </div>` : ''}
-
-              ${seccionesOpcionesHtml}
-
-            <div class="obs-section">
-                <h4>OBSERVACIONES</h4>
-              <div class="obs-content">${this.escaparHtml(observacionesImpresion || 'Sin observaciones adicionales.')}</div>
-            </div>
-
-            <div class="footer-compacto">
-                <div class="footer-brand">${this.escaparHtml(datosSede.nombreOptica)}</div>
-                ${contactoSede ? `<div>${contactoSede}</div>` : ''}
-                ${direccionSede ? `<div>${direccionSede}</div>` : ''}
-            </div>
-        </div>
-        <script>
-            window.onload = function() {
-            document.title = ${JSON.stringify(tituloPresupuestoImpresion || String(presupuestoImpresion.codigo || 'Presupuesto'))};
-                setTimeout(function() { window.print(); }, 300);
-            };
-            window.onafterprint = function() {
-                setTimeout(function() { window.close(); }, 800);
-            };
-        </script>
-    </body>
-    </html>
-    `;
 
     const ventanaImpresion = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
 
@@ -3301,6 +2990,141 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     } else {
       this.snackBar.open('Permite ventanas emergentes para imprimir', 'Cerrar', {
         duration: 3000,
+        panelClass: ['snackbar-warning']
+      });
+    }
+  }
+
+  enviarPresupuestoPorCorreo(presupuesto: any): void {
+    void this.confirmarEnvioPresupuestoPorCorreo(presupuesto);
+  }
+
+  private async confirmarEnvioPresupuestoPorCorreo(presupuesto: any): Promise<void> {
+    try {
+      const presupuestoCorreo = this.normalizarPresupuestoPersistido(
+        JSON.parse(JSON.stringify(presupuesto || {}))
+      );
+      const correoInicial = String(
+        presupuestoCorreo?.opcionesCorreo?.correoDestino
+        || presupuestoCorreo?.cliente?.email
+        || ''
+      ).trim().toLowerCase();
+      const codigoPresupuesto = this.escaparHtml(String(presupuestoCorreo?.codigo || 'este presupuesto'));
+      const nombreCliente = this.escaparHtml(String(presupuestoCorreo?.cliente?.nombreCompleto || 'el paciente'));
+      const clienteTieneCorreo = Boolean(correoInicial);
+
+      const decision = await this.swalService.showInfo(
+        'Enviar presupuesto por correo',
+        `<div class="text-start">
+          <p class="mb-2">Se enviará el presupuesto <strong>${codigoPresupuesto}</strong> al paciente <strong>${nombreCliente}</strong>.</p>
+          <p class="mb-0 text-muted">${clienteTieneCorreo
+            ? 'Puedes confirmar o modificar el correo antes de enviar.'
+            : 'Este paciente no tiene un correo vinculado. Debes ingresar un correo para continuar.'}</p>
+        </div>`,
+        {
+          input: 'email',
+          inputLabel: 'Correo de destino',
+          inputValue: correoInicial,
+          inputPlaceholder: 'Ej: paciente@correo.com',
+          showCancelButton: true,
+          confirmButtonText: 'Enviar correo',
+          cancelButtonText: 'Cancelar',
+          focusConfirm: false,
+          customClass: {
+            actions: 'swal-modern-actions swal-modern-actions--presupuesto-select'
+          },
+          didOpen: () => {
+            const input = document.querySelector('.swal2-input') as HTMLInputElement | null;
+            if (input) {
+              input.focus();
+              input.select();
+            }
+          },
+          inputValidator: (value) => {
+            const correo = String(value || '').trim().toLowerCase();
+            if (!correo) {
+              return 'Debes ingresar un correo para enviar el presupuesto';
+            }
+
+            if (!this.validarEmail(correo)) {
+              return 'Debes indicar un correo válido';
+            }
+
+            return null;
+          }
+        }
+      );
+
+      if (!decision.isConfirmed) {
+        return;
+      }
+
+      const correoDestino = String(decision.value || '').trim().toLowerCase();
+      await this.ejecutarEnvioPresupuestoPorCorreo(presupuestoCorreo, correoDestino);
+    } catch (error) {
+      console.error('Error preparando el envío del presupuesto por correo:', error);
+      this.swalService.showError('Error', 'No se pudo iniciar el envío del presupuesto por correo.');
+    }
+  }
+
+  private async ejecutarEnvioPresupuestoPorCorreo(presupuesto: any, correoDestino: string): Promise<void> {
+    const idPresupuesto = Number(presupuesto?.id || 0);
+    if (!idPresupuesto) {
+      this.swalService.showError('Envío no disponible', 'El presupuesto aún no tiene un identificador válido para enviar el correo.');
+      return;
+    }
+
+    const documentoPdf = this.construirDocumentoPublicoPresupuestoPayload(presupuesto);
+    if (!documentoPdf?.publicUrl) {
+      this.swalService.showError('Envío no disponible', 'No se pudo construir la ruta pública del presupuesto para enviarlo por correo.');
+      return;
+    }
+
+    presupuesto.opcionesCorreo = {
+      ...this.asegurarOpcionesCorreoPresupuesto(presupuesto),
+      enviarEmail: true,
+      correoDestino
+    };
+
+    try {
+      const response = await lastValueFrom(this.presupuestoService.enviarCorreoPresupuesto(idPresupuesto, {
+        opcionesCorreo: {
+          enviarEmail: true,
+          correoDestino
+        },
+        documentoPdf
+      }));
+
+      const correo = response?.correo;
+
+      if (correo?.enviado) {
+        const destinatarios = Array.isArray(correo.destinatarios) && correo.destinatarios.length
+          ? correo.destinatarios.join(', ')
+          : correoDestino;
+
+        this.snackBar.open(`Presupuesto ${presupuesto.codigo} enviado por correo a ${destinatarios}`, 'Cerrar', {
+          duration: 4500,
+          panelClass: ['snackbar-success']
+        });
+        return;
+      }
+
+      const motivo = String(correo?.motivo || '').trim();
+      const detalle = String(correo?.detalle || '').trim();
+      const mensajeErrorCorreo = detalle
+        || (motivo === 'correo-destino-invalido' ? 'El correo del paciente es inválido o está vacío.'
+          : motivo === 'url-publica-no-disponible' ? 'No se pudo construir la ruta pública del presupuesto.'
+          : motivo === 'opcion-deshabilitada' ? 'La opción de envío por correo estaba deshabilitada.'
+          : 'No se pudo enviar el presupuesto por correo.');
+
+      this.snackBar.open(mensajeErrorCorreo, 'Cerrar', {
+        duration: 4500,
+        panelClass: ['snackbar-warning']
+      });
+    } catch (error) {
+      console.error('Error enviando presupuesto por correo:', error);
+      this.snackBar.open('No se pudo enviar el presupuesto por correo.', 'Cerrar', {
+        duration: 4500,
         panelClass: ['snackbar-warning']
       });
     }

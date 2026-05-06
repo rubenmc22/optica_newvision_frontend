@@ -21,6 +21,7 @@ import { RendimientoComercialComponent } from './view/ventas/rendimiento-comerci
 import { SystemConfigComponent } from './view/system-config/system-config.component';
 import { GestionOrdenesTrabajoComponent } from './view/gestion-ordenes-trabajo/gestion-ordenes-trabajo.component';
 import { CierreCajaPdfPublicComponent } from './view/ventas/cierre-caja/cierre-caja-pdf-public.component';
+import { PresupuestoPdfPublicComponent } from './view/ventas/presupuesto/presupuesto-pdf-public.component';
 
 // Nombre de la óptica (constante global)
 const OPTICA_NAME = 'Óptica New Vision';
@@ -43,8 +44,18 @@ export const appRoutes: Routes = [
     title: getFullTitle('PDF cierre de caja')
   },
   {
+    path: 'PDF/presupuesto',
+    component: PresupuestoPdfPublicComponent,
+    title: getFullTitle('PDF presupuesto')
+  },
+  {
     path: 'pdf/cierre-caja',
     redirectTo: 'PDF/cierre-caja',
+    pathMatch: 'full'
+  },
+  {
+    path: 'pdf/presupuesto',
+    redirectTo: 'PDF/presupuesto',
     pathMatch: 'full'
   },
   {

@@ -1366,6 +1366,38 @@ export class HistoriasMedicasComponent implements OnInit {
       : 'Al guardar la historia se creara automaticamente el presupuesto con todas las selecciones actuales.';
   }
 
+  private generarPresupuestoKeyCliente(): string {
+    return `PTO-${Date.now()}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+  }
+
+  private codificarTokenPublicoPresupuesto(payload: { presupuestoKey: string }): string {
+    const json = JSON.stringify(payload);
+    const encoded = btoa(unescape(encodeURIComponent(json)));
+    return encoded.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  private construirDocumentoPublicoPresupuestoDesdeHistoria(presupuestoKey: string): { modulo: string; renderer: string; publicUrl: string; publicPrintUrl: string } | null {
+    if (typeof window === 'undefined' || !window.location?.origin) {
+      return null;
+    }
+
+    const key = String(presupuestoKey || '').trim();
+    if (!key) {
+      return null;
+    }
+
+    const token = this.codificarTokenPublicoPresupuesto({ presupuestoKey: key });
+    const query = `token=${encodeURIComponent(token)}`;
+    const baseUrl = `${window.location.origin}/PDF/presupuesto`;
+
+    return {
+      modulo: 'presupuesto',
+      renderer: 'frontend-public-report-token',
+      publicUrl: `${baseUrl}?${query}`,
+      publicPrintUrl: `${baseUrl}?${query}&autoprint=1`
+    };
+  }
+
   private async generarPresupuestoEnSegundoPlanoDesdeHistoria(
     paciente: Paciente,
     historia: HistoriaMedica,
@@ -1374,7 +1406,8 @@ export class HistoriasMedicasComponent implements OnInit {
     try {
       const handoff = this.construirHandoffPresupuestoDesdeHistoria(paciente, historia, opciones);
       const payload = this.construirPayloadPresupuestoDesdeHistoria(handoff);
-      return await lastValueFrom(this.presupuestoService.crearPresupuesto(payload));
+      const response = await lastValueFrom(this.presupuestoService.crearPresupuesto(payload));
+      return response.presupuesto;
     } catch (error) {
       console.error('Error generando presupuesto desde historia médica:', error);
       this.snackBar.open('No se pudo generar el presupuesto automático desde la historia médica.', 'Cerrar', {
@@ -1389,6 +1422,8 @@ export class HistoriasMedicasComponent implements OnInit {
     const fechaCreacion = new Date();
     const fechaVencimiento = new Date(fechaCreacion);
     fechaVencimiento.setDate(fechaVencimiento.getDate() + 7);
+    const presupuestoKey = this.generarPresupuestoKeyCliente();
+    const documentoPdf = this.construirDocumentoPublicoPresupuestoDesdeHistoria(presupuestoKey);
 
     const opciones = handoff.opciones.map((opcion) => ({
       id: String(opcion.id || '').trim(),
@@ -1413,6 +1448,7 @@ export class HistoriasMedicasComponent implements OnInit {
     const opcionPrincipal = opciones.find((opcion) => opcion.esPrincipal) || opciones[0];
 
     return {
+      presupuestoKey,
       cliente: {
         tipoPersona: handoff.cliente.tipoPersona,
         cedula: String(handoff.cliente.cedula || '').trim(),
@@ -1432,6 +1468,11 @@ export class HistoriasMedicasComponent implements OnInit {
       fechaCreacion,
       fechaVencimiento,
       diasVencimiento: 7,
+      opcionesCorreo: {
+        enviarEmail: true,
+        correoDestino: String(handoff.cliente.email || '').trim().toLowerCase()
+      },
+      documentoPdf,
       observaciones: String(handoff.observaciones || '').trim(),
       formulaExterna: handoff.formulaExterna?.activa
         ? handoff.formulaExterna

@@ -6,6 +6,30 @@ import { Presupuesto } from './presupuesto.interfaz';
 import { environment } from 'src/environments/environment';
 import { ErrorHandlerService } from './../../../core/services/errorHandlerService';
 
+export interface PresupuestoCorreoResultado {
+  enviado: boolean;
+  motivo?: string;
+  detalle?: string | null;
+  destinatarios?: string[];
+  messageId?: string | null;
+  documentoPdf?: {
+    modulo: string;
+    renderer: string;
+    publicUrl: string;
+    publicPrintUrl: string;
+  } | null;
+}
+
+export interface CrearPresupuestoResponse {
+  presupuesto: Presupuesto;
+  correo?: PresupuestoCorreoResultado;
+}
+
+export interface EnviarCorreoPresupuestoResponse {
+  presupuesto: Presupuesto;
+  correo?: PresupuestoCorreoResultado;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -34,10 +58,26 @@ export class PresupuestoService {
     );
   }
 
-  crearPresupuesto(presupuesto: unknown): Observable<Presupuesto> {
-    return this.http.post<{ presupuesto: Presupuesto }>(`${this.apiUrl}/presupuestos-add`, presupuesto).pipe(
+  obtenerPresupuestoPublico(token: string): Observable<Presupuesto> {
+    return this.http.get<{ presupuesto: Presupuesto }>(`${this.apiUrl}/presupuestos/publico`, {
+      params: { token: String(token || '').trim() }
+    }).pipe(
       timeout(this.REQUEST_TIMEOUT),
       map((response) => response.presupuesto),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
+  }
+
+  crearPresupuesto(presupuesto: unknown): Observable<CrearPresupuestoResponse> {
+    return this.http.post<CrearPresupuestoResponse>(`${this.apiUrl}/presupuestos-add`, presupuesto).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
+  }
+
+  enviarCorreoPresupuesto(id: number, payload: unknown): Observable<EnviarCorreoPresupuestoResponse> {
+    return this.http.post<EnviarCorreoPresupuestoResponse>(`${this.apiUrl}/presupuestos-enviar-correo/${id}`, payload).pipe(
+      timeout(this.REQUEST_TIMEOUT),
       catchError(error => this.errorHandler.handleHttpError(error))
     );
   }
