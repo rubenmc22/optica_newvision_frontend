@@ -32,7 +32,7 @@ import {
   MATERIALES,
   TRATAMIENTOS_ADITIVOS,
   INTERVALOS_HORA
-} from 'src/app/shared/constants/historias-medicas';
+} from '../../shared/constants/historias-medicas';
 
 
 @Component({

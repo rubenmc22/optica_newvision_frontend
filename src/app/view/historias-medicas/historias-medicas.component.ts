@@ -35,7 +35,7 @@ import {
   TIPOS_CRISTALES,
   TIPOS_LENTES_CONTACTO,
   MATERIALES,
-} from 'src/app/shared/constants/historias-medicas';
+} from '../../shared/constants/historias-medicas';
 
 // Servicios
 import { HistoriaMedicaService } from '../../core/services/historias-medicas/historias-medicas.service';
@@ -49,18 +49,15 @@ import { ProductoService } from '../productos/producto.service';
 import { Producto } from '../productos/producto.model';
 import { PresupuestoService } from '../ventas/presupuesto/presupuesto.service';
 import { OpcionPresupuesto, Presupuesto, ProductoPresupuesto } from '../ventas/presupuesto/presupuesto.interfaz';
-import {
-  HISTORIA_VENTA_HANDOFF_STORAGE_KEY,
-  HistoriaVentaHandoff
-} from '../ventas/shared/historia-venta-handoff.util';
+import { HistoriaVentaHandoff } from '../ventas/shared/historia-venta-handoff.util';
 import { historiaPuedeCobrarConsulta } from '../ventas/shared/historia-consulta-payment.util';
 import {
-  PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY,
   HistoriaPresupuestoHandoff,
   HistoriaPresupuestoOpcionDraft,
   HistoriaPresupuestoProductoDraft,
   PresupuestoHistoriaReturnDraft
 } from '../ventas/shared/historia-presupuesto-handoff.util';
+import { VentasFlowService } from '../ventas/shared/ventas-flow.service';
 
 interface ProductoRecomendableOption extends Producto {
   disabled: boolean;
@@ -213,7 +210,8 @@ export class HistoriasMedicasComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
     private router: Router,
-    private loader: LoaderService
+    private loader: LoaderService,
+    private ventasFlowService: VentasFlowService
   ) {
     this.materiales = MATERIALES;
     this.materialLabels = new Map<TipoMaterial, string>(
@@ -1321,15 +1319,13 @@ export class HistoriasMedicasComponent implements OnInit {
     };
 
     try {
-      sessionStorage.setItem(HISTORIA_VENTA_HANDOFF_STORAGE_KEY, JSON.stringify(handoff));
+      this.ventasFlowService.guardarHistoriaVentaHandoff(handoff);
     } catch (error) {
       console.error('No se pudo guardar el handoff de historia hacia ventas:', error);
     }
 
     this.limpiarEstadoRetornoPacientes();
-    this.router.navigate(['/ventas'], {
-      queryParams: { vista: 'generacion-de-ventas' }
-    });
+    this.router.navigate(['/ventas/generar']);
   }
 
   private async gestionarAccionesPosterioresHistoriaCreada(
@@ -2666,22 +2662,8 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   private restaurarRetornoDesdePresupuestoSiExiste(): boolean {
-    const retornoRaw = sessionStorage.getItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY);
-    if (!retornoRaw) {
-      return false;
-    }
-
-    let retorno: PresupuestoHistoriaReturnDraft | null = null;
-
-    try {
-      retorno = JSON.parse(retornoRaw) as PresupuestoHistoriaReturnDraft;
-    } catch {
-      sessionStorage.removeItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY);
-      return false;
-    }
-
-    if (!retorno?.pacienteKey || !retorno?.historiaId) {
-      sessionStorage.removeItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY);
+    const retorno = this.ventasFlowService.leerRetornoHistoriaDesdePresupuesto();
+    if (!retorno) {
       return false;
     }
 
@@ -2692,7 +2674,7 @@ export class HistoriasMedicasComponent implements OnInit {
     );
 
     if (!paciente) {
-      sessionStorage.removeItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY);
+      this.ventasFlowService.limpiarRetornoHistoriaDesdePresupuesto();
       this.snackBar.open('No se encontró el paciente para restaurar la historia médica desde presupuestos.', 'Cerrar', {
         duration: 4500,
         panelClass: ['snackbar-warning']
@@ -2706,7 +2688,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.cargarHistoriasMedicas(paciente.key, () => {
       const historia = this.historial.find((item) => String(item.id || '') === String(retorno?.historiaId || ''));
-      sessionStorage.removeItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY);
+      this.ventasFlowService.limpiarRetornoHistoriaDesdePresupuesto();
 
       if (!historia) {
         this.snackBar.open('Se restauró el paciente, pero no se encontró la historia médica vinculada al presupuesto.', 'Cerrar', {

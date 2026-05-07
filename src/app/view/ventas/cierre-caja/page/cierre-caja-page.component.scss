@@ -1,0 +1,56 @@
+:host {
+  display: block;
+}
+
+.ventas-page-shell__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.ventas-page-shell__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.ventas-page-shell__title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ventas-page-shell__subtitle {
+  margin: 0.35rem 0 0;
+  color: #475569;
+}
+
+.ventas-page-shell__contexto {
+  margin: 0;
+  max-width: 22rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.9rem;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .ventas-page-shell__header {
+    flex-direction: column;
+  }
+
+  .ventas-page-shell__contexto {
+    max-width: none;
+    width: 100%;
+  }
+}
+:host {
+  display: block;
+}

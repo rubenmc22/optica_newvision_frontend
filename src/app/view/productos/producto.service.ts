@@ -11,7 +11,7 @@ import {
 } from './producto.model';
 import { HttpClient } from '@angular/common/http';
 import { Observable, timeout, catchError, map } from 'rxjs';
-import { environment } from 'src/environments/environment';
+import { environment } from '../../../environments/environment';
 import { ErrorHandlerService } from './../../core/services/errorHandlerService';
 import { normalizarClasificacionProducto } from './producto-classification.catalog';
 import { parseDescripcionProductoCristal } from './producto-cristal-config.util';
@@ -34,7 +34,7 @@ interface UpdateProductLabelSettingsPayload {
 @Injectable({ providedIn: 'root' })
 export class ProductoService {
   private productos: Producto[] = [];
-  private readonly REQUEST_TIMEOUT = 8000; // 8 segundos
+  private readonly REQUEST_TIMEOUT = 20000;
 
   constructor(
     private http: HttpClient,

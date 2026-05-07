@@ -1,154 +1,37 @@
 ﻿<!-- cierre-caja.component.html -->
 <div class="cierre-caja-container">
 
-  <!-- HEADER  -->
-  <div class="cierre-header">
-    <div class="header-content">
-      <div class="header-title">
-        <i class="bi bi-cash-stack"></i>
-        <div class="header-text">
-          <h1>Cierre de Caja Diario</h1>
-          <div class="header-subtitle">
-            <!-- Estado badge integrado como subtítulo -->
-            <span class="estado-badge estado-sin-iniciar" *ngIf="!cierreActual && esDiaActual && !tieneBloqueoPorCierrePendienteAnterior()">
-              <i class="bi bi-exclamation-circle"></i>
-              Caja sin iniciar
-            </span>
-            <span class="estado-badge estado-sin-cierre" *ngIf="!cierreActual && esDiaActual && tieneBloqueoPorCierrePendienteAnterior()">
-              <i class="bi bi-exclamation-triangle"></i>
-              Cierre pendiente anterior
-            </span>
-            <span class="estado-badge" [ngClass]="getEstadoClass(cierreActual?.estado, cierreActual?.fecha)" *ngIf="cierreActual">
-              <i class="bi" [ngClass]="getEstadoIconClass(cierreActual?.estado, cierreActual?.fecha)"></i>
-              {{ getEstadoTexto(cierreActual?.estado, cierreActual?.fecha) }}
-            </span>
-            <span class="estado-badge estado-sin-cierre" *ngIf="!cierreActual && !esDiaActual">
-              <i class="bi bi-calendar-x"></i>
-              Sin cierre registrado
-            </span>
-          </div>
-        </div>
-      </div>
+  <app-cierre-header
+    [cierreActual]="cierreActual"
+    [cargandoDatos]="cargandoDatos"
+    [fechaSeleccionada]="fechaSeleccionada"
+    [puedeAvanzarFecha]="puedeAvanzarFecha()"
+    [esDiaActual]="esDiaActual"
+    [puedeIniciarCaja]="puedeIniciarCaja()"
+    [mensajeNoDisponibleParaIniciarCaja]="mensajeNoDisponibleParaIniciarCaja"
+    [bloqueoCierrePendienteAnterior]="tieneBloqueoPorCierrePendienteAnterior()"
+    [mensajeBloqueoCierrePendienteAnterior]="mensajeBloqueoCierrePendienteAnterior"
+    [cierrePendienteVisual]="esCierrePendienteVisual(cierreActual)"
+    [estadoClass]="getEstadoClass(cierreActual?.estado, cierreActual?.fecha)"
+    [estadoIconClass]="getEstadoIconClass(cierreActual?.estado, cierreActual?.fecha)"
+    [estadoTexto]="getEstadoTexto(cierreActual?.estado, cierreActual?.fecha)"
+    [referenciaFechaTexto]="getTextoReferenciaFecha()"
+    (previousDay)="cambiarFecha(-1)"
+    (nextDay)="cambiarFecha(1)"
+    (pickDate)="abrirSelectorFecha()"
+    (openStart)="abrirModalInicioCaja()"
+    (openClose)="abrirModalCierre()"
+    (openHistory)="abrirHistorial()">
+  </app-cierre-header>
 
-      <div class="header-actions">
-        <!-- Selector de fecha mejorado -->
-        <div class="date-section">
-          <div class="fecha-selector">
-            <button class="btn-fecha" (click)="cambiarFecha(-1)" title="Día anterior">
-              <i class="bi bi-chevron-left"></i>
-            </button>
-            <div class="fecha-display" (click)="abrirSelectorFecha()">
-              <i class="bi bi-calendar3"></i>
-              <span>{{ fechaSeleccionada | date:'EEEE, d MMMM yyyy' }}</span>
-            </div>
-            <button class="btn-fecha" (click)="cambiarFecha(1)" title="Día siguiente">
-              <i class="bi bi-chevron-right"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Grupo de acciones principales -->
-        <div class="actions-group">
-          <!-- Botones de acción -->
-          <div class="acciones-principales">
-            <button class="btn-moderno btn-primary" (click)="abrirModalInicioCaja()" *ngIf="!cierreActual && esDiaActual"
-              [disabled]="tieneBloqueoPorCierrePendienteAnterior()"
-              [title]="tieneBloqueoPorCierrePendienteAnterior() ? mensajeBloqueoCierrePendienteAnterior : 'Iniciar caja del día'">
-              <i class="bi bi-play-circle"></i>
-              <span>Iniciar Caja</span>
-            </button>
-
-            <button class="btn-moderno btn-success" (click)="abrirModalCierre()"
-              *ngIf="cierreActual?.estado === 'abierto' && esDiaActual">
-              <i class="bi bi-lock"></i>
-              <span>Cerrar Caja</span>
-            </button>
-
-            <div class="info-mensaje" [class.warning]="esCierrePendienteVisual(cierreActual)" *ngIf="cierreActual && !esDiaActual">
-              <i class="bi bi-info-circle"></i>
-              <span>{{ getTextoReferenciaFecha() }}</span>
-            </div>
-
-            <div class="info-mensaje warning" *ngIf="!cierreActual && !esDiaActual">
-              <i class="bi bi-exclamation-triangle"></i>
-              <span>Sin cierre registrado</span>
-            </div>
-
-            <button class="btn-moderno btn-info" (click)="abrirHistorial()">
-              <i class="bi bi-clock-history"></i>
-              <span>Historial</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- KPI GRID -->
-  <div class="kpi-grid">
-    <!-- Tarjeta Efectivo Inicial - Solo visible si hay cierre -->
-    <div class="kpi-card glass-card" *ngIf="cierreActual">
-      <div class="kpi-icon" style="background: rgba(37, 99, 235, 0.15); color: #2563eb;">
-        <i class="bi bi-cash"></i>
-      </div>
-      <div class="kpi-content">
-        <span class="kpi-label">Efectivo Inicial</span>
-        <div class="kpi-monedas">
-          <div class="moneda-item" *ngIf="cierreActual.efectivoInicialDetalle?.USD > 0">
-            <span class="moneda-simbolo">$</span>
-            <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.USD | number:'1.2-2' }}</span>
-          </div>
-          <div class="moneda-item" *ngIf="cierreActual.efectivoInicialDetalle?.EUR > 0">
-            <span class="moneda-simbolo">€</span>
-            <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.EUR | number:'1.2-2' }}</span>
-          </div>
-          <div class="moneda-item" *ngIf="cierreActual.efectivoInicialDetalle?.Bs > 0">
-            <span class="moneda-simbolo">Bs.</span>
-            <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.Bs | number:'1.2-2' }}</span>
-          </div>
-          <div class="moneda-item" *ngIf="!cierreActual.efectivoInicialDetalle?.USD && !cierreActual.efectivoInicialDetalle?.EUR && !cierreActual.efectivoInicialDetalle?.Bs">
-            <span class="moneda-valor text-muted">0.00</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Total Ventas - SIEMPRE visible -->
-    <div class="kpi-card glass-card">
-      <div class="kpi-icon" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">
-        <i class="bi bi-cart-check"></i>
-      </div>
-      <div class="kpi-content">
-        <span class="kpi-label">Total Ventas</span>
-        <span class="kpi-value">{{ totalVentasKPI | currency }}</span>
-        <span class="kpi-trend">{{ transacciones.length }} transacciones</span>
-      </div>
-    </div>
-
-    <!-- Total Pendiente - SIEMPRE visible -->
-    <div class="kpi-card glass-card">
-      <div class="kpi-icon" style="background: rgba(234, 179, 8, 0.15); color: #eab308;">
-        <i class="bi bi-exclamation-triangle"></i>
-      </div>
-      <div class="kpi-content">
-        <span class="kpi-label">Total Pendiente</span>
-        <span class="kpi-value">{{ totalPendientesKPI | currency }}</span>
-        <span class="kpi-trend">{{ analisisVentasPendientes.length }} ventas</span>
-      </div>
-    </div>
-
-    <!-- Neto del Día - SIEMPRE visible -->
-    <div class="kpi-card glass-card">
-      <div class="kpi-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
-        <i class="bi bi-arrow-repeat"></i>
-      </div>
-      <div class="kpi-content">
-        <span class="kpi-label">Neto del Día</span>
-        <span class="kpi-value">{{ netoDiaKPI | currency }}</span>
-        <span class="kpi-trend">Cobrado e ingresos - egresos</span>
-      </div>
-    </div>
-  </div>
+  <app-cierre-kpi-grid
+    [cierreActual]="cierreActual"
+    [totalVentas]="totalVentasKPI"
+    [totalPendientes]="totalPendientesKPI"
+    [netoDia]="netoDiaKPI"
+    [transaccionesCount]="transacciones.length"
+    [ventasPendientesCount]="analisisVentasPendientes.length">
+  </app-cierre-kpi-grid>
 
   <!-- CONTENIDO PRINCIPAL -->
   <div class="content-grid">
@@ -434,7 +317,7 @@
     <div class="right-column">
 
       <!-- PANEL DE CIERRE - -->
-      <div class="cierre-panel glass-card" *ngIf="cierreActual; else sinCierre">
+      <div class="cierre-panel glass-card" *ngIf="cierreActual; else estadoCajaFallback">
         <div class="panel-header">
           <div class="panel-title">
             <i class="bi bi-safe"></i>
@@ -614,6 +497,22 @@
         </div>
       </div>
 
+      <ng-template #estadoCajaFallback>
+        <div class="cierre-panel glass-card sin-cierre" *ngIf="cargandoDatos; else sinCierre">
+          <div class="panel-header">
+            <div class="panel-title">
+              <i class="bi bi-arrow-repeat"></i>
+              <h3>Estado de Caja</h3>
+            </div>
+          </div>
+          <div class="cierre-detalle text-center">
+            <div class="spinner-border text-primary" role="status"></div>
+            <h4 class="mt-3">Actualizando estado</h4>
+            <p>Cargando la información de la fecha seleccionada...</p>
+          </div>
+        </div>
+      </ng-template>
+
       <ng-template #sinCierre>
         <div class="cierre-panel glass-card sin-cierre">
           <div class="panel-header">
@@ -623,17 +522,18 @@
             </div>
             <div class="panel-actions">
               <button class="btn-sm btn-primary" (click)="abrirModalInicioCaja()"
-                [disabled]="tieneBloqueoPorCierrePendienteAnterior()"
-                [title]="tieneBloqueoPorCierrePendienteAnterior() ? mensajeBloqueoCierrePendienteAnterior : 'Iniciar caja'">
+                [class.is-disabled]="!puedeIniciarCaja()"
+                [disabled]="!puedeIniciarCaja()"
+                [title]="!puedeIniciarCaja() ? mensajeNoDisponibleParaIniciarCaja : 'Iniciar caja'">
                 <i class="bi bi-play-circle"></i> Iniciar Caja
               </button>
             </div>
           </div>
           <div class="cierre-detalle text-center">
             <i class="bi bi-cash-stack" style="font-size: 3rem; color: #94a3b8;"></i>
-            <h4>{{ tieneBloqueoPorCierrePendienteAnterior() ? 'Cierre pendiente anterior' : 'Caja no iniciada' }}</h4>
-            <p *ngIf="tieneBloqueoPorCierrePendienteAnterior(); else mensajeInicioCaja">
-              {{ mensajeBloqueoCierrePendienteAnterior }}
+            <h4>{{ !esDiaActual ? 'Fecha historica sin apertura' : (tieneBloqueoPorCierrePendienteAnterior() ? 'Cierre pendiente anterior' : 'Caja no iniciada') }}</h4>
+            <p *ngIf="!puedeIniciarCaja(); else mensajeInicioCaja">
+              {{ mensajeNoDisponibleParaIniciarCaja }}
             </p>
             <ng-template #mensajeInicioCaja>
               <p>Haz clic en "Iniciar Caja" para comenzar la jornada.</p>

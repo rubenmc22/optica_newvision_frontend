@@ -1,395 +1,59 @@
-<div class="card contenedor-presupuestos presupuestos-container">
-    <!-- Header -->
-    <div class="presupuestos-header">
-        <div class="header-content">
-            <div class="header-title">
-                <i class="bi bi-file-earmark-text"></i>
-                <div class="header-text">
-                    <h1>Presupuestos</h1>
-                    <div class="header-subtitle">
-                        Consulta y gestiona todos tus presupuestos activos
-                    </div>
-                </div>
-            </div>
-            <div class="header-actions">
-                <div class="search-section">
-                    <div class="search-container">
-                        <i class="bi bi-search search-icon"></i>
-                        <input type="text" class="search-input" 
-                            placeholder="Buscar por código (P-2025-001, 2025001, 001), cédula o nombre..."
-                            [(ngModel)]="filtroBusqueda" 
-                            (keyup)="filtrarPresupuestos()"
-                            (keyup.enter)="filtrarPresupuestos()">
-                        <button *ngIf="filtroBusqueda" class="btn-clear-search" (click)="limpiarBusqueda()" 
-                                title="Limpiar búsqueda">
-                            <i class="bi bi-x"></i>
-                        </button>
-                    </div>
-                    <!-- Mensaje de resultados filtrados - mejorado visualmente -->
-                    <div class="search-results-info" *ngIf="hayFiltrosActivos() && getTextoResultadosFiltrados()">
-                        <span class="results-badge">
-                            <i class="bi bi-funnel-fill"></i>
-                            {{getTextoResultadosFiltrados()}}
-                            <button class="btn-clear-all" (click)="limpiarFiltros()" title="Limpiar todos los filtros">
-                                <i class="bi bi-x-circle"></i>
-                            </button>
-                        </span>
-                    </div>
-                </div>
-                <div class="header-filters">
-                    <div class="filter-group">
-                        <select class="filtro-select" [(ngModel)]="filtroEstado" (change)="filtrarPresupuestos()">
-                            <option value="">Todos los estados</option>
-                            <option value="vigente">Vigentes</option>
-                            <option value="proximo">Próximos a vencer</option>
-                            <option value="hoy">Vence hoy</option>
-                            <option value="vencido">Vencidos</option>
-                        </select>
-                        <button *ngIf="filtroEstado" class="btn-clear-filter" (click)="limpiarFiltroEstado()" 
-                                title="Limpiar filtro de estado">
-                            <i class="bi bi-x-circle"></i>
-                        </button>
-                    </div>
-                    <button class="btn btn-primary" (click)="abrirModalNuevoPresupuesto()">
-                        <i class="bi bi-plus-circle"></i>
-                        Nuevo Presupuesto
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="contenedor-presupuestos presupuestos-container">
+    <app-presupuesto-header
+        [(filtroBusqueda)]="filtroBusqueda"
+        [(filtroEstado)]="filtroEstado"
+        [hayFiltrosActivos]="hayFiltrosActivos()"
+        [textoResultadosFiltrados]="getTextoResultadosFiltrados()"
+        (filtrar)="filtrarPresupuestos()"
+        (limpiarBusqueda)="limpiarBusqueda()"
+        (limpiarFiltros)="limpiarFiltros()"
+        (limpiarFiltroEstado)="limpiarFiltroEstado()"
+        (nuevoPresupuesto)="abrirModalNuevoPresupuesto()"></app-presupuesto-header>
 
-    <!-- Estadísticas -->
-    <div class="stats-container">
-        <div class="stat-card" (click)="cambiarTab('vigentes')">
-            <div class="stat-icon" style="background: rgba(25, 118, 210, 0.1); color: #1976d2;">
-                <i class="bi bi-file-earmark-text"></i>
-            </div>
-            <div class="stat-info">
-                <div class="stat-count">{{ estadisticas.totalVigentes }}</div>
-                <div class="stat-label">Vigentes</div>
-            </div>
-        </div>
-        <div class="stat-card" (click)="cambiarTab('vigentes')">
-            <div class="stat-icon" style="background: rgba(255, 160, 0, 0.1); color: #ffa000;">
-                <i class="bi bi-clock-history"></i>
-            </div>
-            <div class="stat-info">
-                <div class="stat-count">{{ estadisticas.proximosAVencer }}</div>
-                <div class="stat-label">Próximos a vencer</div>
-            </div>
-        </div>
-        <div class="stat-card" (click)="cambiarTab('vencidos')">
-            <div class="stat-icon" style="background: rgba(220, 53, 69, 0.1); color: #dc3545;">
-                <i class="bi bi-file-x"></i>
-            </div>
-            <div class="stat-info">
-                <div class="stat-count">{{ estadisticas.totalVencidos }}</div>
-                <div class="stat-label">Vencidos</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(40, 167, 69, 0.1); color: #28a745;">
-                <i class="bi bi-currency-dollar"></i>
-            </div>
-            <div class="stat-info">
-                <div class="stat-count">{{ formatMoneda(estadisticas.totalValor) }}</div>
-                <div class="stat-label">Valor total</div>
-            </div>
-        </div>
-    </div>
+    <app-presupuesto-stats
+        [estadisticas]="estadisticas"
+        [totalValorFormatted]="formatMoneda(estadisticas.totalValor)"
+        (tabChange)="cambiarTab($event)"></app-presupuesto-stats>
 
-    <!-- Tabs para Presupuestos Vigentes y Vencidos -->
-    <div class="presupuestos-tabs">
-        <div class="tab-buttons">
-            <button class="tab-button" [class.active]="tabActiva === 'vigentes'" (click)="cambiarTab('vigentes')">
-                <i class="bi bi-file-earmark-check"></i>
-                Vigentes
-                <span class="badge">{{ presupuestosVigentes.length }}</span>
-            </button>
-            <button class="tab-button" [class.active]="tabActiva === 'vencidos'" (click)="cambiarTab('vencidos')">
-                <i class="bi bi-file-earmark-x"></i>
-                Vencidos
-                <span class="badge">{{ presupuestosVencidos.length }}</span>
-            </button>
-        </div>
+    <app-presupuesto-tabs
+        [tabActiva]="tabActiva"
+        [presupuestosVigentes]="presupuestosVigentes"
+        [presupuestosVencidos]="presupuestosVencidos"
+        [presupuestosFiltradosVigentes]="presupuestosFiltradosVigentes"
+        [presupuestosFiltradosVencidos]="presupuestosFiltradosVencidos"
+        [hayFiltrosActivos]="hayFiltrosActivos()"
+        [filtroBusqueda]="filtroBusqueda"
+        [filtroEstado]="filtroEstado"
+        [tituloEstadoVacio]="getTituloEstadoVacio()"
+        [mensajeEstadoVacio]="getMensajeEstadoVacio()"
+        [mostrarReferenciaBs]="debeMostrarReferenciaBs()"
+        [formatFechaFn]="formatFecha.bind(this)"
+        [formatMonedaFn]="formatMoneda.bind(this)"
+        [getEstadoTextoFn]="getEstadoTexto.bind(this)"
+        [getTextoDiasRestantesFn]="getTextoDiasRestantesParaPresupuesto.bind(this)"
+        [obtenerReferenciaBsFn]="obtenerReferenciaBs.bind(this)"
+        [esVentaGeneradaFn]="esVentaGenerada.bind(this)"
+        [puedeConvertirFn]="puedeConvertirPresupuesto.bind(this)"
+        [obtenerMotivoNoConversionFn]="obtenerMotivoNoConversion.bind(this)"
+        (tabChange)="cambiarTab($event)"
+        (viewDetail)="verDetallePresupuesto($event)"
+        (print)="imprimirPresupuesto($event)"
+        (email)="enviarPresupuestoPorCorreo($event)"
+        (whatsapp)="compartirPresupuestoPorWhatsApp($event)"
+        (convert)="convertirAVenta($event)"
+        (delete)="confirmarEliminarPresupuesto($event)"
+        (renew)="renovarPresupuesto($event)"
+        (clearFilters)="limpiarFiltros()"
+        (clearBusqueda)="limpiarBusqueda()"
+        (clearEstado)="limpiarFiltroEstado()"
+        (createNew)="abrirModalNuevoPresupuesto()"></app-presupuesto-tabs>
 
-        <!-- Contenido - Presupuestos Vigentes -->
-        <div class="tab-content" [class.active]="tabActiva === 'vigentes'">
-            <div class="presupuestos-grid scrollable-grid">
-                <div class="presupuesto-card" *ngFor="let presupuesto of presupuestosFiltradosVigentes"
-                    (click)="verDetallePresupuesto(presupuesto)">
-                    <div class="presupuesto-header">
-                        <div class="presupuesto-codigo">
-                            <strong>{{ presupuesto.codigo }}</strong>
-                            <span class="badge" [ngClass]="presupuesto.estadoColor">
-                                {{ getEstadoTexto(presupuesto.estadoColor) }}
-                            </span>
-                            <span class="badge venta-generada" *ngIf="esVentaGenerada(presupuesto)">
-                                <i class="bi bi-cart-check"></i>
-                                Venta generada
-                            </span>
-                        </div>
-                        <div class="presupuesto-fecha">
-                            <small>
-                                <i class="bi bi-calendar"></i>
-                                Vence: {{ formatFecha(presupuesto.fechaVencimiento) }}
-                                <span *ngIf="presupuesto.diasRestantes >= 0" class="dias-restantes">
-                                    {{ getTextoDiasRestantesParaPresupuesto(presupuesto) }}
-                                </span>
-                            </small>
-                        </div>
-                    </div>
-
-                    <div class="presupuesto-cliente">
-                        <i class="bi bi-person"></i>
-                        <span>{{ presupuesto.cliente.nombreCompleto }}</span>
-                    </div>
-
-                    <div class="presupuesto-productos">
-                        <small>
-                            <i class="bi bi-box"></i>
-                            {{ presupuesto.productos.length }} producto{{ presupuesto.productos.length !== 1 ? 's' : ''
-                            }}
-                        </small>
-                    </div>
-
-                    <div class="presupuesto-totales">
-                        <div class="total-label">Total:</div>
-                        <div class="total-resumen">
-                            <div class="total-valor">{{ formatMoneda(presupuesto.total) }}</div>
-                            <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                Ref. {{ formatMoneda(obtenerReferenciaBs(presupuesto.total), 'VES') }}
-                            </small>
-                        </div>
-                    </div>
-
-                    <div class="presupuesto-actions">
-                        <button class="btn-action" type="button" title="Imprimir"
-                            (click)="$event.stopPropagation(); imprimirPresupuesto(presupuesto)">
-                            <i class="bi bi-printer"></i>
-                        </button>
-                        <button class="btn-action btn-action-mail" type="button" title="Enviar por correo"
-                            (click)="$event.stopPropagation(); enviarPresupuestoPorCorreo(presupuesto)">
-                            <i class="bi bi-envelope"></i>
-                        </button>
-                        <button class="btn-action btn-whatsapp" type="button" title="Compartir por WhatsApp"
-                            (click)="$event.stopPropagation(); compartirPresupuestoPorWhatsApp(presupuesto)">
-                            <i class="bi bi-whatsapp"></i>
-                        </button>
-                        <button class="btn-action btn-success"
-                            type="button"
-                            [disabled]="!puedeConvertirPresupuesto(presupuesto)"
-                            [title]="puedeConvertirPresupuesto(presupuesto) ? 'Convertir a venta' : obtenerMotivoNoConversion(presupuesto)"
-                            (click)="$event.stopPropagation(); convertirAVenta(presupuesto)">
-                            <i class="bi bi-cart-check"></i>
-                        </button>
-                        <button class="btn-action btn-danger" type="button" title="Eliminar"
-                            (click)="$event.stopPropagation(); confirmarEliminarPresupuesto(presupuesto)">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="empty-state" *ngIf="presupuestosFiltradosVigentes.length === 0">
-                    <div class="empty-state-container">
-                        <div class="empty-state-icon">
-                            <i *ngIf="hayFiltrosActivos()" class="bi bi-search-x"></i>
-                            <i *ngIf="!hayFiltrosActivos() && tabActiva === 'vigentes'" class="bi bi-file-earmark-text"></i>
-                            <i *ngIf="!hayFiltrosActivos() && tabActiva === 'vencidos'" class="bi bi-file-earmark-x"></i>
-                        </div>
-                        
-                        <div class="empty-state-content">
-                            <h4 class="empty-state-title">
-                                {{ getTituloEstadoVacio() }}
-                            </h4>
-                            
-                            <p class="empty-state-message">
-                                {{ getMensajeEstadoVacio() }}
-                            </p>
-                            
-                            <div *ngIf="hayFiltrosActivos()" class="empty-state-actions">
-                                <button class="btn btn-primary btn-sm" (click)="limpiarFiltros()">
-                                    <i class="bi bi-funnel"></i>
-                                    Limpiar filtros
-                                </button>
-                                <button *ngIf="filtroBusqueda" class="btn btn-outline-secondary btn-sm" (click)="limpiarBusqueda()">
-                                    <i class="bi bi-search"></i>
-                                    Limpiar búsqueda
-                                </button>
-                                <button *ngIf="filtroEstado" class="btn btn-outline-secondary btn-sm" (click)="limpiarFiltroEstado()">
-                                    <i class="bi bi-filter"></i>
-                                    Limpiar estado
-                                </button>
-                            </div>
-                            
-                            <div *ngIf="!hayFiltrosActivos() && tabActiva === 'vigentes'" class="empty-state-actions">
-                                <button class="btn btn-primary btn-crear-primer-presupuesto" (click)="abrirModalNuevoPresupuesto()">
-                                    <i class="bi bi-plus-circle"></i>
-                                    Crear primer presupuesto
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-</div>
-            </div>
-        </div>
-
-        <!-- Contenido - Presupuestos Vencidos -->
-        <div class="tab-content" [class.active]="tabActiva === 'vencidos'">
-            <div class="presupuestos-grid scrollable-grid">
-                <div class="presupuesto-card" *ngFor="let presupuesto of presupuestosFiltradosVencidos"
-                    (click)="verDetallePresupuesto(presupuesto)">
-                    <div class="presupuesto-header">
-                        <div class="presupuesto-codigo">
-                            <strong>{{ presupuesto.codigo }}</strong>
-                            <span class="badge vencido">
-                                Vencido
-                            </span>
-                            <span class="badge venta-generada" *ngIf="esVentaGenerada(presupuesto)">
-                                <i class="bi bi-cart-check"></i>
-                                Venta generada
-                            </span>
-                        </div>
-                        <div class="presupuesto-fecha">
-                            <small>
-                                <i class="bi bi-calendar-x"></i>
-                                Venció: {{ formatFecha(presupuesto.fechaVencimiento) }}
-                            </small>
-                        </div>
-                    </div>
-
-                    <div class="presupuesto-cliente">
-                        <i class="bi bi-person"></i>
-                        <span>{{ presupuesto.cliente.nombreCompleto }}</span>
-                    </div>
-
-                    <div class="presupuesto-totales">
-                        <div class="total-label">Total:</div>
-                        <div class="total-resumen">
-                            <div class="total-valor">{{ formatMoneda(presupuesto.total) }}</div>
-                            <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
-                                Ref. {{ formatMoneda(obtenerReferenciaBs(presupuesto.total), 'VES') }}
-                            </small>
-                        </div>
-                    </div>
-
-                    <div class="presupuesto-actions">
-                        <button class="btn-action btn-whatsapp" type="button" title="Compartir por WhatsApp"
-                            (click)="$event.stopPropagation(); compartirPresupuestoPorWhatsApp(presupuesto)">
-                            <i class="bi bi-whatsapp"></i>
-                        </button>
-                        <button class="btn-action btn-warning" type="button" title="Renovar"
-                            (click)="$event.stopPropagation(); renovarPresupuesto(presupuesto)">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                        <button class="btn-action btn-danger" type="button" title="Eliminar"
-                            (click)="$event.stopPropagation(); confirmarEliminarPresupuesto(presupuesto)">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Estado vacío para presupuestos vencidos -->
-                <div class="empty-state" *ngIf="presupuestosFiltradosVencidos.length === 0">
-                    <div class="empty-state-container">
-                        <div class="empty-state-icon">
-                            <i *ngIf="hayFiltrosActivos()" class="bi bi-search-x"></i>
-                            <i *ngIf="!hayFiltrosActivos()" class="bi bi-file-earmark-x"></i>
-                        </div>
-                        
-                        <div class="empty-state-content">
-                            <h4 class="empty-state-title">
-                                {{ getTituloEstadoVacio() }}
-                            </h4>
-                            
-                            <p class="empty-state-message">
-                                {{ getMensajeEstadoVacio() }}
-                            </p>
-                            
-                            <div *ngIf="hayFiltrosActivos()" class="empty-state-actions">
-                                <button class="btn btn-primary btn-sm" (click)="limpiarFiltros()">
-                                    <i class="bi bi-funnel"></i>
-                                    Limpiar filtros
-                                </button>
-                            </div>
-                            
-                            <div *ngIf="!hayFiltrosActivos()" class="empty-state-info">
-                                <i class="bi bi-check-circle"></i>
-                                ¡Excelente! No tienes presupuestos vencidos.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="presupuestos-footer">
-        <div class="footer-info">
-            <span class="text-muted">
-                <i class="bi bi-info-circle"></i>
-                Los presupuestos se auto-archivan {{ diasParaAutoArchivo }} días después de vencidos
-            </span>
-        </div>
-
-        <!-- Botón de Exportar con Menú Desplegable -->
-        <div class="export-button-container" 
-            (mouseenter)="abrirMenuExportar()" 
-            (mouseleave)="cerrarMenuExportar()">
-        
-        <button class="btn btn-export-excel" 
-                [class.active]="mostrarMenuExportar">
-            <i class="bi bi-file-earmark-excel"></i>
-            Exportar a Excel
-            <i class="bi bi-chevron-down ms-1"></i>
-        </button>
-
-        <!-- Menú desplegable - Abre hacia arriba -->
-        <div class="export-dropdown" *ngIf="mostrarMenuExportar"
-            (mouseenter)="mantenerMenuAbierto()"
-            (mouseleave)="cerrarMenuExportar()">
-            <div class="dropdown-header">
-            <i class="bi bi-download"></i>
-            Opciones de Exportación
-            </div>
-            
-            <div class="dropdown-divider"></div>
-            
-            <button class="dropdown-item" 
-                    (click)="seleccionarOpcionExportar('vigentes')"
-                    [class.active]="tabActiva === 'vigentes'">
-            <i class="bi bi-file-earmark-check"></i>
-            <div class="item-content">
-                <span class="item-title">Exportar Vigentes</span>
-                <small class="item-subtitle">{{ presupuestosVigentes.length }} presupuestos</small>
-            </div>
-            <span class="badge bg-success" *ngIf="tabActiva === 'vigentes'">Activo</span>
-            </button>
-            
-            <button class="dropdown-item" 
-                    (click)="seleccionarOpcionExportar('vencidos')"
-                    [class.active]="tabActiva === 'vencidos'">
-            <i class="bi bi-file-earmark-x"></i>
-            <div class="item-content">
-                <span class="item-title">Exportar Vencidos</span>
-                <small class="item-subtitle">{{ presupuestosVencidos.length }} presupuestos</small>
-            </div>
-            <span class="badge bg-warning" *ngIf="tabActiva === 'vencidos'">Activo</span>
-            </button>
-            
-            <button class="dropdown-item" 
-                    (click)="seleccionarOpcionExportar('todos')">
-            <i class="bi bi-files"></i>
-            <div class="item-content">
-                <span class="item-title">Exportar Todos</span>
-                <small class="item-subtitle">{{ presupuestosVigentes.length + presupuestosVencidos.length }} presupuestos</small>
-            </div>
-            </button>
-        </div>
-        </div>
-    </div>
+    <app-presupuesto-footer
+        [diasParaAutoArchivo]="diasParaAutoArchivo"
+        [tabActiva]="tabActiva"
+        [totalVigentes]="presupuestosVigentes.length"
+        [totalVencidos]="presupuestosVencidos.length"
+        (export)="exportarExcel($event)"></app-presupuesto-footer>
 </div>
 
 <!-- Modal para Nuevo Presupuesto -->

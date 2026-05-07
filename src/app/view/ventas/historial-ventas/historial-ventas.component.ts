@@ -17,6 +17,7 @@ import { ExcelExportService } from '../../../core/services/excel-export/excel-ex
 import { EstadisticasVentas, ResumenFiltros, FiltrosVentas } from '../venta-interfaz';
 import { Chart, registerables } from 'chart.js';
 import { Sede, SedeCompleta } from '../../../view/login/login-interface';
+import { HistorialVentasFacadeService } from './services/historial-ventas-facade.service';
 import {
   buildVentaPaymentCatalog,
   VentaBankOption,
@@ -221,7 +222,8 @@ export class HistorialVentasComponent implements OnInit {
     private userStateService: UserStateService,
     private cdRef: ChangeDetectorRef,
     private excelExportService: ExcelExportService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private historialVentasFacade: HistorialVentasFacadeService
   ) {
     Chart.register(...registerables);
     this.inicializarFormularioEdicion();
@@ -3184,15 +3186,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   hayFiltrosActivos(): boolean {
-    return !!(
-      this.filtros.busquedaGeneral ||
-      this.filtros.asesor ||
-      this.filtros.especialista ||
-      this.filtros.estado ||
-      this.filtros.formaPago ||
-      this.filtros.fechaDesde ||
-      this.filtros.fechaHasta
-    );
+    return this.historialVentasFacade.hayFiltrosActivos(this.filtros);
   }
 
   cargarVentasPagina(pagina: number, esBusquedaConFiltros: boolean = false, esBusquedaDinamica: boolean = false): void {
@@ -3204,36 +3198,21 @@ export class HistorialVentasComponent implements OnInit {
       this.loader.showWithMessage('📋 Cargando ventas...');
     }
 
-    // Preparar filtros para el backend
-    const filtrosBackend = { ...this.filtros };
-
-    this.historialVentaService.obtenerVentasPaginadas(
+    this.historialVentasFacade.cargarVentasPagina(
       pagina,
       this.paginacion.itemsPorPagina,
-      filtrosBackend
+      this.filtros,
+      (ventaApi: any) => this.adaptarVentaDelApi(ventaApi)
     ).subscribe({
-      next: (response: any) => {
+      next: (response) => {
         this.ventasCargando = false;
         this.buscando = false;
 
-        // ✅ Verificar que response y response.ventas existan
-        if (response && response.message === 'ok' && response.ventas && Array.isArray(response.ventas)) {
-          const ventasPagina = response.ventas.map((ventaApi: any) =>
-            this.adaptarVentaDelApi(ventaApi)
-          );
-
-          this.paginacion.paginaActual = pagina;
-          this.paginacion.totalItems = response.pagination?.total || 0;
-          this.paginacion.totalPaginas = response.pagination?.pages || 1;
-          this.ventasFiltradas = ventasPagina;
-          this.generarRangoPaginas();
-
-        } else {
-          console.error('Respuesta inesperada del API de ventas:', response);
-          this.ventasFiltradas = [];
-          this.paginacion.totalItems = 0;
-          this.paginacion.totalPaginas = 1;
-        }
+        this.paginacion.paginaActual = pagina;
+        this.paginacion.totalItems = response.totalItems;
+        this.paginacion.totalPaginas = response.totalPaginas;
+        this.ventasFiltradas = response.ventas;
+        this.generarRangoPaginas();
 
         if (!esBusquedaDinamica) {
           this.loader.hide();
@@ -3264,27 +3243,11 @@ export class HistorialVentasComponent implements OnInit {
       this.loader.showWithMessage('📊 Cargando estadísticas...');
     }
 
-    this.historialVentaService.obtenerEstadisticasVentas(this.filtros).subscribe({
-      next: (response: any) => {
+    this.historialVentasFacade.cargarEstadisticas(this.filtros).subscribe({
+      next: (estadisticas) => {
         this.estadisticasCargando = false;
 
-        if (response.message === 'ok') {
-          // Usar los datos directamente del API
-          this.estadisticas = {
-            totalVentas: response.ventas || 0,
-            ventasCompletadas: response.completadas || 0,
-            ventasPendientes: response.pendientes || 0,
-            ventasCanceladas: response.canceladas || 0,
-            montoCompletadas: response.montoCompletadas || 0,
-            montoPendientes: response.montoPendientes || 0,
-            montoCanceladas: response.montoCanceladas || 0,
-            montoTotalGeneral: response.montoTotalGeneral || 0
-          };
-
-        } else {
-          console.warn('Formato de respuesta inesperado:', response);
-          this.estadisticas = this.crearEstadisticasVacias();
-        }
+        this.estadisticas = estadisticas;
 
         this.cdRef.detectChanges();
 
@@ -3313,16 +3276,7 @@ export class HistorialVentasComponent implements OnInit {
 
 
   limpiarFiltros(): void {
-    this.filtros = {
-      busquedaGeneral: '',
-      estado: '',
-      formaPago: '',
-      asesor: '',
-      especialista: '',
-      fechaDesde: null,
-      fechaHasta: null,
-      tipoVenta: ''
-    };
+    this.filtros = this.historialVentasFacade.crearFiltrosVacios();
     this.paginacion.paginaActual = 1;
     this.fechaUnica = '';
 
@@ -6768,16 +6722,7 @@ export class HistorialVentasComponent implements OnInit {
 
   // Método para crear estadísticas vacías
   private crearEstadisticasVacias(): any {
-    return {
-      totalVentas: 0,
-      ventasCompletadas: 0,
-      ventasPendientes: 0,
-      ventasCanceladas: 0,
-      montoCompletadas: 0,
-      montoPendientes: 0,
-      montoCanceladas: 0,
-      montoTotalGeneral: 0
-    };
+    return this.historialVentasFacade.crearEstadisticasVacias();
   }
 
   // Método para calcular estadísticas con ventas

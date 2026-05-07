@@ -12,7 +12,7 @@ import {
   TIPOS_LENTES_CONTACTO,
   MATERIALES,
   TRATAMIENTOS_ADITIVOS
-} from 'src/app/shared/constants/historias-medicas';
+} from '../../shared/constants/historias-medicas';
 
 @Component({
   selector: 'app-gestion-ordenes-trabajo',

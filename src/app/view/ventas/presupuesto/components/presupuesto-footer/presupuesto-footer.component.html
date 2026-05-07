@@ -1,0 +1,52 @@
+<div class="presupuestos-footer">
+  <div class="footer-info">
+    <span class="text-muted">
+      <i class="bi bi-info-circle"></i>
+      Los presupuestos se auto-archivan {{ diasParaAutoArchivo }} días después de vencidos
+    </span>
+  </div>
+
+  <div class="export-button-container" (mouseenter)="abrirMenuExportar()" (mouseleave)="cerrarMenuExportar()">
+    <button class="btn btn-export-excel" [class.active]="mostrarMenuExportar">
+      <i class="bi bi-file-earmark-excel"></i>
+      Exportar a Excel
+      <i class="bi bi-chevron-down ms-1"></i>
+    </button>
+
+    <div class="export-dropdown" *ngIf="mostrarMenuExportar" (mouseenter)="mantenerMenuAbierto()"
+      (mouseleave)="cerrarMenuExportar()">
+      <div class="dropdown-header">
+        <i class="bi bi-download"></i>
+        Opciones de Exportación
+      </div>
+
+      <div class="dropdown-divider"></div>
+
+      <button class="dropdown-item" (click)="seleccionarOpcionExportar('vigentes')" [class.active]="tabActiva === 'vigentes'">
+        <i class="bi bi-file-earmark-check"></i>
+        <div class="item-content">
+          <span class="item-title">Exportar Vigentes</span>
+          <small class="item-subtitle">{{ totalVigentes }} presupuestos</small>
+        </div>
+        <span class="badge bg-success" *ngIf="tabActiva === 'vigentes'">Activo</span>
+      </button>
+
+      <button class="dropdown-item" (click)="seleccionarOpcionExportar('vencidos')" [class.active]="tabActiva === 'vencidos'">
+        <i class="bi bi-file-earmark-x"></i>
+        <div class="item-content">
+          <span class="item-title">Exportar Vencidos</span>
+          <small class="item-subtitle">{{ totalVencidos }} presupuestos</small>
+        </div>
+        <span class="badge bg-warning" *ngIf="tabActiva === 'vencidos'">Activo</span>
+      </button>
+
+      <button class="dropdown-item" (click)="seleccionarOpcionExportar('todos')">
+        <i class="bi bi-files"></i>
+        <div class="item-content">
+          <span class="item-title">Exportar Todos</span>
+          <small class="item-subtitle">{{ totalVigentes + totalVencidos }} presupuestos</small>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>

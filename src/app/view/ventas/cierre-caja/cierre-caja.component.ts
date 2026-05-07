@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef } from '@
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, forkJoin, of, firstValueFrom } from 'rxjs';
 import { takeUntil, debounceTime, catchError, map } from 'rxjs/operators';
 import jsPDF from 'jspdf';
@@ -347,7 +348,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     private generarVentaService: GenerarVentaService,
     private excelExportService: ExcelExportService,
     private swalService: SwalService,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.inicializarForms();
     this.checkMobile();
@@ -373,6 +376,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.obtenerConfiguracionSistema();
     this.obtenerTasaCambio();
     this.cargarCuentasReceptorasConfiguradas();
+    this.suscribirRutaFechaSeleccionada();
     this.obtenerUsuarioYSede();
     this.suscribirVentasGeneradas();
     this.configurarSuscripciones();
@@ -388,6 +392,41 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.systemConfigService.obtenerConfigDesdeBackend();
     this.monedaSistema = this.systemConfigService.getMonedaPrincipal() || 'USD';
     this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal() || '$';
+  }
+
+  private suscribirRutaFechaSeleccionada(): void {
+    this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      const fechaRuta = this.route.snapshot.paramMap.get('fecha');
+
+      if (!fechaRuta) {
+        return;
+      }
+
+      const fechaNormalizada = this.normalizarFechaOperativaLocal(fechaRuta);
+      if (!fechaNormalizada || this.esMismaFechaCalendario(fechaNormalizada, this.fechaSeleccionada)) {
+        return;
+      }
+
+      this.actualizarFechaSeleccionada(fechaNormalizada, false);
+    });
+  }
+
+  private actualizarFechaSeleccionada(fecha: Date, sincronizarRuta: boolean = true): void {
+    const fechaNormalizada = this.normalizarFechaOperativaLocal(fecha);
+    if (!fechaNormalizada) {
+      return;
+    }
+
+    this.fechaSeleccionada = fechaNormalizada;
+    this.cierreActual = null;
+
+    if (sincronizarRuta) {
+      void this.router.navigate(['/ventas/cierres', this.formatearFechaLocal(fechaNormalizada)]);
+      this.cargarDatosFecha();
+      return;
+    }
+
+    this.cargarDatosFecha();
   }
 
   private cargarCuentasReceptorasConfiguradas(): void {
@@ -2942,8 +2981,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   iniciarCaja(): void {
-    if (this.tieneBloqueoPorCierrePendienteAnterior()) {
-      this.mostrarAvisoCierrePendienteAnterior();
+    if (!this.puedeIniciarCaja()) {
+      this.swalService.showWarning('Caja no disponible', this.mensajeNoDisponibleParaIniciarCaja);
       return;
     }
 
@@ -3550,25 +3589,49 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   cambiarFecha(dias: number): void {
     const nuevaFecha = new Date(this.fechaSeleccionada);
     nuevaFecha.setDate(nuevaFecha.getDate() + dias);
-    this.fechaSeleccionada = nuevaFecha;
 
-    // Al cambiar de fecha, resetear el cierreActual ANTES de cargar datos
-    // para que no se muestre el cierre anterior mientras carga
-    this.cierreActual = null;
-    this.cargarDatosFecha();
+    if (this.esFechaFutura(nuevaFecha)) {
+      return;
+    }
+
+    this.actualizarFechaSeleccionada(nuevaFecha);
   }
 
   abrirSelectorFecha(): void {
     const input = document.createElement('input');
     input.type = 'date';
     input.value = this.datePipe.transform(this.fechaSeleccionada, 'yyyy-MM-dd') || '';
+    input.max = this.datePipe.transform(this.getFechaActualOperativa(), 'yyyy-MM-dd') || '';
     input.onchange = (event: any) => {
       if (event.target.value) {
-        this.fechaSeleccionada = new Date(event.target.value);
-        this.cargarDatosFecha();
+        const fechaSeleccionada = new Date(event.target.value);
+        if (this.esFechaFutura(fechaSeleccionada)) {
+          return;
+        }
+
+        this.actualizarFechaSeleccionada(fechaSeleccionada);
       }
     };
     input.click();
+  }
+
+  puedeAvanzarFecha(): boolean {
+    return !this.esMismaFechaCalendario(this.fechaSeleccionada, this.getFechaActualOperativa());
+  }
+
+  private getFechaActualOperativa(): Date {
+    return this.normalizarFechaOperativaLocal(new Date()) || new Date();
+  }
+
+  private esFechaFutura(fecha: Date): boolean {
+    const fechaNormalizada = this.normalizarFechaOperativaLocal(fecha);
+    const fechaActual = this.getFechaActualOperativa();
+
+    if (!fechaNormalizada) {
+      return false;
+    }
+
+    return fechaNormalizada.getTime() > fechaActual.getTime();
   }
 
   // === GETTERS ÚTILES ===
@@ -4065,8 +4128,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.tieneBloqueoPorCierrePendienteAnterior()) {
-      this.mostrarAvisoCierrePendienteAnterior();
+    if (!this.puedeIniciarCaja()) {
+      this.swalService.showWarning('Caja no disponible', this.mensajeNoDisponibleParaIniciarCaja);
       return;
     }
 
@@ -4085,6 +4148,22 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   tieneBloqueoPorCierrePendienteAnterior(): boolean {
     return !!this.bloqueoOperativoActual?.cierrePendienteAnterior;
+  }
+
+  puedeIniciarCaja(): boolean {
+    return this.esDiaActual && !this.tieneBloqueoPorCierrePendienteAnterior();
+  }
+
+  get mensajeNoDisponibleParaIniciarCaja(): string {
+    if (this.tieneBloqueoPorCierrePendienteAnterior()) {
+      return this.mensajeBloqueoCierrePendienteAnterior;
+    }
+
+    if (!this.esDiaActual) {
+      return 'Solo puedes iniciar la caja del dia actual. Para fechas anteriores debes consultar el historial o regularizar el cierre correspondiente.';
+    }
+
+    return 'La caja no esta disponible para iniciarse en este momento.';
   }
 
   get mensajeBloqueoCierrePendienteAnterior(): string {

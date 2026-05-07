@@ -17,7 +17,17 @@ import { HistoriasMedicasComponent } from './view/historias-medicas/historias-me
 import { ProductosListComponent } from './view/productos/productos-list/productos-list.component';
 import { ProductosEtiquetasComponent } from './view/productos/productos-etiquetas/productos-etiquetas.component';
 import { VentasDashboardComponent } from './view/ventas/ventas-dashboard.component';
+import { VentasShellComponent } from './view/ventas/ventas-shell.component';
 import { RendimientoComercialComponent } from './view/ventas/rendimiento-comercial/rendimiento-comercial.component';
+import { GenerarVentaComponent } from './view/ventas/generar-venta/generar-venta.component';
+import { PresupuestoComponent } from './view/ventas/presupuesto/presupuesto.component';
+import { HistorialVentasComponent } from './view/ventas/historial-ventas/historial-ventas.component';
+import { CierreCajaComponent } from './view/ventas/cierre-caja/cierre-caja.component';
+import { GenerarVentaPageComponent } from './view/ventas/generar-venta/page/generar-venta-page.component';
+import { PresupuestoPageComponent } from './view/ventas/presupuesto/page/presupuesto-page.component';
+import { HistorialVentasPageComponent } from './view/ventas/historial-ventas/page/historial-ventas-page.component';
+import { CierreCajaPageComponent } from './view/ventas/cierre-caja/page/cierre-caja-page.component';
+import { RendimientoComercialPageComponent } from './view/ventas/rendimiento-comercial/page/rendimiento-comercial-page.component';
 import { SystemConfigComponent } from './view/system-config/system-config.component';
 import { GestionOrdenesTrabajoComponent } from './view/gestion-ordenes-trabajo/gestion-ordenes-trabajo.component';
 import { CierreCajaPdfPublicComponent } from './view/ventas/cierre-caja/cierre-caja-pdf-public.component';
@@ -134,14 +144,66 @@ export const appRoutes: Routes = [
         title: getFullTitle('Etiquetas de productos')
       },
       {
-        path: 'ventas/rendimiento-comercial',
-        component: RendimientoComercialComponent,
-        title: getFullTitle('Rendimiento Comercial')
+        path: 'ventas',
+        component: VentasShellComponent,
+        title: getFullTitle('Ventas'),
+        children: [
+          {
+            path: '',
+            redirectTo: 'generar',
+            pathMatch: 'full'
+          },
+          {
+            path: 'resumen',
+            redirectTo: 'generar',
+            pathMatch: 'full'
+          },
+          {
+            path: 'generar',
+            component: GenerarVentaPageComponent,
+            title: getFullTitle('Generar Venta')
+          },
+          {
+            path: 'presupuestos',
+            component: PresupuestoPageComponent,
+            title: getFullTitle('Presupuestos')
+          },
+          {
+            path: 'presupuestos/nuevo',
+            component: PresupuestoPageComponent,
+            title: getFullTitle('Nuevo Presupuesto')
+          },
+          {
+            path: 'presupuestos/:id',
+            component: PresupuestoPageComponent,
+            title: getFullTitle('Detalle de Presupuesto')
+          },
+          {
+            path: 'historial',
+            component: HistorialVentasPageComponent,
+            title: getFullTitle('Historial de Ventas')
+          },
+          {
+            path: 'cierres',
+            component: CierreCajaPageComponent,
+            title: getFullTitle('Cierre de Caja')
+          },
+          {
+            path: 'cierres/:fecha',
+            component: CierreCajaPageComponent,
+            title: getFullTitle('Cierre de Caja')
+          },
+          {
+            path: 'rendimiento',
+            component: RendimientoComercialPageComponent,
+            title: getFullTitle('Rendimiento Comercial')
+          }
+        ]
       },
       {
-        path: 'ventas',
-        component: VentasDashboardComponent,
-        title: getFullTitle('Ventas')
+        path: 'ventas/rendimiento-comercial',
+        redirectTo: 'ventas/rendimiento',
+        pathMatch: 'full'
       },
       {
         path: 'configuracion-sistema',

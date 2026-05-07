@@ -1,0 +1,78 @@
+<div class="cierre-header">
+  <div class="header-content">
+    <div class="header-title">
+      <i class="bi bi-cash-stack"></i>
+      <div class="header-text">
+        <h1>Cierre de Caja Diario</h1>
+        <div class="header-subtitle">
+          <span class="estado-badge estado-sin-iniciar" *ngIf="!cierreActual && !cargandoDatos && esDiaActual && !bloqueoCierrePendienteAnterior">
+            <i class="bi bi-exclamation-circle"></i>
+            Caja sin iniciar
+          </span>
+          <span class="estado-badge estado-sin-cierre" *ngIf="!cierreActual && !cargandoDatos && esDiaActual && bloqueoCierrePendienteAnterior">
+            <i class="bi bi-exclamation-triangle"></i>
+            Cierre pendiente anterior
+          </span>
+          <span class="estado-badge" [ngClass]="estadoClass" *ngIf="cierreActual">
+            <i class="bi" [ngClass]="estadoIconClass"></i>
+            {{ estadoTexto }}
+          </span>
+          <span class="estado-badge estado-sin-cierre" *ngIf="!cierreActual && !cargandoDatos && !esDiaActual">
+            <i class="bi bi-calendar-x"></i>
+            Sin cierre registrado
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="date-section">
+        <div class="fecha-selector">
+          <button class="btn-fecha" (click)="previousDay.emit()" title="Día anterior">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+          <div class="fecha-display" (click)="pickDate.emit()">
+            <i class="bi bi-calendar3"></i>
+            <span>{{ fechaSeleccionada | date:'EEEE, d MMMM yyyy' }}</span>
+          </div>
+          <button class="btn-fecha" (click)="nextDay.emit()" title="Día siguiente"
+            [disabled]="!puedeAvanzarFecha">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="actions-group">
+        <div class="acciones-principales">
+          <button class="btn-moderno btn-primary" (click)="openStart.emit()" *ngIf="!cierreActual && !cargandoDatos && esDiaActual"
+            [class.btn-disabled]="!puedeIniciarCaja"
+            [disabled]="!puedeIniciarCaja"
+            [title]="!puedeIniciarCaja ? mensajeNoDisponibleParaIniciarCaja : 'Iniciar caja del día'">
+            <i class="bi bi-play-circle"></i>
+            <span>Iniciar Caja</span>
+          </button>
+
+          <button class="btn-moderno btn-success" (click)="openClose.emit()" *ngIf="cierreActual?.estado === 'abierto' && esDiaActual">
+            <i class="bi bi-lock"></i>
+            <span>Cerrar Caja</span>
+          </button>
+
+          <div class="info-mensaje" [class.warning]="cierrePendienteVisual" *ngIf="cierreActual && !esDiaActual">
+            <i class="bi bi-info-circle"></i>
+            <span>{{ referenciaFechaTexto }}</span>
+          </div>
+
+          <div class="info-mensaje warning" *ngIf="!cierreActual && !cargandoDatos && !esDiaActual">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>Sin cierre registrado</span>
+          </div>
+
+          <button class="btn-moderno btn-info" (click)="openHistory.emit()">
+            <i class="bi bi-clock-history"></i>
+            <span>Historial</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

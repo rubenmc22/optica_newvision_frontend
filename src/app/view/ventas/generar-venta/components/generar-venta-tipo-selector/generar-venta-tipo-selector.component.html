@@ -1,0 +1,69 @@
+<div class="tipo-venta-selector">
+  <div class="selector-header">
+    <i class="bi bi-shop"></i>
+    <span>¿Qué tipo de venta deseas realizar?</span>
+    <div class="header-context" [ngSwitch]="tipoVenta">
+      <div class="context-chip" *ngSwitchCase="'solo_consulta'">
+        <i class="bi bi-person-badge"></i>
+        <span><strong>Solo consulta:</strong> Selecciona paciente y historia con oftalmólogo.</span>
+        <span class="badge-moderno" *ngIf="hasPaciente">Paciente seleccionado ✓</span>
+        <span class="badge-warning">Solo contado o Cashea</span>
+      </div>
+      <div class="context-chip" *ngSwitchCase="'consulta_productos'">
+        <i class="bi bi-journal-medical"></i>
+        <span><strong>Consulta + Productos:</strong> Selecciona paciente y agrega productos.</span>
+        <span class="badge-moderno" *ngIf="hasPaciente">Paciente seleccionado ✓</span>
+      </div>
+      <div class="context-chip" *ngSwitchCase="'solo_productos'">
+        <i class="bi bi-cart"></i>
+        <span><strong>Solo productos:</strong> Venta sin historia médica.</span>
+      </div>
+      <div class="context-chip" *ngSwitchDefault>
+        <i class="bi bi-question-circle"></i>
+        <span>Selecciona un tipo de venta para continuar</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="selector-opciones tres-opciones">
+    <div class="opcion-card modern-card" [class.active]="tipoVenta === 'solo_consulta'" (click)="seleccionar('solo_consulta')">
+      <div class="card-bg-pattern"></div>
+      <div class="card-header-icon">
+        <div class="opcion-icono" style="background: linear-gradient(135deg, #4361ee, #3a0ca3);">
+          <i class="bi bi-person-badge"></i>
+        </div>
+        <div class="opcion-badge" *ngIf="tipoVenta === 'solo_consulta'"><i class="bi bi-check-circle-fill"></i></div>
+      </div>
+      <div class="opcion-contenido">
+        <h6>Solo Consulta</h6>
+        <p>Pago de consulta médica</p>
+      </div>
+    </div>
+    <div class="opcion-card modern-card highlight-card" [class.active]="tipoVenta === 'consulta_productos'" (click)="seleccionar('consulta_productos')">
+      <div class="card-bg-pattern"></div>
+      <div class="card-header-icon">
+        <div class="opcion-icono" style="background: linear-gradient(135deg, #06d6a0, #118ab2);">
+          <i class="bi bi-journal-medical"></i>
+        </div>
+        <div class="opcion-badge" *ngIf="tipoVenta === 'consulta_productos'"><i class="bi bi-check-circle-fill"></i></div>
+      </div>
+      <div class="opcion-contenido">
+        <h6>Consulta + Productos</h6>
+        <p>Consulta y venta de lentes</p>
+      </div>
+    </div>
+    <div class="opcion-card modern-card" [class.active]="tipoVenta === 'solo_productos'" (click)="seleccionar('solo_productos')">
+      <div class="card-bg-pattern"></div>
+      <div class="card-header-icon">
+        <div class="opcion-icono" style="background: linear-gradient(135deg, #ff9e00, #f37121);">
+          <i class="bi bi-cart"></i>
+        </div>
+        <div class="opcion-badge" *ngIf="tipoVenta === 'solo_productos'"><i class="bi bi-check-circle-fill"></i></div>
+      </div>
+      <div class="opcion-contenido">
+        <h6>Solo Productos</h6>
+        <p>Venta sin historia médica</p>
+      </div>
+    </div>
+  </div>
+</div>

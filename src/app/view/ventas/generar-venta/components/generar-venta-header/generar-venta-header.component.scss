@@ -1,0 +1,237 @@
+:host {
+  display: block;
+  position: relative;
+  z-index: 3;
+}
+
+.card-header-moderno {
+  background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%) !important;
+  color: #0f172a;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  border-top: 1px solid #dbeafe;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.header-content,
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-content {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.header-left {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.header-right {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #eff6ff;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.header-icon i {
+  font-size: 1.15rem;
+  color: #2563eb;
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.header-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.header-subtitle {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.live-indicator.is-inactive {
+  background: linear-gradient(135deg, rgba(245, 194, 66, 0.18), rgba(255, 225, 139, 0.26));
+  color: #8f5b00;
+  box-shadow: inset 0 0 0 1px rgba(245, 194, 66, 0.22);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.caja-cerrada-banner {
+  position: absolute;
+  top: calc(100% + 1rem);
+  left: 50%;
+  z-index: 14;
+  width: min(720px, calc(100% - 2rem));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.caja-cerrada-banner__card {
+  width: 100%;
+  background:
+    radial-gradient(circle at top right, rgba(125, 211, 252, 0.18), transparent 28%),
+    linear-gradient(135deg, rgba(15, 35, 63, 0.98) 0%, rgba(37, 85, 135, 0.96) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  padding: 1.75rem;
+  color: #eff7ff;
+  pointer-events: auto;
+}
+
+.caja-cerrada-banner__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.caja-cerrada-banner__icon {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f5c242 0%, #ffe18b 100%);
+  color: #10233b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 16px 30px rgba(245, 194, 66, 0.24);
+}
+
+.caja-cerrada-banner__title {
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+  font-size: 1.45rem;
+  color: #f8fbff;
+}
+
+.caja-cerrada-banner__description,
+.caja-cerrada-banner__message {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.caja-cerrada-banner__description {
+  color: rgba(244, 249, 255, 0.96);
+  margin-bottom: 0.65rem;
+}
+
+.caja-cerrada-banner__message {
+  color: rgba(232, 242, 252, 0.9);
+}
+
+.caja-cerrada-banner__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.caja-cerrada-banner__actions .btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 0.8rem 1.15rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f5c242 0%, #ffe18b 100%);
+  color: #10233b;
+  box-shadow: 0 14px 26px rgba(245, 194, 66, 0.24);
+}
+
+.caja-cerrada-banner__actions .btn:hover {
+  background: linear-gradient(135deg, #f7cd59 0%, #ffe7a3 100%);
+  color: #0f2238;
+}
+
+.caja-cerrada-banner__actions .btn:focus-visible {
+  outline: 2px solid rgba(255, 225, 139, 0.75);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255, 225, 139, 0.18);
+}
+
+@media (max-width: 768px) {
+  .card-header-moderno {
+    padding: 0.9rem 1rem;
+  }
+
+  .header-content,
+  .header-left {
+    min-width: 0;
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .caja-cerrada-banner {
+    top: calc(100% + 0.75rem);
+    width: calc(100% - 1rem);
+  }
+
+  .caja-cerrada-banner__card {
+    border-radius: 20px;
+    padding: 1.1rem;
+  }
+
+  .caja-cerrada-banner__header {
+    flex-direction: column;
+  }
+
+  .caja-cerrada-banner__icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 16px;
+  }
+}

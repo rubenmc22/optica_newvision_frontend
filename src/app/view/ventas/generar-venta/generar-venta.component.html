@@ -1,159 +1,20 @@
 <!-- Modal dashboard de venta -->
 <div class="card contenedor-generar-venta-moderno venta-dashboard" [class.is-caja-bloqueada]="!cajaDisponibleParaVentas">
-
-    <!-- HEADER-->
-    <div class="card-header-moderno glass-header">
-        <div class="header-content">
-            <div class="header-left">
-                <div class="header-icon animated-icon">
-                    <i class="bi bi-cart-plus"></i>
-                    <div class="icon-glow"></div>
-                </div>
-                <div class="header-text">
-                    <h4 class="header-title gradient-text">Generar Venta</h4>
-                    <div class="header-subtitle">Experiencia de venta inteligente</div>
-                </div>
-            </div>
-            <div class="header-right">
-                <div class="live-indicator" [class.is-inactive]="!cajaDisponibleParaVentas">
-                    <span class="pulse-dot"></span>
-                    <span class="indicator-text">{{ cajaDisponibleParaVentas ? 'Modo venta activo' : 'Modo venta inactivo' }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div *ngIf="!cajaDisponibleParaVentas" class="caja-cerrada-banner">
-        <div class="caja-cerrada-banner__card">
-            <div class="caja-cerrada-banner__header">
-                <div class="caja-cerrada-banner__icon">
-                    <i class="bi bi-lock-fill"></i>
-                </div>
-                <div class="caja-cerrada-banner__content">
-                    <h5 class="caja-cerrada-banner__title">Caja cerrada</h5>
-                    <p class="caja-cerrada-banner__description">Este módulo está bloqueado porque la caja del día no ha sido iniciada para la sede activa.</p>
-                    <p class="caja-cerrada-banner__message">{{ mensajeBloqueoCaja }}</p>
-                </div>
-            </div>
-
-            <div class="caja-cerrada-banner__actions">
-                <button type="button" class="btn btn-warning" (click)="revalidarCaja()">
-                    <i class="bi bi-arrow-clockwise me-2"></i>
-                    Validar nuevamente
-                </button>
-            </div>
-        </div>
-    </div>
+    <app-generar-venta-header
+        [cajaDisponibleParaVentas]="cajaDisponibleParaVentas"
+        [mensajeBloqueoCaja]="mensajeBloqueoCaja"
+        (revalidarCaja)="revalidarCaja()"></app-generar-venta-header>
 
     <div class="venta-dashboard-body" [class.is-disabled]="!cajaDisponibleParaVentas">
 
-    <div class="presupuesto-origen-banner" *ngIf="presupuestoOrigenVenta as presupuestoOrigen">
-        <div class="origen-banner-icon">
-            <i class="bi bi-journal-check"></i>
-        </div>
-        <div class="origen-banner-content">
-            <div class="origen-banner-title">Venta precargada desde presupuesto vigente</div>
-            <div class="origen-banner-meta">
-                <span class="origen-chip">Código: {{ presupuestoOrigen.codigo }}</span>
-                <span class="origen-chip" *ngIf="presupuestoOrigen.fechaVencimiento">Vence: {{ presupuestoOrigen.fechaVencimiento | date:'dd/MM/yyyy' }}</span>
-                <span class="origen-chip" *ngIf="presupuestoOrigen.total !== undefined">Total referencial: {{ presupuestoOrigen.total | number:'1.2-2' }}</span>
-            </div>
-        </div>
-        <div class="origen-banner-status">
-            <i class="bi bi-pencil-square"></i>
-            Editable antes de guardar
-        </div>
-    </div>
+    <app-generar-venta-origen-banner
+        [presupuestoOrigen]="presupuestoOrigenVenta">
+    </app-generar-venta-origen-banner>
 
-    <!-- SELECTOR DE TIPO DE VENTA (3 OPCIONES) CON CONTEXTO INTEGRADO -->
-    <div class="tipo-venta-selector">
-        <div class="selector-header">
-            <i class="bi bi-shop"></i>
-            <span>¿Qué tipo de venta deseas realizar?</span>
-
-            <!-- CONTEXTO DE VENTA INTEGRADO EN EL HEADER DEL SELECTOR -->
-            <div class="header-context" [ngSwitch]="tipoVenta">
-                <div class="context-chip" *ngSwitchCase="'solo_consulta'">
-                    <i class="bi bi-person-badge"></i>
-                    <span><strong>Solo consulta:</strong> Selecciona paciente y historia con oftalmólogo.</span>
-                    <span class="badge-moderno" *ngIf="pacienteSeleccionado">Paciente seleccionado ✓</span>
-                    <span class="badge-warning">Solo contado o Cashea</span>
-                </div>
-
-                <div class="context-chip" *ngSwitchCase="'consulta_productos'">
-                    <i class="bi bi-journal-medical"></i>
-                    <span><strong>Consulta + Productos:</strong> Selecciona paciente y agrega productos.</span>
-                    <span class="badge-moderno" *ngIf="pacienteSeleccionado">Paciente seleccionado ✓</span>
-                </div>
-
-                <div class="context-chip" *ngSwitchCase="'solo_productos'">
-                    <i class="bi bi-cart"></i>
-                    <span><strong>Solo productos:</strong> Venta sin historia médica.</span>
-                </div>
-
-                <div class="context-chip" *ngSwitchDefault>
-                    <i class="bi bi-question-circle"></i>
-                    <span>Selecciona un tipo de venta para continuar</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="selector-opciones tres-opciones">
-            <!-- Opción 1: Solo Consulta -->
-            <div class="opcion-card modern-card" [class.active]="tipoVenta === 'solo_consulta'"
-                (click)="seleccionarTipoVenta('solo_consulta')">
-                <div class="card-bg-pattern"></div>
-                <div class="card-header-icon">
-                    <div class="opcion-icono" style="background: linear-gradient(135deg, #4361ee, #3a0ca3);">
-                        <i class="bi bi-person-badge"></i>
-                    </div>
-                    <div class="opcion-badge" *ngIf="tipoVenta === 'solo_consulta'">
-                        <i class="bi bi-check-circle-fill"></i>
-                    </div>
-                </div>
-                <div class="opcion-contenido">
-                    <h6>Solo Consulta</h6>
-                    <p>Pago de consulta médica</p>
-                </div>
-            </div>
-
-            <!-- Opción 2: Consulta + Productos -->
-            <div class="opcion-card modern-card highlight-card" [class.active]="tipoVenta === 'consulta_productos'"
-                (click)="seleccionarTipoVenta('consulta_productos')">
-                <div class="card-bg-pattern"></div>
-                <div class="card-header-icon">
-                    <div class="opcion-icono" style="background: linear-gradient(135deg, #06d6a0, #118ab2);">
-                        <i class="bi bi-journal-medical"></i>
-                    </div>
-                    <div class="opcion-badge" *ngIf="tipoVenta === 'consulta_productos'">
-                        <i class="bi bi-check-circle-fill"></i>
-                    </div>
-                </div>
-                <div class="opcion-contenido">
-                    <h6>Consulta + Productos</h6>
-                    <p>Consulta y venta de lentes</p>
-                </div>
-            </div>
-
-            <!-- Opción 3: Solo Productos -->
-            <div class="opcion-card modern-card" [class.active]="tipoVenta === 'solo_productos'"
-                (click)="seleccionarTipoVenta('solo_productos')">
-                <div class="card-bg-pattern"></div>
-                <div class="card-header-icon">
-                    <div class="opcion-icono" style="background: linear-gradient(135deg, #ff9e00, #f37121);">
-                        <i class="bi bi-cart"></i>
-                    </div>
-                    <div class="opcion-badge" *ngIf="tipoVenta === 'solo_productos'">
-                        <i class="bi bi-check-circle-fill"></i>
-                    </div>
-                </div>
-                <div class="opcion-contenido">
-                    <h6>Solo Productos</h6>
-                    <p>Venta sin historia médica</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <app-generar-venta-tipo-selector
+        [tipoVenta]="tipoVenta"
+        [hasPaciente]="!!pacienteSeleccionado"
+        (tipoVentaChange)="seleccionarTipoVenta($event)"></app-generar-venta-tipo-selector>
 
     <!-- PANELES PRINCIPALES -->
     <div class="paneles-container modern-grid" [class.single-column]="tipoVenta === 'solo_productos'">

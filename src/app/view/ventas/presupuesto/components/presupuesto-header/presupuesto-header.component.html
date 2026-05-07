@@ -1,0 +1,67 @@
+<div class="presupuestos-header">
+  <div class="header-topbar">
+    <div class="header-intro">
+      <div class="header-intro__icon">
+        <i class="bi bi-file-earmark-text"></i>
+      </div>
+      <div class="header-text">
+        <h2>Presupuestos</h2>
+        <p>Consulta, filtra y crea propuestas sin salir del flujo operativo.</p>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-create" type="button" (click)="nuevoPresupuesto.emit()">
+      <i class="bi bi-plus-circle"></i>
+      Nuevo presupuesto
+    </button>
+  </div>
+
+  <div class="header-toolbar">
+    <div class="search-section">
+      <label class="toolbar-label" for="presupuestos-search">Búsqueda rápida</label>
+      <div class="search-container">
+        <i class="bi bi-search search-icon"></i>
+        <input
+          id="presupuestos-search"
+          type="text"
+          class="search-input"
+          placeholder="Buscar por código, cédula o nombre..."
+          [ngModel]="filtroBusqueda"
+          (ngModelChange)="filtroBusquedaChange.emit($event)"
+          (keyup)="filtrar.emit()"
+          (keyup.enter)="filtrar.emit()">
+        <button *ngIf="filtroBusqueda" class="btn-clear-search" type="button" (click)="limpiarBusqueda.emit()" title="Limpiar búsqueda">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="filter-group">
+        <label class="toolbar-label" for="presupuestos-estado">Estado</label>
+        <div class="filter-select-wrap">
+          <select id="presupuestos-estado" class="filtro-select" [ngModel]="filtroEstado" (ngModelChange)="filtroEstadoChange.emit($event); filtrar.emit()">
+            <option value="">Todos los estados</option>
+            <option value="vigente">Vigentes</option>
+            <option value="proximo">Próximos a vencer</option>
+            <option value="hoy">Vence hoy</option>
+            <option value="vencido">Vencidos</option>
+          </select>
+          <button *ngIf="filtroEstado" class="btn-clear-filter" type="button" (click)="limpiarFiltroEstado.emit()" title="Limpiar filtro de estado">
+            <i class="bi bi-x-circle"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-feedback" *ngIf="hayFiltrosActivos && textoResultadosFiltrados">
+    <span class="results-badge">
+      <i class="bi bi-funnel-fill"></i>
+      {{ textoResultadosFiltrados }}
+      <button class="btn-clear-all" type="button" (click)="limpiarFiltros.emit()" title="Limpiar todos los filtros">
+        <i class="bi bi-x-circle"></i>
+      </button>
+    </span>
+  </div>
+</div>

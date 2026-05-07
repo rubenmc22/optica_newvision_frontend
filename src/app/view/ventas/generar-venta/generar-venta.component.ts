@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, OnDestroy, ViewChild, HostListener } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, OnDestroy, ViewChild, HostListener, inject } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Producto } from '../../productos/producto.model';
@@ -38,10 +38,10 @@ import {
     VentaReceiverAccountOption
 } from '../shared/payment-catalog.util';
 import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/presupuesto-venta-handoff.util';
-import {
-    HISTORIA_VENTA_HANDOFF_STORAGE_KEY,
-    HistoriaVentaHandoff
-} from '../shared/historia-venta-handoff.util';
+import { HISTORIA_VENTA_HANDOFF_STORAGE_KEY, HistoriaVentaHandoff } from '../shared/historia-venta-handoff.util';
+import { VentasFlowService } from '../shared/ventas-flow.service';
+import { GenerarVentaFacadeService, TipoVentaGenerada } from './services/generar-venta-facade.service';
+import { GenerarVentaUiService } from './services/generar-venta-ui.service';
 import {
     historiaPuedeCobrarConsulta,
     historiaEsFormulaExterna,
@@ -54,7 +54,7 @@ import {
     TIPOS_CRISTALES,
     TIPOS_LENTES_CONTACTO,
     MATERIALES,
-} from 'src/app/shared/constants/historias-medicas';
+} from '../../../shared/constants/historias-medicas';
 
 // Tipos de historia
 type TipoHistoria =
@@ -94,8 +94,8 @@ type ProductoBusquedaOption = Producto & {
 
 export class GenerarVentaComponent implements OnInit, OnDestroy {
     private readonly FILTRO_TODAS_SEDES = 'todas';
-    private readonly presupuestoVentaStorageKey = PRESUPUESTO_VENTA_STORAGE_KEY;
-    private readonly historiaVentaHandoffStorageKey = HISTORIA_VENTA_HANDOFF_STORAGE_KEY;
+    private readonly generarVentaFacade = inject(GenerarVentaFacadeService);
+    private readonly generarVentaUi = inject(GenerarVentaUiService);
     private paymentCatalogSubscription?: Subscription;
     private historiaVentaHandoffPendiente: HistoriaVentaHandoff | null = null;
     private historiaPresupuestoPendienteId: string | null = null;
@@ -121,7 +121,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         private clienteService: ClienteService,
         private sanitizer: DomSanitizer,
         private route: ActivatedRoute,
-        private router: Router
+        private router: Router,
+        private ventasFlowService: VentasFlowService
     ) {
     }
 
@@ -505,27 +506,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private leerHistoriaVentaHandoff(): HistoriaVentaHandoff | null {
-        const handoffRaw = sessionStorage.getItem(this.historiaVentaHandoffStorageKey);
-        if (!handoffRaw) {
-            return null;
-        }
-
-        try {
-            const handoff = JSON.parse(handoffRaw) as HistoriaVentaHandoff;
-            if (
-                !handoff?.pacienteKey
-                || !handoff?.historiaId
-                || (handoff.tipoVenta !== 'consulta_productos' && handoff.tipoVenta !== 'solo_consulta')
-            ) {
-                sessionStorage.removeItem(this.historiaVentaHandoffStorageKey);
-                return null;
-            }
-
-            return handoff;
-        } catch {
-            sessionStorage.removeItem(this.historiaVentaHandoffStorageKey);
-            return null;
-        }
+        return this.ventasFlowService.leerHistoriaVentaHandoff();
     }
 
     private cargarVentaDesdeHistoriaPendienteSiExiste(): void {
@@ -534,10 +515,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
-        const paciente = this.todosLosPacientes.find((item) =>
-            String(item.key || '') === String(handoff.pacienteKey)
-            || (handoff.pacienteId ? String(item.id || '') === String(handoff.pacienteId) : false)
-        );
+        const paciente = this.generarVentaFacade.resolverPacienteHistoriaHandoff(handoff, this.todosLosPacientes);
 
         if (!paciente) {
             this.limpiarHistoriaVentaHandoff();
@@ -554,7 +532,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     private limpiarHistoriaVentaHandoff(): void {
         this.historiaVentaHandoffPendiente = null;
-        sessionStorage.removeItem(this.historiaVentaHandoffStorageKey);
+        this.ventasFlowService.limpiarHistoriaVentaHandoff();
 
         this.router.navigate([], {
             relativeTo: this.route,
@@ -567,63 +545,34 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private cargarPresupuestoPendienteSiExiste(): boolean {
-        const draftRaw = sessionStorage.getItem(this.presupuestoVentaStorageKey);
-        if (!draftRaw) {
-            return false;
-        }
-
-        let draft: PresupuestoVentaDraft | null = null;
-
-        try {
-            draft = JSON.parse(draftRaw) as PresupuestoVentaDraft;
-        } catch {
-            sessionStorage.removeItem(this.presupuestoVentaStorageKey);
-            return false;
-        }
-
-        if (!draft || !Array.isArray(draft.productos) || draft.productos.length === 0) {
-            sessionStorage.removeItem(this.presupuestoVentaStorageKey);
+        const draft = this.ventasFlowService.leerPresupuestoVentaDraft();
+        if (!draft) {
             return false;
         }
 
         this.aplicarPresupuestoComoVentaEditable(draft);
-        sessionStorage.removeItem(this.presupuestoVentaStorageKey);
+        this.ventasFlowService.limpiarPresupuestoVentaDraft();
         return true;
     }
 
     private limpiarHistoriaVentaHandoffSilencioso(): void {
         this.historiaVentaHandoffPendiente = null;
-        sessionStorage.removeItem(this.historiaVentaHandoffStorageKey);
+        this.ventasFlowService.limpiarHistoriaVentaHandoff();
     }
 
     private aplicarPresupuestoComoVentaEditable(draft: PresupuestoVentaDraft): void {
-        const tipoVentaDerivada: 'solo_consulta' | 'consulta_productos' | 'solo_productos' =
-            draft.tipoVenta === 'consulta_productos' || draft.tipoVenta === 'solo_consulta'
-                ? draft.tipoVenta
-                : 'solo_productos';
+        const tipoVentaDerivada = this.generarVentaFacade.deriverTipoVentaDesdePresupuesto(draft);
 
         this.seleccionarTipoVenta(tipoVentaDerivada);
         this.presupuestoOrigenVenta = draft.origen;
 
-        this.clienteSinPaciente = {
-            tipoPersona: draft.cliente.tipoPersona === 'juridica' ? 'juridica' : 'natural',
-            nombreCompleto: draft.cliente.nombreCompleto || '',
-            cedula: draft.cliente.cedula || '',
-            telefono: draft.cliente.telefono || '',
-            email: draft.cliente.email || ''
-        };
-
-        const observacionesOrigen = [`Presupuesto origen: ${draft.origen.codigo}`];
-        if (draft.observaciones?.trim()) {
-            observacionesOrigen.push(draft.observaciones.trim());
-        }
-        this.venta.observaciones = observacionesOrigen.join(' | ');
+        this.clienteSinPaciente = this.generarVentaFacade.construirClienteSinPaciente(draft);
+        this.venta.observaciones = this.generarVentaFacade.construirObservacionesOrigen(draft);
 
         let productosCargados = 0;
         let productosOmitidos = 0;
 
-        const lineasConsulta = draft.productos.filter((linea) => this.esLineaConsultaDraft(linea));
-        const lineasProducto = draft.productos.filter((linea) => !this.esLineaConsultaDraft(linea));
+        const { lineasConsulta, lineasProducto } = this.generarVentaFacade.separarLineasPresupuesto(draft);
 
         lineasProducto.forEach((productoDraft) => {
             const productoCatalogo = this.buscarProductoParaPresupuesto(productoDraft);
@@ -657,20 +606,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
 
         if (lineasConsulta.length > 0) {
-            const montoConsultaDraft = lineasConsulta.reduce((sum, linea) => {
-                const totalLinea = Number(linea.totalLinea || 0);
-                if (totalLinea > 0) {
-                    return sum + totalLinea;
-                }
-
-                const cantidad = Math.max(1, Number(linea.cantidad || 1));
-                const precio = Number(linea.precioUnitario || 0);
-                const descuento = Math.max(0, Number(linea.descuento || 0));
-                const subtotal = precio * cantidad;
-                return sum + (subtotal * (1 - (descuento / 100)));
-            }, 0);
-
-            const montoConsultaNormalizado = this.redondear(Math.max(0, montoConsultaDraft));
+            const montoConsultaNormalizado = this.generarVentaFacade.calcularMontoConsultaDesdeLineas(lineasConsulta, (valor) => this.redondear(valor));
             this.montoConsulta = montoConsultaNormalizado;
             this.montoConsultaOriginal = montoConsultaNormalizado;
             this.pagoMedico = montoConsultaNormalizado;
@@ -741,17 +677,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private buscarPacienteParaDraftPresupuesto(draft: PresupuestoVentaDraft): Paciente | null {
-        const pacienteKey = draft.historia?.pacienteKey || draft.cliente?.pacienteKey;
-        const pacienteId = draft.historia?.pacienteId ?? draft.cliente?.pacienteId;
-        const cedula = (draft.cliente?.cedula || '').trim().toLowerCase();
-
-        return this.todosLosPacientes.find((item) => {
-            const coincideKey = !!pacienteKey && String(item.key || '') === String(pacienteKey);
-            const coincideId = pacienteId !== undefined && pacienteId !== null && String(item.id || '') === String(pacienteId);
-            const cedulaPaciente = String(item.informacionPersonal?.cedula || '').trim().toLowerCase();
-            const coincideCedula = !!cedula && cedulaPaciente === cedula;
-            return coincideKey || coincideId || coincideCedula;
-        }) || null;
+        return this.generarVentaFacade.buscarPacienteParaDraftPresupuesto(draft, this.todosLosPacientes);
     }
 
     private aplicarHistoriaPresupuestoPendienteSiExiste(): void {
@@ -4772,15 +4698,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.swalService.showWarning(
             this.bloqueoPorCierrePendienteAnterior ? 'Cierre pendiente' : 'Caja cerrada',
             `
-            <div style="text-align:left">
-                <p style="margin-bottom:12px">${this.mensajeBloqueoCaja}</p>
-                <p style="margin-bottom:0">${this.bloqueoPorCierrePendienteAnterior
+            <div class="caja-bloqueada-swal">
+                <p class="caja-bloqueada-swal__lead">${this.mensajeBloqueoCaja}</p>
+                <p class="caja-bloqueada-swal__message">${this.bloqueoPorCierrePendienteAnterior
                     ? 'Debes ingresar al módulo de cierre de caja, conciliar la caja pendiente y cerrarla antes de continuar.'
                     : 'Solicita al responsable abrir la caja desde el módulo de cierre de caja y luego vuelve a esta pantalla.'}</p>
             </div>
             `,
             true,
-            6000
+            6000,
+            {
+                customClass: {
+                    popup: 'swal-modern-popup warning-popup caja-bloqueada-popup',
+                    confirmButton: 'swal-modern-confirm warning-btn caja-bloqueada-confirm'
+                }
+            }
         );
     }
 
@@ -7554,17 +7486,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.venta.productos.length > 0;
     }
 
-    private esTipoVentaConHistoria(tipo: 'solo_consulta' | 'consulta_productos' | 'solo_productos'): boolean {
-        return tipo === 'solo_consulta' || tipo === 'consulta_productos';
+    private esTipoVentaConHistoria(tipo: TipoVentaGenerada): boolean {
+        return this.generarVentaUi.esTipoVentaConHistoria(tipo);
     }
 
     private esCambioEntreVentasConHistoria(
-        tipoAnterior: 'solo_consulta' | 'consulta_productos' | 'solo_productos',
-        tipoNuevo: 'solo_consulta' | 'consulta_productos' | 'solo_productos'
+        tipoAnterior: TipoVentaGenerada,
+        tipoNuevo: TipoVentaGenerada
     ): boolean {
-        return this.esTipoVentaConHistoria(tipoAnterior)
-            && this.esTipoVentaConHistoria(tipoNuevo)
-            && tipoAnterior !== tipoNuevo;
+        return this.generarVentaUi.esCambioEntreVentasConHistoria(tipoAnterior, tipoNuevo);
     }
 
     private sincronizarProductosOcultosSegunTipo(tipo: 'solo_consulta' | 'consulta_productos' | 'solo_productos'): void {
@@ -8157,6 +8087,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 return esp.nombre || 'No especificado';
             }
         }
+
+        return 'No especificado';
     }
 
     // Total de items visuales

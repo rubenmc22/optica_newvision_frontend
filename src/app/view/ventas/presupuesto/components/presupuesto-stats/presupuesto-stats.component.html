@@ -1,0 +1,38 @@
+<div class="stats-container">
+  <div class="stat-card" (click)="tabChange.emit('vigentes')">
+    <div class="stat-icon" style="background: rgba(25, 118, 210, 0.1); color: #1976d2;">
+      <i class="bi bi-file-earmark-text"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-count">{{ estadisticas.totalVigentes }}</div>
+      <div class="stat-label">Vigentes</div>
+    </div>
+  </div>
+  <div class="stat-card" (click)="tabChange.emit('vigentes')">
+    <div class="stat-icon" style="background: rgba(255, 160, 0, 0.1); color: #ffa000;">
+      <i class="bi bi-clock-history"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-count">{{ estadisticas.proximosAVencer }}</div>
+      <div class="stat-label">Próximos a vencer</div>
+    </div>
+  </div>
+  <div class="stat-card" (click)="tabChange.emit('vencidos')">
+    <div class="stat-icon" style="background: rgba(220, 53, 69, 0.1); color: #dc3545;">
+      <i class="bi bi-file-x"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-count">{{ estadisticas.totalVencidos }}</div>
+      <div class="stat-label">Vencidos</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(40, 167, 69, 0.1); color: #28a745;">
+      <i class="bi bi-currency-dollar"></i>
+    </div>
+    <div class="stat-info">
+      <div class="stat-count">{{ totalValorFormatted }}</div>
+      <div class="stat-label">Valor total</div>
+    </div>
+  </div>
+</div>

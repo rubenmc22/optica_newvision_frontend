@@ -2110,6 +2110,15 @@
             transform: translateY(-1px);
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
           }
+
+          &:disabled,
+          &.is-disabled {
+            background: #cbd5e1 !important;
+            color: #64748b !important;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+          }
         }
       }
     }

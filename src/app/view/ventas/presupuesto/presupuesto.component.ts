@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
-import { OPCIONES_REF } from 'src/app/shared/constants/historias-medicas';
+import { OPCIONES_REF } from '../../../shared/constants/historias-medicas';
 import { ActivatedRoute, Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { Subscription } from 'rxjs';
@@ -17,14 +17,13 @@ import { GenerarVentaService } from '../generar-venta/generar-venta.service';
 import { UserStateService } from './../../../core/services/userState/user-state-service';
 import { Empleado, User } from './../../../Interfaces/models-interface';
 import { SedeCompleta } from './../../login/login-interface';
-import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/presupuesto-venta-handoff.util';
-import { HISTORIA_VENTA_HANDOFF_STORAGE_KEY } from '../shared/historia-venta-handoff.util';
+import { PresupuestoVentaDraft } from '../shared/presupuesto-venta-handoff.util';
 import {
-  HISTORIA_PRESUPUESTO_HANDOFF_STORAGE_KEY,
-  PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY,
   HistoriaPresupuestoHandoff,
   PresupuestoHistoriaReturnDraft
 } from '../shared/historia-presupuesto-handoff.util';
+import { VentasFlowService } from '../shared/ventas-flow.service';
+import { PresupuestoFacadeService } from './services/presupuesto-facade.service';
 import { CrearPresupuestoResponse, PresupuestoService } from './presupuesto.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { OpcionPresupuesto, OrigenFormulaPresupuesto, Presupuesto } from './presupuesto.interfaz';
@@ -45,6 +44,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   @ViewChild('clienteCedulaInput') clienteCedulaInput!: ElementRef;
 
   private contadorOpcionesPresupuesto: number = 0;
+  private presupuestoRouteSubscription?: Subscription;
+  private presupuestoRouteInicializada: boolean = false;
 
   // Opciones de refracción para selects (igual que historia médica)
   public opcionesRef = OPCIONES_REF;
@@ -59,7 +60,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   generandoPresupuesto: boolean = false;
   filtroBusqueda: string = '';
   filtroEstado: string = '';
-  tabActiva: string = 'vigentes';
+  tabActiva: 'vigentes' | 'vencidos' = 'vigentes';
   diasParaAutoArchivo: number = 30;
   diasVencimientoSeleccionado: number = 7;
 
@@ -74,15 +75,6 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   terminoBusquedaDetalleProducto: string = '';
   productosDetalleFiltrados: any[] = [];
 
-  // Agrega estas variables al componente
-  mostrarMenuExportar: boolean = false;
-  opcionesExportar = [
-    { id: 'vigentes', texto: 'Exportar Vigentes', icono: 'bi-file-earmark-check' },
-    { id: 'vencidos', texto: 'Exportar Vencidos', icono: 'bi-file-earmark-x' },
-    { id: 'todos', texto: 'Exportar Todos', icono: 'bi-files' }
-  ];
-  // Variables para el menú de exportar
-  timeoutCerrarMenu: any;
   mostrarMenuAccionesDetalle: boolean = false;
   timeoutCerrarMenuDetalle: any;
 
@@ -265,12 +257,15 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     private swalService: SwalService,
     private historiaService: HistoriaMedicaService,
     private pacientesService: PacientesService,
+    private ventasFlowService: VentasFlowService,
+    private presupuestoFacade: PresupuestoFacadeService,
   ) { }
 
   ngOnInit() {
     // Cierra cualquier loader global residual de una vista previa para evitar overlays bloqueados.
     this.loader.forceHide();
     this.sincronizarContextoUsuario();
+    this.suscribirRutaPresupuesto();
     this.obtenerConfiguracionSistema();
     this.suscribirCambiosConfiguracion();
     this.cargarDatos();
@@ -282,12 +277,12 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.timeoutCerrarMenu) {
-      clearTimeout(this.timeoutCerrarMenu);
-    }
-
     if (this.configSubscription) {
       this.configSubscription.unsubscribe();
+    }
+
+    if (this.presupuestoRouteSubscription) {
+      this.presupuestoRouteSubscription.unsubscribe();
     }
 
     if (this.timeoutCerrarMenuDetalle) {
@@ -331,19 +326,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   inicializarPresupuestosFiltrados() {
-    // Inicializar con todos los presupuestos
-    if (this.presupuestosVigentes) {
-      this.presupuestosFiltradosVigentes = [...this.presupuestosVigentes];
-    }
-
-    if (this.presupuestosVencidos) {
-      this.presupuestosFiltradosVencidos = [...this.presupuestosVencidos];
-    }
-
-    this.presupuestosCombinados = [
-      ...(this.presupuestosFiltradosVigentes || []),
-      ...(this.presupuestosFiltradosVencidos || [])
-    ];
+    this.aplicarEstadoListado();
   }
 
   getClienteVacio() {
@@ -1237,9 +1220,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.presupuestosVencidos = normalizados.filter((presupuesto) => presupuesto.estadoColor === 'vencido');
 
     this.actualizarDiasRestantesDinamicos();
-    this.inicializarPresupuestosFiltrados();
-    this.filtrarPresupuestos();
-    this.calcularEstadisticas();
+    this.aplicarEstadoListado();
+    this.procesarRutaPresupuesto();
   }
 
   private normalizarPresupuestoPersistido(presupuesto: any): any {
@@ -1287,18 +1269,18 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   private async cargarPresupuestosDesdeApi(mostrarError: boolean = true, autoArchivar: boolean = true): Promise<void> {
     try {
-      if (autoArchivar) {
-        await lastValueFrom(this.presupuestoService.autoArchivarPresupuestos(this.diasParaAutoArchivo));
-      }
-
       const presupuestos = await lastValueFrom(this.presupuestoService.getPresupuestos());
       this.aplicarPresupuestosDesdeFuente(presupuestos);
+
+      if (autoArchivar) {
+        void this.ejecutarAutoArchivadoEnSegundoPlano();
+      }
     } catch (error) {
       console.error('Error cargando presupuestos desde API:', error);
       this.presupuestosVigentes = [];
       this.presupuestosVencidos = [];
-      this.inicializarPresupuestosFiltrados();
-      this.calcularEstadisticas();
+      this.aplicarEstadoListado();
+      this.procesarRutaPresupuesto();
 
       if (mostrarError) {
         this.snackBar.open('No se pudieron cargar los presupuestos', 'Cerrar', {
@@ -1306,6 +1288,21 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
           panelClass: ['snackbar-warning']
         });
       }
+    }
+  }
+
+  private async ejecutarAutoArchivadoEnSegundoPlano(): Promise<void> {
+    try {
+      const resultado = await lastValueFrom(
+        this.presupuestoService.autoArchivarPresupuestos(this.diasParaAutoArchivo)
+      );
+
+      if ((resultado?.archivados || 0) > 0) {
+        const presupuestos = await lastValueFrom(this.presupuestoService.getPresupuestos());
+        this.aplicarPresupuestosDesdeFuente(presupuestos);
+      }
+    } catch (error) {
+      console.warn('Autoarchivado de presupuestos omitido por timeout o error:', error);
     }
   }
 
@@ -1520,6 +1517,77 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     void this.cargarPresupuestosDesdeApi();
   }
 
+  private suscribirRutaPresupuesto(): void {
+    this.presupuestoRouteSubscription = this.route.url.subscribe(() => {
+      this.procesarRutaPresupuesto();
+    });
+  }
+
+  private procesarRutaPresupuesto(): void {
+    const ultimoSegmento = this.route.snapshot.url.at(-1)?.path || '';
+    const presupuestoId = this.route.snapshot.paramMap.get('id');
+
+    if (ultimoSegmento === 'nuevo') {
+      if (!this.mostrarModalNuevoPresupuesto) {
+        this.abrirModalNuevoPresupuesto(false);
+      }
+
+      this.presupuestoRouteInicializada = true;
+      return;
+    }
+
+    if (presupuestoId) {
+      const presupuesto = this.buscarPresupuestoPorId(presupuestoId);
+
+      if (presupuesto) {
+        const seleccionadoId = String(this.presupuestoSeleccionado?.id || '');
+        if (!this.mostrarModalDetallePresupuesto || seleccionadoId !== String(presupuesto.id)) {
+          this.verDetallePresupuesto(presupuesto, false);
+        }
+      }
+
+      this.presupuestoRouteInicializada = true;
+      return;
+    }
+
+    if (this.presupuestoRouteInicializada) {
+      if (this.mostrarModalNuevoPresupuesto) {
+        this.cerrarModalNuevoPresupuesto(false);
+      }
+
+      if (this.mostrarModalDetallePresupuesto) {
+        this.cerrarModalDetalle(false);
+      }
+    }
+
+    this.presupuestoRouteInicializada = true;
+  }
+
+  private buscarPresupuestoPorId(presupuestoId: string | number): any | null {
+    const idNormalizado = String(presupuestoId || '').trim();
+    if (!idNormalizado) {
+      return null;
+    }
+
+    return [...this.presupuestosVigentes, ...this.presupuestosVencidos].find(
+      (presupuesto) => String(presupuesto?.id || '').trim() === idNormalizado
+    ) || null;
+  }
+
+  private navegarRutaPresupuesto(destino: 'listado' | 'nuevo' | 'detalle', presupuestoId?: string | number): void {
+    if (destino === 'nuevo') {
+      void this.router.navigate(['/ventas/presupuestos/nuevo']);
+      return;
+    }
+
+    if (destino === 'detalle' && presupuestoId !== undefined && presupuestoId !== null) {
+      void this.router.navigate(['/ventas/presupuestos', presupuestoId]);
+      return;
+    }
+
+    void this.router.navigate(['/ventas/presupuestos']);
+  }
+
   actualizarDiasRestantesDinamicos(): void {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0); // Establece la hora a medianoche para comparar solo fechas
@@ -1702,36 +1770,28 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   // ========== MÉTODOS PARA MODALES ==========
-  abrirModalNuevoPresupuesto() {
+  abrirModalNuevoPresupuesto(sincronizarRuta: boolean = true) {
     this.inicializarNuevoPresupuesto();
     this.mostrarModalNuevoPresupuesto = true;
     this.sincronizarEstadoBodyModal();
+
+    if (sincronizarRuta) {
+      this.navegarRutaPresupuesto('nuevo');
+    }
   }
 
-  cerrarModalNuevoPresupuesto() {
+  cerrarModalNuevoPresupuesto(sincronizarRuta: boolean = true) {
     this.mostrarModalNuevoPresupuesto = false;
     this.inicializarNuevoPresupuesto();
     this.sincronizarEstadoBodyModal();
+
+    if (sincronizarRuta) {
+      this.navegarRutaPresupuesto('listado');
+    }
   }
 
   private leerHistoriaPresupuestoHandoff(): HistoriaPresupuestoHandoff | null {
-    const handoffRaw = sessionStorage.getItem(HISTORIA_PRESUPUESTO_HANDOFF_STORAGE_KEY);
-    if (!handoffRaw) {
-      return null;
-    }
-
-    try {
-      const handoff = JSON.parse(handoffRaw) as HistoriaPresupuestoHandoff;
-      if (!handoff?.pacienteKey || !handoff?.historiaId || !Array.isArray(handoff?.opciones) || handoff.opciones.length === 0) {
-        sessionStorage.removeItem(HISTORIA_PRESUPUESTO_HANDOFF_STORAGE_KEY);
-        return null;
-      }
-
-      return handoff;
-    } catch {
-      sessionStorage.removeItem(HISTORIA_PRESUPUESTO_HANDOFF_STORAGE_KEY);
-      return null;
-    }
+    return this.ventasFlowService.leerHistoriaPresupuestoHandoff();
   }
 
   private aplicarHandoffHistoriaPresupuestoSiExiste(): void {
@@ -1740,7 +1800,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       return;
     }
 
-    sessionStorage.removeItem(HISTORIA_PRESUPUESTO_HANDOFF_STORAGE_KEY);
+    this.ventasFlowService.limpiarHistoriaPresupuestoHandoff();
     this.inicializarNuevoPresupuesto();
 
     const opciones = handoff.opciones
@@ -2162,7 +2222,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   // ========== UTILIDADES ==========
 
-  cambiarTab(tab: string) {
+  cambiarTab(tab: 'vigentes' | 'vencidos') {
     this.tabActiva = tab;
     this.actualizarDiasRestantesDinamicos();
   }
@@ -2325,7 +2385,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     };
 
     try {
-      sessionStorage.setItem(PRESUPUESTO_HISTORIA_RETURN_STORAGE_KEY, JSON.stringify(retorno));
+      this.ventasFlowService.guardarRetornoHistoriaDesdePresupuesto(retorno);
       await this.router.navigate(['/pacientes-historias']);
     } catch (error) {
       console.error('No se pudo preparar el retorno a la historia médica:', error);
@@ -2350,41 +2410,26 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   calcularEstadisticas() {
-    this.estadisticas.totalVigentes = this.presupuestosFiltradosVigentes.length;
-    this.estadisticas.totalVencidos = this.presupuestosFiltradosVencidos.length;
-
-    const totalVigentes = this.presupuestosFiltradosVigentes.reduce((sum, p) => sum + (p.total || 0), 0);
-    const totalVencidos = this.presupuestosFiltradosVencidos.reduce((sum, p) => sum + (p.total || 0), 0);
-    this.estadisticas.totalValor = totalVigentes + totalVencidos;
-
-    this.estadisticas.proximosAVencer = this.presupuestosFiltradosVigentes.filter(p => p.diasRestantes! <= 3).length;
+    this.aplicarEstadoListado();
   }
 
   // Método para limpiar búsqueda
   limpiarBusqueda() {
     this.filtroBusqueda = '';
-    // Restablecer los arrays filtrados a los originales
-    this.presupuestosFiltradosVigentes = [...this.presupuestosVigentes];
-    this.presupuestosFiltradosVencidos = [...this.presupuestosVencidos];
-    // Actualizar estadísticas
-    this.calcularEstadisticas();
+    this.aplicarEstadoListado();
   }
 
   // Método para limpiar filtro de estado
   limpiarFiltroEstado() {
     this.filtroEstado = '';
-    this.presupuestosFiltradosVigentes = [...this.presupuestosVigentes];
-    this.presupuestosFiltradosVencidos = [...this.presupuestosVencidos];
-    this.calcularEstadisticas();
+    this.aplicarEstadoListado();
   }
 
   // Método para limpiar todos los filtros
   limpiarFiltros() {
     this.filtroBusqueda = '';
     this.filtroEstado = '';
-    this.presupuestosFiltradosVigentes = [...this.presupuestosVigentes];
-    this.presupuestosFiltradosVencidos = [...this.presupuestosVencidos];
-    this.calcularEstadisticas();
+    this.aplicarEstadoListado();
 
     // Mostrar mensaje
     this.snackBar.open('Filtros limpiados correctamente', 'Cerrar', {
@@ -2442,92 +2487,24 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   // Método mejorado para filtrar presupuestos con búsqueda flexible
   filtrarPresupuestos() {
-    // Primero, asegurarse de tener los datos actualizados
-    if (!this.presupuestosVigentes && !this.presupuestosVencidos) {
-      return;
-    }
+    this.aplicarEstadoListado();
+  }
 
-    // Convertir filtro de búsqueda a minúsculas para búsqueda case-insensitive
-    const busqueda = this.filtroBusqueda ? this.filtroBusqueda.toLowerCase().trim() : '';
-
-    // Filtrar presupuestos VIGENTES
-    this.presupuestosFiltradosVigentes = this.presupuestosVigentes.filter(presupuesto => {
-      // 1. Filtrar por estado (si hay filtro de estado)
-      let pasaFiltroEstado = true;
-      if (this.filtroEstado) {
-        pasaFiltroEstado = presupuesto.estadoColor === this.filtroEstado;
-      }
-
-      // 2. Filtrar por búsqueda (si hay búsqueda)
-      let pasaFiltroBusqueda = true;
-      if (busqueda) {
-        // Normalizar el código del presupuesto para búsqueda flexible
-        const codigoNormalizado = this.normalizarCodigoParaBusqueda(presupuesto.codigo || '');
-
-        // Normalizar la búsqueda del usuario
-        const busquedaNormalizada = this.normalizarBusqueda(busqueda);
-
-        // Buscar en múltiples campos
-        const camposBusqueda = [
-          codigoNormalizado,
-          presupuesto.cliente?.nombreCompleto?.toLowerCase() || '',
-          presupuesto.cliente?.cedula?.toLowerCase() || '',
-          presupuesto.cliente?.nombre?.toLowerCase() || '',
-          presupuesto.cliente?.apellido?.toLowerCase() || '',
-          presupuesto.vendedor?.toLowerCase() || ''
-        ].join(' ');
-
-        // Verificar si coincide en algún campo
-        pasaFiltroBusqueda = camposBusqueda.includes(busquedaNormalizada) ||
-          // Búsqueda específica por código normalizado
-          codigoNormalizado.includes(busquedaNormalizada) ||
-          // Búsqueda parcial por último dígitos del código
-          this.coincideCodigoParcial(presupuesto.codigo, busqueda);
-      }
-
-      return pasaFiltroEstado && pasaFiltroBusqueda;
+  private aplicarEstadoListado(): void {
+    const listadoState = this.presupuestoFacade.construirListadoState({
+      presupuestosVigentes: this.presupuestosVigentes,
+      presupuestosVencidos: this.presupuestosVencidos,
+      filtroBusqueda: this.filtroBusqueda,
+      filtroEstado: this.filtroEstado,
+      normalizarCodigoParaBusqueda: this.normalizarCodigoParaBusqueda.bind(this),
+      normalizarBusqueda: this.normalizarBusqueda.bind(this),
+      coincideCodigoParcial: this.coincideCodigoParcial.bind(this)
     });
 
-    // Filtrar presupuestos VENCIDOS
-    this.presupuestosFiltradosVencidos = this.presupuestosVencidos.filter(presupuesto => {
-      // 1. Filtrar por estado (si hay filtro de estado)
-      let pasaFiltroEstado = true;
-      if (this.filtroEstado) {
-        pasaFiltroEstado = presupuesto.estadoColor === this.filtroEstado;
-      }
-
-      // 2. Filtrar por búsqueda (si hay búsqueda)
-      let pasaFiltroBusqueda = true;
-      if (busqueda) {
-        // Normalizar el código del presupuesto para búsqueda flexible
-        const codigoNormalizado = this.normalizarCodigoParaBusqueda(presupuesto.codigo || '');
-
-        // Normalizar la búsqueda del usuario
-        const busquedaNormalizada = this.normalizarBusqueda(busqueda);
-
-        // Buscar en múltiples campos
-        const camposBusqueda = [
-          codigoNormalizado,
-          presupuesto.cliente?.nombreCompleto?.toLowerCase() || '',
-          presupuesto.cliente?.cedula?.toLowerCase() || '',
-          presupuesto.cliente?.nombre?.toLowerCase() || '',
-          presupuesto.cliente?.apellido?.toLowerCase() || '',
-          presupuesto.vendedor?.toLowerCase() || ''
-        ].join(' ');
-
-        // Verificar si coincide en algún campo
-        pasaFiltroBusqueda = camposBusqueda.includes(busquedaNormalizada) ||
-          // Búsqueda específica por código normalizado
-          codigoNormalizado.includes(busquedaNormalizada) ||
-          // Búsqueda parcial por último dígitos del código
-          this.coincideCodigoParcial(presupuesto.codigo, busqueda);
-      }
-
-      return pasaFiltroEstado && pasaFiltroBusqueda;
-    });
-
-    // Actualizar estadísticas
-    this.calcularEstadisticas();
+    this.presupuestosFiltradosVigentes = listadoState.vigentes;
+    this.presupuestosFiltradosVencidos = listadoState.vencidos;
+    this.presupuestosCombinados = listadoState.combinados;
+    this.estadisticas = { ...this.estadisticas, ...listadoState.estadisticas };
   }
 
   // Método auxiliar para normalizar código para búsqueda
@@ -2657,27 +2634,6 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Métodos para controlar el menú desplegable
-  abrirMenuExportar(): void {
-    if (this.timeoutCerrarMenu) {
-      clearTimeout(this.timeoutCerrarMenu);
-    }
-    this.mostrarMenuExportar = true;
-  }
-
-  cerrarMenuExportar(): void {
-    // Usar timeout para permitir mover el mouse entre el botón y el menú
-    this.timeoutCerrarMenu = setTimeout(() => {
-      this.mostrarMenuExportar = false;
-    }, 300);
-  }
-
-  mantenerMenuAbierto(): void {
-    if (this.timeoutCerrarMenu) {
-      clearTimeout(this.timeoutCerrarMenu);
-    }
-  }
-
   abrirMenuAccionesDetalle(): void {
     if (this.timeoutCerrarMenuDetalle) {
       clearTimeout(this.timeoutCerrarMenuDetalle);
@@ -2703,14 +2659,6 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
     if (this.timeoutCerrarMenuDetalle) {
       clearTimeout(this.timeoutCerrarMenuDetalle);
-    }
-  }
-
-  seleccionarOpcionExportar(tipo: 'vigentes' | 'vencidos' | 'todos'): void {
-    this.exportarExcel(tipo);
-    this.mostrarMenuExportar = false;
-    if (this.timeoutCerrarMenu) {
-      clearTimeout(this.timeoutCerrarMenu);
     }
   }
 
@@ -2754,19 +2702,15 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       );
 
       const borradorVenta = this.mapearPresupuestoParaVenta(presupuestoConvertido);
-      sessionStorage.removeItem(HISTORIA_VENTA_HANDOFF_STORAGE_KEY);
-      sessionStorage.setItem(PRESUPUESTO_VENTA_STORAGE_KEY, JSON.stringify(borradorVenta));
+  this.ventasFlowService.limpiarHistoriaVentaHandoff();
+  this.ventasFlowService.guardarPresupuestoVentaDraft(borradorVenta);
       this.cerrarModalConversionPresupuesto();
       await this.cargarPresupuestosDesdeApi(false, false);
 
-      const navegacionOk = await this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { vista: 'generacion-de-ventas' },
-        queryParamsHandling: 'merge'
-      });
+      const navegacionOk = await this.router.navigate(['/ventas/generar']);
 
       if (!navegacionOk) {
-        sessionStorage.removeItem(PRESUPUESTO_VENTA_STORAGE_KEY);
+        this.ventasFlowService.limpiarPresupuestoVentaDraft();
         this.snackBar.open('No se pudo abrir el módulo de ventas', 'Cerrar', {
           duration: 3500,
           panelClass: ['snackbar-warning']
@@ -4035,7 +3979,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   // En el método verDetallePresupuesto, agregar:
-  verDetallePresupuesto(presupuesto: any) {
+  verDetallePresupuesto(presupuesto: any, sincronizarRuta: boolean = true) {
     this.presupuestoSeleccionado = JSON.parse(JSON.stringify(presupuesto)); // Copia profunda
     this.presupuestoSeleccionado.formulaExterna = this.normalizarFormulaExternaPersistida(this.presupuestoSeleccionado?.formulaExterna);
     this.asegurarOpcionesPresupuesto(this.presupuestoSeleccionado);
@@ -4046,6 +3990,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.productosDetalleFiltrados = [];
     this.mostrarModalDetallePresupuesto = true;
     this.sincronizarEstadoBodyModal();
+
+    if (sincronizarRuta) {
+      this.navegarRutaPresupuesto('detalle', presupuesto?.id);
+    }
   }
 
   // Método para seleccionar días de vencimiento en modal de detalle
@@ -4132,7 +4080,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   // Actualizar el método cerrarModalDetalle
-  cerrarModalDetalle(): void {
+  cerrarModalDetalle(sincronizarRuta: boolean = true): void {
     this.mostrarModalDetallePresupuesto = false;
     this.presupuestoSeleccionado = null;
     this.opcionActivaDetalleId = '';
@@ -4141,6 +4089,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.cerrarMenuAccionesDetalleInmediato();
     this.resetearEstadoEdicion();
     this.sincronizarEstadoBodyModal();
+
+    if (sincronizarRuta) {
+      this.navegarRutaPresupuesto('listado');
+    }
   }
 
   puedeConvertirPresupuesto(presupuesto: any): boolean {

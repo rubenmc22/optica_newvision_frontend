@@ -688,15 +688,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   irAVentas(): void {
-    this.router.navigate(['/ventas'], { queryParams: { vista: 'generacion-de-ventas' } });
+    this.router.navigate(['/ventas/generar']);
   }
 
   irAHistorialVentas(): void {
-    this.router.navigate(['/ventas'], { queryParams: { vista: 'historial-de-ventas' } });
+    this.router.navigate(['/ventas/historial']);
   }
 
   irARendimientoComercial(): void {
-    this.router.navigate(['/ventas/rendimiento-comercial']);
+    this.router.navigate(['/ventas/rendimiento']);
   }
 
   irAOrdenes(): void {

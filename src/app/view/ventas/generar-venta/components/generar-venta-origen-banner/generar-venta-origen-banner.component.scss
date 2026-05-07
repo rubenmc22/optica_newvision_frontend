@@ -1,0 +1,80 @@
+:host {
+  display: block;
+}
+
+.presupuesto-origen-banner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  margin: 1rem 1rem 0;
+  padding: 1rem 1.25rem;
+  border-radius: 18px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%);
+}
+
+.origen-banner-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.origen-banner-icon i {
+  font-size: 1.35rem;
+}
+
+.origen-banner-content {
+  min-width: 0;
+}
+
+.origen-banner-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.origen-banner-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.origen-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.origen-banner-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .presupuesto-origen-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .origen-banner-status {
+    justify-content: center;
+  }
+}

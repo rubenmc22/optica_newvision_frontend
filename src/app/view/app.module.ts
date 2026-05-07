@@ -32,9 +32,20 @@ import { HistoriasMedicasComponent } from './historias-medicas/historias-medicas
 import { ProductosListComponent } from './productos/productos-list/productos-list.component';
 import { ProductosEtiquetasComponent } from './productos/productos-etiquetas/productos-etiquetas.component';
 import { GenerarVentaComponent } from './ventas/generar-venta/generar-venta.component';
+import { GenerarVentaPageComponent } from './ventas/generar-venta/page/generar-venta-page.component';
+import { GenerarVentaHeaderComponent } from './ventas/generar-venta/components/generar-venta-header/generar-venta-header.component';
+import { GenerarVentaOrigenBannerComponent } from './ventas/generar-venta/components/generar-venta-origen-banner/generar-venta-origen-banner.component';
+import { GenerarVentaTipoSelectorComponent } from './ventas/generar-venta/components/generar-venta-tipo-selector/generar-venta-tipo-selector.component';
 import { VentasDashboardComponent } from './ventas/ventas-dashboard.component';
+import { VentasShellComponent } from './ventas/ventas-shell.component';
 import { HistorialVentasComponent } from './ventas/historial-ventas/historial-ventas.component';
+import { HistorialHeaderComponent } from './ventas/historial-ventas/components/historial-header/historial-header.component';
+import { HistorialStatsGridComponent } from './ventas/historial-ventas/components/historial-stats-grid/historial-stats-grid.component';
+import { HistorialVentasPageComponent } from './ventas/historial-ventas/page/historial-ventas-page.component';
 import { CierreCajaComponent } from './ventas/cierre-caja/cierre-caja.component';
+import { CierreHeaderComponent } from './ventas/cierre-caja/components/cierre-header/cierre-header.component';
+import { CierreKpiGridComponent } from './ventas/cierre-caja/components/cierre-kpi-grid/cierre-kpi-grid.component';
+import { CierreCajaPageComponent } from './ventas/cierre-caja/page/cierre-caja-page.component';
 import { SafeUrlPipe } from './ventas/generar-venta/safe-url.pipe';
 import { LoaderComponent } from './../shared/loader/loader.component';
 import { SystemConfigComponent } from './system-config/system-config.component';
@@ -42,7 +53,13 @@ import { clientesComponent } from './clientes/clientes.component';
 import { GestionOrdenesTrabajoComponent } from './gestion-ordenes-trabajo/gestion-ordenes-trabajo.component';
 import { DetalleOrdenComponent } from './gestion-ordenes-trabajo/detalle-orden/detalle-orden.component';
 import { PresupuestoComponent } from './ventas/presupuesto/presupuesto.component';
+import { PresupuestoHeaderComponent } from './ventas/presupuesto/components/presupuesto-header/presupuesto-header.component';
+import { PresupuestoFooterComponent } from './ventas/presupuesto/components/presupuesto-footer/presupuesto-footer.component';
+import { PresupuestoStatsComponent } from './ventas/presupuesto/components/presupuesto-stats/presupuesto-stats.component';
+import { PresupuestoTabsComponent } from './ventas/presupuesto/components/presupuesto-tabs/presupuesto-tabs.component';
+import { PresupuestoPageComponent } from './ventas/presupuesto/page/presupuesto-page.component';
 import { RendimientoComercialComponent } from './ventas/rendimiento-comercial/rendimiento-comercial.component';
+import { RendimientoComercialPageComponent } from './ventas/rendimiento-comercial/page/rendimiento-comercial-page.component';
 
 
 
@@ -82,11 +99,28 @@ import { RefOptionAutocompleteComponent } from '../shared/ref-option-autocomplet
     ProductosEtiquetasComponent,
     LoaderComponent,
     GenerarVentaComponent,
+    GenerarVentaPageComponent,
+    GenerarVentaHeaderComponent,
+    GenerarVentaOrigenBannerComponent,
+    GenerarVentaTipoSelectorComponent,
     HistorialVentasComponent,
+    HistorialHeaderComponent,
+    HistorialStatsGridComponent,
+    HistorialVentasPageComponent,
     VentasDashboardComponent,
+    VentasShellComponent,
     PresupuestoComponent,
+    PresupuestoHeaderComponent,
+    PresupuestoFooterComponent,
+    PresupuestoStatsComponent,
+    PresupuestoTabsComponent,
+    PresupuestoPageComponent,
+    CierreHeaderComponent,
+    CierreKpiGridComponent,
     CierreCajaComponent,
+    CierreCajaPageComponent,
     RendimientoComercialComponent,
+    RendimientoComercialPageComponent,
     clientesComponent,
     SystemConfigComponent,
     GestionOrdenesTrabajoComponent,

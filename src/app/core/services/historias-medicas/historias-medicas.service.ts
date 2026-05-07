@@ -13,7 +13,7 @@ import { ErrorHandlerService } from '../../services/errorHandlerService';
 
 export class HistoriaMedicaService {
 
-  private readonly REQUEST_TIMEOUT = 10000; // opcional, mismo patrón que en pacientes
+  private readonly REQUEST_TIMEOUT = 20000;
 
   constructor(
     private http: HttpClient,

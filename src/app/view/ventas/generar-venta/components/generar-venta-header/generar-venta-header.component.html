@@ -1,0 +1,41 @@
+<div class="card-header-moderno glass-header">
+  <div class="header-content">
+    <div class="header-left">
+      <div class="header-icon animated-icon">
+        <i class="bi bi-cart-plus"></i>
+        <div class="icon-glow"></div>
+      </div>
+      <div class="header-text">
+        <h4 class="header-title gradient-text">Generar Venta</h4>
+        <div class="header-subtitle">Experiencia de venta inteligente</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-indicator" [class.is-inactive]="!cajaDisponibleParaVentas">
+        <span class="pulse-dot"></span>
+        <span class="indicator-text">{{ cajaDisponibleParaVentas ? 'Modo venta activo' : 'Modo venta inactivo' }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="!cajaDisponibleParaVentas" class="caja-cerrada-banner">
+  <div class="caja-cerrada-banner__card">
+    <div class="caja-cerrada-banner__header">
+      <div class="caja-cerrada-banner__icon">
+        <i class="bi bi-lock-fill"></i>
+      </div>
+      <div class="caja-cerrada-banner__content">
+        <h5 class="caja-cerrada-banner__title">Caja cerrada</h5>
+        <p class="caja-cerrada-banner__description">Este módulo está bloqueado porque la caja del día no ha sido iniciada para la sede activa.</p>
+        <p class="caja-cerrada-banner__message">{{ mensajeBloqueoCaja }}</p>
+      </div>
+    </div>
+    <div class="caja-cerrada-banner__actions">
+      <button type="button" class="btn btn-warning" (click)="revalidarCaja.emit()">
+        <i class="bi bi-arrow-clockwise me-2"></i>
+        Validar nuevamente
+      </button>
+    </div>
+  </div>
+</div>

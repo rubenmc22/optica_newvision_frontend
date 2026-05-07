@@ -12,7 +12,7 @@ import { Empresa } from './../../../view/pacientes/paciente-interface';
 })
 export class PacientesService {
 
-  private readonly REQUEST_TIMEOUT = 8000; // 8 segundos
+  private readonly REQUEST_TIMEOUT = 20000;
 
   private abrirModalNuevoPacienteSource = new Subject<void>();
   abrirModalNuevoPaciente$ = this.abrirModalNuevoPacienteSource.asObservable();

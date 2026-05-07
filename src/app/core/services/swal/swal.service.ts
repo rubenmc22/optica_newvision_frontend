@@ -87,8 +87,8 @@ export class SwalService {
     });
   }
 
-  showWarning(title: string, content: string, isHtml: boolean = false, timer: number = 4000): Promise<any> {
-    const config: SweetAlertOptions = {
+  showWarning(title: string, content: string, isHtml: boolean = false, timer: number = 4000, options: SweetAlertOptions = {}): Promise<any> {
+    const baseConfig: SweetAlertOptions = {
       icon: 'warning',
       title: title,
       confirmButtonText: 'Aceptar',
@@ -110,6 +110,32 @@ export class SwalService {
         popup: 'animate__animated animate__fadeOutUp animate__faster'
       }
     };
+
+    const config = {
+      ...baseConfig,
+      ...options
+    } as SweetAlertOptions;
+
+    if (options.customClass) {
+      config.customClass = {
+        ...(baseConfig.customClass || {}),
+        ...options.customClass
+      };
+    }
+
+    if (options.showClass) {
+      config.showClass = {
+        ...(baseConfig.showClass || {}),
+        ...options.showClass
+      };
+    }
+
+    if (options.hideClass) {
+      config.hideClass = {
+        ...(baseConfig.hideClass || {}),
+        ...options.hideClass
+      };
+    }
 
     if (isHtml) {
       config.html = content;

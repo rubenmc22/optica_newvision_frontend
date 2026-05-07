@@ -1,11 +1,18 @@
-import { Component, Output, EventEmitter, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { AuthService } from '../../core/services/auth/auth.service';
 import { UserStateService } from '../../core/services/userState/user-state-service';
 import { SedeCompleta } from '../../view/login/login-interface';
 
-type VistaVentas = 'generacion-de-ventas' | 'presupuestos' | 'historial-de-ventas' | 'cierre-de-caja';
+interface VentasResumenItem {
+    titulo: string;
+    descripcion: string;
+    route: string;
+    icono: string;
+    accentClass: string;
+    total: number | null;
+}
 
 @Component({
     selector: 'app-ventas-dashboard',
@@ -14,20 +21,10 @@ type VistaVentas = 'generacion-de-ventas' | 'presupuestos' | 'historial-de-venta
     styleUrl: './ventas-dashboard.component.scss'
 })
 export class VentasDashboardComponent implements OnInit, OnDestroy {
-    vista: VistaVentas = 'generacion-de-ventas';
-    vistasInstanciadas: Record<VistaVentas, boolean> = {
-        'generacion-de-ventas': true,
-        'presupuestos': false,
-        'historial-de-ventas': false,
-        'cierre-de-caja': false
-    };
-
     totalVentas: number | null = null;
     totalPresupuestos: number | null = null;
     totalHistorialVentas: number | null = null;
     totalCierres: number | null = null;
-
-    @Output() onCerrar = new EventEmitter<void>();
 
     private autoRefreshSubscription!: Subscription;
     private readonly AUTO_REFRESH_INTERVAL = 300000;
@@ -36,13 +33,10 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
         private userStateService: UserStateService,
         private authService: AuthService,
         private cdr: ChangeDetectorRef,
-        private route: ActivatedRoute,
         private router: Router
     ) { }
 
     ngOnInit(): void {
-        this.inicializarVista();
-
         this.cargarSedesUnaVez().then(() => {
             this.iniciarAutoRefresh();
         }).catch(error => {
@@ -56,57 +50,45 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
         }
     }
 
-    cambiarVista(vista: VistaVentas): void {
-        this.vista = vista;
-        this.marcarVistaInstanciada(vista);
-        this.actualizarEstadoVista(vista);
-        this.cdr.detectChanges();
-    }
-
-    esVistaActiva(vista: string): boolean {
-        return this.vista === vista;
-    }
-
-    estaVistaInstanciada(vista: VistaVentas): boolean {
-        return this.vistasInstanciadas[vista];
-    }
-
-    private inicializarVista(): void {
-        this.route.queryParams.subscribe(params => {
-            const vistaDesdeUrl = params['vista'];
-
-            if (vistaDesdeUrl && this.esVistaValida(vistaDesdeUrl)) {
-                this.vista = vistaDesdeUrl as VistaVentas;
-            } else {
-                this.vista = 'generacion-de-ventas';
-                this.actualizarUrlSinNavegacion('generacion-de-ventas');
+    get resumenItems(): VentasResumenItem[] {
+        return [
+            {
+                titulo: 'Nueva venta',
+                descripcion: 'Acceso inmediato al flujo operativo de cobro y registro.',
+                route: '/ventas/generar',
+                icono: 'fas fa-cash-register',
+                accentClass: 'card-venta',
+                total: this.totalVentas
+            },
+            {
+                titulo: 'Presupuestos',
+                descripcion: 'Cotizaciones activas, seguimiento y conversión a venta.',
+                route: '/ventas/presupuestos',
+                icono: 'fas fa-file-invoice-dollar',
+                accentClass: 'card-presupuesto',
+                total: this.totalPresupuestos
+            },
+            {
+                titulo: 'Historial',
+                descripcion: 'Consulta ventas registradas, pagos y trazabilidad.',
+                route: '/ventas/historial',
+                icono: 'fas fa-history',
+                accentClass: 'card-historial',
+                total: this.totalHistorialVentas
+            },
+            {
+                titulo: 'Cierre de caja',
+                descripcion: 'Revisión diaria, conciliación y control operativo.',
+                route: '/ventas/cierres',
+                icono: 'fas fa-lock',
+                accentClass: 'card-caja',
+                total: this.totalCierres
             }
-
-            this.marcarVistaInstanciada(this.vista);
-            this.cdr.detectChanges();
-        });
+        ];
     }
 
-    private actualizarEstadoVista(vista: VistaVentas): void {
-        this.vista = vista;
-        this.actualizarUrlSinNavegacion(vista);
-    }
-
-    private actualizarUrlSinNavegacion(vista: VistaVentas): void {
-        this.router.navigate([], {
-            relativeTo: this.route,
-            queryParams: { vista },
-            queryParamsHandling: 'merge',
-            replaceUrl: true
-        });
-    }
-
-    private esVistaValida(vista: string): vista is VistaVentas {
-        return ['generacion-de-ventas', 'presupuestos', 'historial-de-ventas', 'cierre-de-caja'].includes(vista);
-    }
-
-    private marcarVistaInstanciada(vista: VistaVentas): void {
-        this.vistasInstanciadas[vista] = true;
+    abrirRuta(route: string): void {
+        this.router.navigate([route]);
     }
 
     private iniciarAutoRefresh(): void {

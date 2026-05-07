@@ -4,7 +4,7 @@
   [class.app-shell--sidebar-open]="isMobileView && isSidebarOpen">
   <aside class="app-sidebar" [class.app-sidebar--open]="isMobileView && isSidebarOpen"
     [class.app-sidebar--collapsed]="!isMobileView && isDesktopSidebarCollapsed">
-    <div class="app-sidebar__surface">
+    <div class="app-sidebar__surface" #sidebarSurface>
       <div class="sidebar-brand">
         <div class="sidebar-brand__mark">
           <i class="fas fa-glasses"></i>
@@ -32,7 +32,7 @@
       <div class="sidebar-nav">
         <div class="sidebar-nav__label">Módulos</div>
         <nav class="sidebar-nav__menu" aria-label="Navegación principal">
-          <div *ngFor="let menu of filteredMenu" class="menu-group"
+          <div *ngFor="let menu of filteredMenu" class="menu-group" [attr.data-menu-label]="menu.label"
             [class.menu-group--open]="selectedMenuLabel === menu.label && !!menu.submenu">
             <a *ngIf="!menu.submenu" [routerLink]="menu.underConstruction ? null : menu.routerLink" class="menu-link"
               [class.is-active]="selectedMenuLabel === menu.label" [class.is-disabled]="menu.underConstruction"
@@ -64,6 +64,7 @@
             <div *ngIf="menu.submenu && !menu.underConstruction" class="submenu-panel"
               [class.is-open]="selectedMenuLabel === menu.label">
               <a *ngFor="let sub of menu.submenu" [routerLink]="sub.underConstruction ? null : sub.routerLink"
+                [attr.data-submenu-label]="sub.label"
                 class="submenu-link" [class.is-active]="selectedSubmenuLabel === sub.label"
                 [matTooltip]="sub.underConstruction ? 'Módulo en desarrollo 🚧' : null" matTooltipPosition="right"
                 [matTooltipDisabled]="!sub.underConstruction" (click)="onMenuClick($event, buildSubmenuItem(sub, menu.label))">
@@ -203,7 +204,7 @@
 
   <main class="content-wrapper app-main" [class.content-wrapper-mobile]="isMobileView"
     [class.sidebar-collapsed]="!isMobileView && isDesktopSidebarCollapsed">
-    <div class="container-fluid app-main__viewport">
+    <div class="container-fluid app-main__viewport" #mainViewport>
       <ng-container *ngIf="loader.loading$ | async">
         <app-global-loader></app-global-loader>
       </ng-container>

@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
+import { Component, OnInit, Input, OnDestroy, ChangeDetectorRef, HostListener, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { AuthService } from '../../core/services/auth/auth.service';
 import { Router, NavigationEnd } from '@angular/router';
 import { SwalService } from '../../core/services/swal/swal.service';
@@ -21,10 +21,12 @@ import * as bootstrap from 'bootstrap';
   styleUrls: ['./sidebar.component.scss']
 })
 
-export class SidebarComponent implements OnInit, OnDestroy {
+export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() userRoleKey: string = '';
   @Input() userRoleName: string = '';
   @Input() userName: string = '';
+  @ViewChild('sidebarSurface') sidebarSurfaceRef?: ElementRef<HTMLElement>;
+  @ViewChild('mainViewport', { static: false }) mainViewportRef?: ElementRef<HTMLElement>;
   profileImage: string = 'assets/default-photo.png';
   sedeActual: string = '';
   tasaDolar: number = 0;
@@ -54,6 +56,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.updateQuickAccessDock();
     this.cdRef.detectChanges();
   };
+  private sidebarScrollTimeouts: number[] = [];
 
   constructor(
     private swalService: SwalService,
@@ -94,8 +97,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Gestión de Ventas',
       icon: 'fas fa-shopping-cart',
       submenu: [
-        { label: 'Ventas', routerLink: '/ventas', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Rendimiento Comercial', routerLink: '/ventas/rendimiento-comercial', roles: ['admin', 'gerente', 'asesor-optico'] }
+        { label: 'Nueva Venta', routerLink: '/ventas/generar', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Presupuestos', routerLink: '/ventas/presupuestos', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Historial', routerLink: '/ventas/historial', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Cierre de Caja', routerLink: '/ventas/cierres', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Rendimiento Comercial', routerLink: '/ventas/rendimiento', roles: ['admin', 'gerente', 'asesor-optico'] }
       ],
       roles: ['admin', 'gerente', 'asesor-optico'],
       underConstruction: false
@@ -153,6 +159,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.setupModalStateSync();
     this.obtenerSedeActual();
     this.obtenerTasaCambio();
+  }
+
+  ngAfterViewInit(): void {
+    this.scheduleSidebarScroll();
   }
 
   // Método para toggle manual del dropdown
@@ -243,6 +253,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.userSubscriptions.forEach(sub => sub.unsubscribe());
     this.tasaStreamSub?.unsubscribe();
     this.tasaActualSub?.unsubscribe();
+    this.clearSidebarScrollTimeouts();
     document.removeEventListener('shown.bs.modal', this.modalShownHandler as EventListener);
     document.removeEventListener('hidden.bs.modal', this.modalHiddenHandler as EventListener);
 
@@ -308,9 +319,21 @@ export class SidebarComponent implements OnInit, OnDestroy {
         this.closeSidebar();
       }
       this.cdRef.detectChanges();
+      this.scheduleSidebarScroll(120);
+      this.scrollMainContentToTop();
     });
 
     this.userSubscriptions.push(userProfileSub, authUserSub, routerSub);
+  }
+
+  private scrollMainContentToTop(): void {
+    // Scroll principal del shell (viewport interno)
+    const viewport = this.mainViewportRef?.nativeElement;
+    if (viewport) {
+      viewport.scrollTo({ top: 0, behavior: 'auto' });
+    }
+    // También forzar window por si hay scroll global
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
   private initializeUserData(): void {
@@ -390,12 +413,19 @@ export class SidebarComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const activeSubmenu = Array.isArray(menu?.submenu)
+      ? [...menu.submenu]
+          .sort((a: { routerLink: string }, b: { routerLink: string }) => (b.routerLink?.length || 0) - (a.routerLink?.length || 0))
+          .find((sub: { routerLink: string; label: string }) => this.routeMatches(this.router.url, sub.routerLink))
+      : null;
+
     //Abrir el nuevo menú
     this.selectedMenuLabel = menuLabel;
-    this.selectedSubmenuLabel = '';
+    this.selectedSubmenuLabel = activeSubmenu?.label || '';
 
     localStorage.setItem('selectedMenuLabel', this.selectedMenuLabel);
-    localStorage.setItem('selectedSubmenuLabel', '');
+    localStorage.setItem('selectedSubmenuLabel', this.selectedSubmenuLabel || '');
+    this.scheduleSidebarScroll(220);
   }
 
   onMenuClick(event: Event, menuItem: any): void {
@@ -424,6 +454,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
     localStorage.setItem('selectedMenuLabel', this.selectedMenuLabel);
     localStorage.setItem('selectedSubmenuLabel', this.selectedSubmenuLabel || '');
+    this.scheduleSidebarScroll(220);
   }
 
   toggleSidebar(event?: Event): void {
@@ -575,6 +606,75 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   private unlockBodyScroll(): void {
     document.body.style.overflow = '';
+  }
+
+  private scheduleSidebarScroll(delay = 80): void {
+    this.clearSidebarScrollTimeouts();
+
+    [delay, delay + 140, delay + 320].forEach((timeoutDelay) => {
+      const timeoutId = window.setTimeout(() => this.scrollSidebarSelectionIntoView(), timeoutDelay);
+      this.sidebarScrollTimeouts.push(timeoutId);
+    });
+  }
+
+  private scrollSidebarSelectionIntoView(): void {
+    const surface = this.sidebarSurfaceRef?.nativeElement;
+    if (!surface) {
+      return;
+    }
+
+    const submenuSelector = this.selectedSubmenuLabel
+      ? `.submenu-link[data-submenu-label="${this.escapeSelector(this.selectedSubmenuLabel)}"]`
+      : null;
+
+    const menuSelector = this.selectedMenuLabel
+      ? `.menu-group[data-menu-label="${this.escapeSelector(this.selectedMenuLabel)}"]`
+      : null;
+
+    const submenuElement = submenuSelector ? surface.querySelector<HTMLElement>(submenuSelector) : null;
+    const menuElement = menuSelector ? surface.querySelector<HTMLElement>(menuSelector) : null;
+    const openPanelElement = menuElement?.querySelector<HTMLElement>('.submenu-panel.is-open') || null;
+    const lastOpenSubmenuElement = openPanelElement
+      ? Array.from(openPanelElement.querySelectorAll<HTMLElement>('.submenu-link')).pop() || null
+      : null;
+    const target = lastOpenSubmenuElement || submenuElement || openPanelElement || menuElement;
+
+    if (!target) {
+      return;
+    }
+
+    const surfaceRect = surface.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const topPadding = 20;
+    const bottomPadding = 28;
+
+    if (targetRect.top < surfaceRect.top + topPadding) {
+      surface.scrollBy({
+        top: targetRect.top - surfaceRect.top - topPadding,
+        behavior: 'smooth'
+      });
+      return;
+    }
+
+    if (targetRect.bottom > surfaceRect.bottom - bottomPadding) {
+      surface.scrollBy({
+        top: targetRect.bottom - surfaceRect.bottom + bottomPadding,
+        behavior: 'smooth'
+      });
+    }
+  }
+
+  private clearSidebarScrollTimeouts(): void {
+    this.sidebarScrollTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    this.sidebarScrollTimeouts = [];
+  }
+
+  private escapeSelector(value: string): string {
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+      return CSS.escape(value);
+    }
+
+    return value.replace(/(["\\.#:[\]()=<>+~*^$|])/g, '\\$1');
   }
 
   //Método para abrir el modal de logout

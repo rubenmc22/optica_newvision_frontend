@@ -9,7 +9,7 @@ import {
   TIPOS_LENTES_CONTACTO,
   MATERIALES,
   TRATAMIENTOS_ADITIVOS
-} from 'src/app/shared/constants/historias-medicas';
+} from '../../shared/constants/historias-medicas';
 
 // Interfaz base para historia médica
 export interface HistoriaMedicaBase {
