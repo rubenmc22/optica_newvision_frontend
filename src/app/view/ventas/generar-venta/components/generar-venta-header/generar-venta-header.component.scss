@@ -188,10 +188,41 @@
   color: #0f2238;
 }
 
+.caja-cerrada-banner__actions .btn:disabled {
+  opacity: 0.78;
+  cursor: not-allowed;
+  filter: grayscale(0.08);
+}
+
+.caja-cerrada-banner__actions .btn-caja-cierre {
+  background: rgba(11, 29, 51, 0.24);
+  color: #eef7ff;
+  border: 1px solid rgba(238, 247, 255, 0.4);
+  box-shadow: none;
+  text-decoration: none;
+}
+
+.caja-cerrada-banner__actions .btn-caja-cierre:hover {
+  background: rgba(11, 29, 51, 0.36);
+  color: #ffffff;
+  border-color: rgba(238, 247, 255, 0.62);
+}
+
 .caja-cerrada-banner__actions .btn:focus-visible {
   outline: 2px solid rgba(255, 225, 139, 0.75);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(255, 225, 139, 0.18);
+}
+
+.caja-cerrada-banner__validation-feedback {
+  margin: 0.95rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(7, 22, 40, 0.34);
+  color: rgba(232, 242, 252, 0.96);
+  line-height: 1.45;
+  font-size: 0.93rem;
 }
 
 @media (max-width: 768px) {

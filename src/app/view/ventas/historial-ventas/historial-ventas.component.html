@@ -470,12 +470,14 @@
                   <i class="bi bi-receipt"></i>
                   <span>Recibo</span>
                 </button>
+                <!-- RDMC: validar estado de caja antes de abrir el modal de pago pendiente. -->
                 <button *ngIf="mostrarBotonRealizarPago(venta)" class="accion-btn success"
                   (click)="abrirModalPagoCompleto(venta)">
                   <i class="bi bi-cash-stack"></i>
                   <span>Realizar Pago</span>
                 </button>
-                <button *ngIf="mostrarBotonAbonar(venta)" class="accion-btn warning" (click)="editarVenta(venta)">
+                <!-- RDMC: validar estado de caja antes de abrir el modal de abono. -->
+                <button *ngIf="mostrarBotonAbonar(venta)" class="accion-btn warning" (click)="abrirModalEdicion(venta)">
                   <i class="bi bi-cash-coin"></i>
                   <span>Abonar</span>
                 </button>

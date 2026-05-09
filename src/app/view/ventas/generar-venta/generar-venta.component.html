@@ -3,6 +3,9 @@
     <app-generar-venta-header
         [cajaDisponibleParaVentas]="cajaDisponibleParaVentas"
         [mensajeBloqueoCaja]="mensajeBloqueoCaja"
+        [fechaCierrePendienteRuta]="fechaCierrePendienteRuta"
+        [revalidandoCaja]="revalidandoEstadoCaja"
+        [mensajeRevalidacionCaja]="mensajeRevalidacionCaja"
         (revalidarCaja)="revalidarCaja()"></app-generar-venta-header>
 
     <div class="venta-dashboard-body" [class.is-disabled]="!cajaDisponibleParaVentas">

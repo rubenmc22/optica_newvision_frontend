@@ -32,10 +32,17 @@
       </div>
     </div>
     <div class="caja-cerrada-banner__actions">
-      <button type="button" class="btn btn-warning" (click)="revalidarCaja.emit()">
-        <i class="bi bi-arrow-clockwise me-2"></i>
+      <a type="button" class="btn btn-caja-cierre"
+        [routerLink]="fechaCierrePendienteRuta ? ['/ventas/cierres', fechaCierrePendienteRuta] : ['/ventas/cierres']">
+        <i class="bi bi-box-arrow-up-right me-2"></i>
+        Ir a cierre de caja
+      </a>
+      <button type="button" class="btn btn-warning" (click)="revalidarCaja.emit()" [disabled]="revalidandoCaja">
+        <span *ngIf="revalidandoCaja" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        <i *ngIf="!revalidandoCaja" class="bi bi-arrow-clockwise me-2"></i>
         Validar nuevamente
       </button>
     </div>
+    <p class="caja-cerrada-banner__validation-feedback" *ngIf="mensajeRevalidacionCaja">{{ mensajeRevalidacionCaja }}</p>
   </div>
 </div>

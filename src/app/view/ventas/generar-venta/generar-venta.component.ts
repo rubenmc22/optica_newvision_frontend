@@ -186,7 +186,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     cajaDisponibleParaVentas: boolean = true;
     mensajeBloqueoCaja: string = 'Debes iniciar la caja del día para poder registrar ventas.';
     private bloqueoPorCierrePendienteAnterior: boolean = false;
-    private popupCajaCerradaMostrado: boolean = false;
+    fechaCierrePendienteRuta: string | null = null;
+    revalidandoEstadoCaja: boolean = false;
+    mensajeRevalidacionCaja: string = '';
 
     productos: Producto[] = [];
     pacientes: any[] = [];
@@ -326,7 +328,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 this.sedeActiva = this.normalizarClaveSede(this.sedeInfo.key);
                 this.sedeFiltro = this.sedeActiva;
                 this.actualizarProductosFiltrados();
-                this.validarCajaAbierta(true);
+                this.validarCajaAbierta();
             }
         });
 
@@ -335,7 +337,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.sedeInfo = sedeInicial;
             this.sedeActiva = this.normalizarClaveSede(sedeInicial.key);
             this.sedeFiltro = this.sedeActiva;
-            this.validarCajaAbierta(true);
+            this.validarCajaAbierta();
         }
 
         window.addEventListener('focus', () => {
@@ -4437,7 +4439,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     async generarVenta(): Promise<void> {
 
         if (!this.cajaDisponibleParaVentas) {
-            this.mostrarPopupCajaCerrada();
             return;
         }
 
@@ -4635,11 +4636,19 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 1500);
     }
 
-    private validarCajaAbierta(mostrarPopup: boolean = false): void {
+    private validarCajaAbierta(esRevalidacionManual: boolean = false): void {
         const sedeKey = this.normalizarClaveSede(this.sedeInfo?.key || this.sedeActiva || this.currentUser?.sede || '');
 
         if (!sedeKey) {
+            if (esRevalidacionManual) {
+                this.mensajeRevalidacionCaja = 'No se pudo validar la caja porque no hay una sede activa seleccionada.';
+            }
             return;
+        }
+
+        this.revalidandoEstadoCaja = esRevalidacionManual;
+        if (esRevalidacionManual) {
+            this.mensajeRevalidacionCaja = '';
         }
 
         this.generarVentaService.obtenerEstadoCaja(new Date(), sedeKey).pipe(take(1)).subscribe({
@@ -4649,36 +4658,106 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 const cajaAbierta = cierre?.estado === 'abierto' && !cierrePendienteAnterior;
 
                 this.bloqueoPorCierrePendienteAnterior = !!cierrePendienteAnterior;
+                this.fechaCierrePendienteRuta = this.obtenerFechaRutaCierrePendiente(cierrePendienteAnterior);
 
                 this.cajaDisponibleParaVentas = cajaAbierta;
                 this.mensajeBloqueoCaja = cajaAbierta
                     ? ''
                     : this.construirMensajeBloqueoCaja(cierrePendienteAnterior);
 
-                if (cajaAbierta) {
-                    this.popupCajaCerradaMostrado = false;
-                    return;
+                if (esRevalidacionManual) {
+                    this.mensajeRevalidacionCaja = cajaAbierta
+                        ? 'Validación completada: la caja ya está habilitada para registrar ventas.'
+                        : this.bloqueoPorCierrePendienteAnterior
+                            ? `Validación completada: sigue pendiente el cierre del ${cierrePendienteAnterior?.fechaFormateada || 'día anterior'}.`
+                            : 'Validación completada: la caja del día aún no ha sido iniciada.';
                 }
 
-                if (mostrarPopup) {
-                    this.mostrarPopupCajaCerrada();
+                if (cajaAbierta) {
+                    return;
                 }
             },
             error: () => {
                 this.bloqueoPorCierrePendienteAnterior = false;
                 this.cajaDisponibleParaVentas = false;
+                this.fechaCierrePendienteRuta = null;
                 this.mensajeBloqueoCaja = 'No fue posible validar el estado de la caja. Por seguridad, la generación de ventas quedó bloqueada.';
+                this.revalidandoEstadoCaja = false;
 
-                if (mostrarPopup) {
-                    this.mostrarPopupCajaCerrada();
+                if (esRevalidacionManual) {
+                    this.mensajeRevalidacionCaja = 'Validación completada con error: no fue posible verificar el estado de caja.';
                 }
+            },
+            complete: () => {
+                this.revalidandoEstadoCaja = false;
             }
         });
     }
 
     revalidarCaja(): void {
-        this.popupCajaCerradaMostrado = false;
         this.validarCajaAbierta(true);
+    }
+
+    private obtenerFechaRutaCierrePendiente(cierrePendienteAnterior: any): string | null {
+        if (!cierrePendienteAnterior) {
+            return null;
+        }
+
+        const candidatos = [
+            cierrePendienteAnterior?.fecha,
+            cierrePendienteAnterior?.fechaOperativa,
+            cierrePendienteAnterior?.fechaIso,
+            cierrePendienteAnterior?.fechaISO,
+            cierrePendienteAnterior?.fechaFormateada
+        ];
+
+        for (const candidato of candidatos) {
+            const fechaNormalizada = this.normalizarFechaParaRuta(candidato);
+            if (fechaNormalizada) {
+                return fechaNormalizada;
+            }
+        }
+
+        return null;
+    }
+
+    private normalizarFechaParaRuta(valor: any): string | null {
+        if (!valor) {
+            return null;
+        }
+
+        if (valor instanceof Date && !Number.isNaN(valor.getTime())) {
+            return this.formatearFechaParaRuta(valor);
+        }
+
+        const texto = String(valor).trim();
+        if (!texto) {
+            return null;
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+            return texto;
+        }
+
+        const matchDiaMesAnio = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (matchDiaMesAnio) {
+            const [, dia, mes, anio] = matchDiaMesAnio;
+            return `${anio}-${mes}-${dia}`;
+        }
+
+        const fechaParseada = new Date(texto);
+        if (Number.isNaN(fechaParseada.getTime())) {
+            return null;
+        }
+
+        return this.formatearFechaParaRuta(fechaParseada);
+    }
+
+    private formatearFechaParaRuta(fecha: Date): string {
+        const anio = fecha.getFullYear();
+        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+        const dia = String(fecha.getDate()).padStart(2, '0');
+        return `${anio}-${mes}-${dia}`;
     }
 
     private construirMensajeBloqueoCaja(cierrePendienteAnterior: any): string {
@@ -4687,33 +4766,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         return 'La caja del día no está iniciada. Debes abrir la caja antes de registrar una venta.';
-    }
-
-    private mostrarPopupCajaCerrada(): void {
-        if (this.popupCajaCerradaMostrado) {
-            return;
-        }
-
-        this.popupCajaCerradaMostrado = true;
-        this.swalService.showWarning(
-            this.bloqueoPorCierrePendienteAnterior ? 'Cierre pendiente' : 'Caja cerrada',
-            `
-            <div class="caja-bloqueada-swal">
-                <p class="caja-bloqueada-swal__lead">${this.mensajeBloqueoCaja}</p>
-                <p class="caja-bloqueada-swal__message">${this.bloqueoPorCierrePendienteAnterior
-                    ? 'Debes ingresar al módulo de cierre de caja, conciliar la caja pendiente y cerrarla antes de continuar.'
-                    : 'Solicita al responsable abrir la caja desde el módulo de cierre de caja y luego vuelve a esta pantalla.'}</p>
-            </div>
-            `,
-            true,
-            6000,
-            {
-                customClass: {
-                    popup: 'swal-modern-popup warning-popup caja-bloqueada-popup',
-                    confirmButton: 'swal-modern-confirm warning-btn caja-bloqueada-confirm'
-                }
-            }
-        );
     }
 
     private generarReciboHTMLUnificado(datos: any, vista: ReceiptViewMode = 'preview'): string {

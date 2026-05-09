@@ -211,15 +211,9 @@ export function generateUnifiedReceiptHTML(options: ReceiptRenderOptions): strin
             ${metodosPago.map((metodo: any, index: number) => {
               const montoVisible = obtenerMontoVisibleMetodo(metodo);
               const monedaVisible = obtenerMonedaVisibleMetodo(metodo, datos?.configuracion?.moneda);
-              const referenciaBolivar = debeMostrarReferenciaBolivarMetodo(metodo, datos?.configuracion?.moneda)
-                ? formatearMoneda(obtenerMontoBolivarMetodo(metodo), 'bolivar')
-                : '';
               const detalles = [
                 metodo.referencia ? `Ref. ${escaparHTML(metodo.referencia)}` : '',
-                metodo.banco || metodo.bancoEmisor ? escaparHTML(metodo.banco || metodo.bancoEmisor) : '',
-                metodo.bancoReceptor ? `Receptor: ${escaparHTML(metodo.bancoReceptor)}` : '',
-                metodo.notaPago ? escaparHTML(metodo.notaPago) : '',
-                formatearFechaMetodo(metodo.fechaRegistro)
+                metodo.banco || metodo.bancoEmisor ? escaparHTML(metodo.banco || metodo.bancoEmisor) : ''
               ].filter(Boolean);
 
               return `
@@ -231,7 +225,6 @@ export function generateUnifiedReceiptHTML(options: ReceiptRenderOptions): strin
                     </div>
                     <span class="payment-index">#${index + 1}</span>
                   </div>
-                  ${referenciaBolivar ? `<div class="payment-secondary">Equiv.: ${referenciaBolivar}</div>` : ''}
                   ${detalles.length > 0 ? `<div class="payment-meta">${detalles.join(' <span class="meta-dot">&#8226;</span> ')}</div>` : ''}
                 </div>
               `;

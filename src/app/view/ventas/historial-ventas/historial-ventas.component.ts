@@ -1,4 +1,5 @@
 import { Component, OnInit, HostListener, ViewChild, TemplateRef, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormBuilder, FormGroup, FormArray, Validators, AbstractControl } from '@angular/forms';
 import html2canvas from 'html2canvas';
@@ -10,6 +11,7 @@ import { GenerarVentaService } from './../generar-venta/generar-venta.service';
 import { finalize, take } from 'rxjs/operators';
 import { SystemConfigService } from '../../system-config/system-config.service';
 import { Subscription, Subject, debounceTime } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { UserStateService } from '../../../core/services/userState/user-state-service';
@@ -199,6 +201,8 @@ export class HistorialVentasComponent implements OnInit {
   bancosDisponibles: Array<VentaBankOption & { displayText: string }> = this.mapearBancosConDisplay(buildVentaPaymentCatalog().bancosNacionales);
 
   bancosUsaDisponibles: Array<VentaBankOption & { displayText: string }> = this.mapearBancosConDisplay(buildVentaPaymentCatalog().bancosInternacionales);
+  cajaDisponibleParaCobros: boolean = true;
+  mensajeBloqueoCajaCobros: string = '';
 
   // Paginación
   paginacion = {
@@ -223,7 +227,8 @@ export class HistorialVentasComponent implements OnInit {
     private cdRef: ChangeDetectorRef,
     private excelExportService: ExcelExportService,
     private sanitizer: DomSanitizer,
-    private historialVentasFacade: HistorialVentasFacadeService
+    private historialVentasFacade: HistorialVentasFacadeService,
+    private router: Router
   ) {
     Chart.register(...registerables);
     this.inicializarFormularioEdicion();
@@ -262,6 +267,7 @@ export class HistorialVentasComponent implements OnInit {
     // Obtener sede actual
     this.userStateService.sedeActual$.subscribe(sede => {
       this.sedeInfo = sede;
+      this.actualizarEstadoCajaParaCobros();
     });
 
     // Obtener todas las sedes (ya cargadas por el dashboard)
@@ -760,22 +766,17 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   cargarVentas(): void {
-    this.loader.showWithMessage('📋 Cargando historial de ventas...');
+    this.loader.showWithMessage('🔄 Cargando historial de ventas...');
 
     this.historialVentaService.obtenerHistorialVentas().subscribe({
       next: (response: any) => {
         if (response.message === 'ok' && response.ventas) {
-          // Procesar TODAS las ventas
           const todasLasVentas = response.ventas.map((ventaApi: any) =>
             this.adaptarVentaDelApi(ventaApi)
           );
 
-          // Guardar todas las ventas
           this.ventasFiltradas = todasLasVentas;
-
-          // Aplicar filtros y paginación
           this.aplicarFiltrosYPaginacion();
-
           this.loader.hide();
 
         } else {
@@ -1591,13 +1592,18 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   guardarEdicionVenta(modal: any): void {
-    const confirmacion = this.prepararConfirmacionAbono();
-    if (!confirmacion) {
-      return;
-    }
+    this.validarCajaDisponibleParaOperacion(this.selectedVenta).then((cajaDisponible) => {
+      if (!cajaDisponible) {
+        return;
+      }
 
-    const { formValue, nuevoAbono, totalAbonado, totalVenta, nuevaDeudaPendiente } = confirmacion;
-    const mensajeConfirmacion = `
+      const confirmacion = this.prepararConfirmacionAbono();
+      if (!confirmacion) {
+        return;
+      }
+
+      const { formValue, nuevoAbono, totalAbonado, totalVenta, nuevaDeudaPendiente } = confirmacion;
+      const mensajeConfirmacion = `
     <strong>📋 Confirmar abono de ${this.formatearMoneda(nuevoAbono)}</strong><br><br>
     
     <strong>Resumen de la venta:</strong><br>
@@ -1606,13 +1612,14 @@ export class HistorialVentasComponent implements OnInit {
     • Nueva deuda: ${this.formatearMoneda(nuevaDeudaPendiente)}<br><br>
     `;
 
-    this.mostrarConfirmacionDesdeModal(
-      modal,
-      'Confirmar Abono Completo',
-      mensajeConfirmacion,
-      '✅ Sí, Registrar Abono',
-      () => this.procesarAbono(null, formValue)
-    );
+      this.mostrarConfirmacionDesdeModal(
+        modal,
+        'Confirmar Abono Completo',
+        mensajeConfirmacion,
+        '✅ Sí, Registrar Abono',
+        () => this.procesarAbono(null, formValue)
+      );
+    });
   }
 
   private prepararConfirmacionAbono(): {
@@ -1707,7 +1714,18 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  private procesarAbono(modal: any, formData: any): void {
+  private procesarAbono(modal: any, formData: any, validarCaja: boolean = true): void {
+    if (validarCaja) {
+      this.validarCajaDisponibleParaOperacion(this.selectedVenta).then((cajaDisponible) => {
+        if (!cajaDisponible) {
+          return;
+        }
+
+        this.procesarAbono(modal, formData, false);
+      });
+      return;
+    }
+
     if (!this.selectedVenta?.key) {
       this.swalService.showWarning('Error', 'No se puede registrar el abono: falta información de la venta.');
       return;
@@ -2115,7 +2133,12 @@ export class HistorialVentasComponent implements OnInit {
     this.recalcularMontosMetodosPago();
   }
 
-  abrirModalEdicion(venta: any) {
+  async abrirModalEdicion(venta: any): Promise<void> {
+    const cajaDisponible = await this.validarCajaDisponibleParaOperacion(venta);
+    if (!cajaDisponible) {
+      return;
+    }
+
     this.selectedVenta = venta;
     this.reinicializarFormularioConDeuda();
   }
@@ -4855,16 +4878,9 @@ export class HistorialVentasComponent implements OnInit {
           </div>
           <div class="payment-list compact-list">
             ${metodosPago.map((metodo: any, index: number) => {
-              const referenciaBolivar = debeMostrarReferenciaBolivarMetodoLocal(metodo)
-                ? `Equiv.: ${formatearMonedaLocal(obtenerMontoBolivarMetodoLocal(metodo), 'bolivar')}`
-                : '';
               const detalles = [
-                referenciaBolivar,
                 metodo.referencia ? `Ref. ${escaparHTML(metodo.referencia)}` : '',
-                metodo.banco ? escaparHTML(metodo.banco) : '',
-                metodo.bancoReceptor ? `Receptor: ${escaparHTML(metodo.bancoReceptor)}` : '',
-                metodo.notaPago ? escaparHTML(metodo.notaPago) : '',
-                formatearFechaMetodoLocal(metodo.fechaRegistro)
+                metodo.banco ? escaparHTML(metodo.banco) : ''
               ].filter(Boolean);
 
               return `
@@ -8089,26 +8105,27 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   // Método para abrir modal de pago
-  abrirModalPagoCompleto(venta: any): void {
+  async abrirModalPagoCompleto(venta: any): Promise<void> {
+    const cajaDisponible = await this.validarCajaDisponibleParaOperacion(venta);
+    if (!cajaDisponible) {
+      return;
+    }
+
     this.tipoOperacionPago = 'pago-completo';
     this.selectedVenta = venta;
 
-    // Reinicializar formulario
     this.reinicializarFormularioConDeuda();
 
-    // Establecer el valor de montoAbonado a la deuda total
     const deudaTotal = this.calcularMontoDeuda();
     this.editarVentaForm.patchValue({
       montoAbonado: deudaTotal
     });
     this.sincronizarMontoAbonadoTemporal();
 
-    // Limpiar y agregar método de pago
     this.metodosPagoArray.clear();
     this.montosTemporalesMetodos = [];
     this.agregarMetodoPago();
 
-    // Abrir modal
     this.modalService.open(this.realizarPagoModal, {
       centered: true,
       size: 'lg',
@@ -8119,22 +8136,26 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   guardarPagoCompleto(modal: any): void {
-    // Validar que sea pago completo
-    const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value;
-    const deudaTotal = this.calcularMontoDeuda();
+    this.validarCajaDisponibleParaOperacion(this.selectedVenta).then((cajaDisponible) => {
+      if (!cajaDisponible) {
+        return;
+      }
 
-    if (Math.abs(montoAbonado - deudaTotal) > 0.01) {
-      this.swalService.showWarning('Advertencia',
-        'El pago debe ser por la totalidad de la deuda pendiente.');
-      return;
-    }
+      const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value;
+      const deudaTotal = this.calcularMontoDeuda();
 
-    const confirmacion = this.prepararConfirmacionAbono();
-    if (!confirmacion) {
-      return;
-    }
+      if (Math.abs(montoAbonado - deudaTotal) > 0.01) {
+        this.swalService.showWarning('Advertencia',
+          'El pago debe ser por la totalidad de la deuda pendiente.');
+        return;
+      }
 
-    const mensajeConfirmacion = `
+      const confirmacion = this.prepararConfirmacionAbono();
+      if (!confirmacion) {
+        return;
+      }
+
+      const mensajeConfirmacion = `
     <strong>💰 Confirmar pago completo de ${this.formatearMoneda(montoAbonado)}</strong><br><br>
     
     <strong>Resumen:</strong><br>
@@ -8145,13 +8166,14 @@ export class HistorialVentasComponent implements OnInit {
     <strong>⚠️ IMPORTANTE:</strong> Este es un pago único. La venta quedará totalmente saldada.
   `;
 
-    this.mostrarConfirmacionDesdeModal(
-      modal,
-      'Confirmar Pago Completo',
-      mensajeConfirmacion,
-      '✅ Sí, Registrar Pago',
-      () => this.procesarAbono(null, confirmacion.formValue)
-    );
+      this.mostrarConfirmacionDesdeModal(
+        modal,
+        'Confirmar Pago Completo',
+        mensajeConfirmacion,
+        '✅ Sí, Registrar Pago',
+        () => this.procesarAbono(null, confirmacion.formValue)
+      );
+    });
   }
 
   // Método para mostrar botón de abono (ajustado)
@@ -8165,6 +8187,196 @@ export class HistorialVentasComponent implements OnInit {
       this.getDeudaPendiente(venta) > 0;
 
     return esAbonoConDeuda;
+  }
+
+  private async actualizarEstadoCajaParaCobros(): Promise<void> {
+    const sedeKey = this.obtenerSedeKeyParaOperacion();
+    if (!sedeKey) {
+      this.cajaDisponibleParaCobros = false;
+      this.mensajeBloqueoCajaCobros = 'No se pudo determinar la sede activa para validar el estado de caja.';
+      return;
+    }
+
+    try {
+      const response = await firstValueFrom(this.generarVentaService.obtenerEstadoCaja(new Date(), sedeKey).pipe(take(1)));
+      const cierrePendienteAnterior = response?.bloqueoOperativo?.cierrePendienteAnterior || null;
+      const cajaAbierta = response?.cierreExistente?.estado === 'abierto' && !cierrePendienteAnterior;
+      this.cajaDisponibleParaCobros = cajaAbierta;
+      this.mensajeBloqueoCajaCobros = this.construirMensajeBloqueoCajaCobros(cierrePendienteAnterior);
+    } catch (error) {
+      this.cajaDisponibleParaCobros = false;
+      this.mensajeBloqueoCajaCobros = 'No fue posible validar el estado de la caja. Por seguridad se bloquean abonos y pagos pendientes.';
+      console.warn('No se pudo validar estado de caja para historial de ventas:', error);
+    }
+  }
+
+  private async validarCajaDisponibleParaOperacion(venta?: any): Promise<boolean> {
+    const sedeKey = this.obtenerSedeKeyParaOperacion(venta);
+    if (!sedeKey) {
+      this.swalService.showWarning('Caja no disponible', 'No se pudo determinar la sede para validar el estado de caja.');
+      return false;
+    }
+
+    try {
+      const response = await firstValueFrom(this.generarVentaService.obtenerEstadoCaja(new Date(), sedeKey).pipe(take(1)));
+      const cierrePendienteAnterior = response?.bloqueoOperativo?.cierrePendienteAnterior || null;
+      const cajaAbierta = response?.cierreExistente?.estado === 'abierto' && !cierrePendienteAnterior;
+
+      this.cajaDisponibleParaCobros = cajaAbierta;
+      this.mensajeBloqueoCajaCobros = this.construirMensajeBloqueoCajaCobros(cierrePendienteAnterior);
+
+      if (cajaAbierta) {
+        return true;
+      }
+
+      await this.mostrarAlertaCajaBloqueada(cierrePendienteAnterior, sedeKey);
+      return false;
+    } catch (error) {
+      this.cajaDisponibleParaCobros = false;
+      this.mensajeBloqueoCajaCobros = 'No fue posible validar el estado de la caja. Por seguridad se bloquean abonos y pagos pendientes.';
+      console.warn('No se pudo validar estado de caja para operación en historial:', error);
+      this.swalService.showWarning('Caja no disponible', this.mensajeBloqueoCajaCobros);
+      return false;
+    }
+  }
+
+  private construirMensajeBloqueoCajaCobros(cierrePendienteAnterior: any): string {
+    if (cierrePendienteAnterior?.fechaFormateada) {
+      return `No puedes registrar abonos ni pagos pendientes porque existe una caja pendiente del ${cierrePendienteAnterior.fechaFormateada}. Debes conciliarla y cerrarla primero.`;
+    }
+
+    return 'No puedes registrar abonos ni pagos pendientes porque la caja del día no está iniciada.';
+  }
+
+  private async mostrarAlertaCajaBloqueada(cierrePendienteAnterior: any, sedeKey: string): Promise<void> {
+    const fechaRuta = this.obtenerFechaRutaCierrePendiente(cierrePendienteAnterior);
+    const resultado = await this.swalService.showInfo(
+      'Caja no disponible',
+      this.mensajeBloqueoCajaCobros || 'La caja no está habilitada para registrar cobros.',
+      {
+        icon: 'warning',
+        showConfirmButton: true,
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'Ir a cierre de caja',
+        denyButtonText: 'Validar nuevamente',
+        cancelButtonText: 'Cerrar',
+        allowOutsideClick: false,
+        allowEscapeKey: true,
+        customClass: {
+          popup: 'swal-modern-popup warning-popup',
+          title: 'swal-modern-title',
+          htmlContainer: 'swal-modern-content',
+          actions: 'swal-modern-actions',
+          confirmButton: 'swal-modern-confirm warning-btn',
+          denyButton: 'swal-modern-deny',
+          cancelButton: 'swal-modern-cancel'
+        }
+      }
+    );
+
+    if (resultado.isConfirmed) {
+      this.router.navigate(fechaRuta ? ['/ventas/cierres', fechaRuta] : ['/ventas/cierres']);
+      return;
+    }
+
+    if (resultado.isDenied) {
+      await this.revalidarCajaBloqueadaEnHistorial(sedeKey);
+    }
+  }
+
+  private async revalidarCajaBloqueadaEnHistorial(sedeKey: string): Promise<void> {
+    try {
+      const response = await firstValueFrom(this.generarVentaService.obtenerEstadoCaja(new Date(), sedeKey).pipe(take(1)));
+      const cierrePendienteAnterior = response?.bloqueoOperativo?.cierrePendienteAnterior || null;
+      const cajaAbierta = response?.cierreExistente?.estado === 'abierto' && !cierrePendienteAnterior;
+
+      this.cajaDisponibleParaCobros = cajaAbierta;
+      this.mensajeBloqueoCajaCobros = this.construirMensajeBloqueoCajaCobros(cierrePendienteAnterior);
+
+      if (cajaAbierta) {
+        await this.swalService.showSuccess('Caja habilitada', 'La caja ya está disponible para registrar abonos y pagos pendientes.');
+        return;
+      }
+
+      await this.mostrarAlertaCajaBloqueada(cierrePendienteAnterior, sedeKey);
+    } catch (error) {
+      console.warn('No se pudo revalidar estado de caja en historial:', error);
+      this.swalService.showWarning('Caja no disponible', 'No fue posible validar nuevamente el estado de caja. Intenta de nuevo en unos segundos.');
+    }
+  }
+
+  private obtenerFechaRutaCierrePendiente(cierrePendienteAnterior: any): string | null {
+    if (!cierrePendienteAnterior) {
+      return null;
+    }
+
+    const candidatos = [
+      cierrePendienteAnterior?.fecha,
+      cierrePendienteAnterior?.fechaOperativa,
+      cierrePendienteAnterior?.fechaIso,
+      cierrePendienteAnterior?.fechaISO,
+      cierrePendienteAnterior?.fechaFormateada
+    ];
+
+    for (const candidato of candidatos) {
+      const fechaNormalizada = this.normalizarFechaParaRuta(candidato);
+      if (fechaNormalizada) {
+        return fechaNormalizada;
+      }
+    }
+
+    return null;
+  }
+
+  private normalizarFechaParaRuta(valor: any): string | null {
+    if (!valor) {
+      return null;
+    }
+
+    if (valor instanceof Date && !Number.isNaN(valor.getTime())) {
+      return this.formatearFechaParaRuta(valor);
+    }
+
+    const texto = String(valor).trim();
+    if (!texto) {
+      return null;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+      return texto;
+    }
+
+    const matchDiaMesAnio = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (matchDiaMesAnio) {
+      const [, dia, mes, anio] = matchDiaMesAnio;
+      return `${anio}-${mes}-${dia}`;
+    }
+
+    const fechaParseada = new Date(texto);
+    if (Number.isNaN(fechaParseada.getTime())) {
+      return null;
+    }
+
+    return this.formatearFechaParaRuta(fechaParseada);
+  }
+
+  private formatearFechaParaRuta(fecha: Date): string {
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
+  }
+
+  private obtenerSedeKeyParaOperacion(venta?: any): string {
+    const sedeVenta = typeof venta?.sede === 'string'
+      ? venta.sede
+      : (venta?.sede?.key || venta?.sede?.id || '');
+
+    const sedeActiva = this.sedeInfo?.key || this.userStateService.getSedeActual()?.key || '';
+    const sedeKey = String(sedeVenta || sedeActiva || '').trim();
+
+    return sedeKey;
   }
 
   // Método para expandir textarea al hacer focus

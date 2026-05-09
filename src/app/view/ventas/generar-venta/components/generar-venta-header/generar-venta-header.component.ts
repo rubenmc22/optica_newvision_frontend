@@ -9,5 +9,8 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 export class GenerarVentaHeaderComponent {
   @Input() cajaDisponibleParaVentas = true;
   @Input() mensajeBloqueoCaja = '';
+  @Input() fechaCierrePendienteRuta: string | null = null;
+  @Input() revalidandoCaja = false;
+  @Input() mensajeRevalidacionCaja = '';
   @Output() revalidarCaja = new EventEmitter<void>();
 }
