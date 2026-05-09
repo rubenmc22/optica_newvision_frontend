@@ -84,10 +84,12 @@
 
           <!-- Opciones Compactas -->
           <div class="form-options-compact">
-            <label class="checkbox-compact">
-              <input type="checkbox" formControlName="rememberMe">
-              <span class="checkmark-compact"></span>
-              <span class="checkbox-text">Recordar mis datos</span>
+            <label class="toggle-compact" for="rememberMeToggle">
+              <input id="rememberMeToggle" type="checkbox" formControlName="rememberMe">
+              <span class="toggle-track" aria-hidden="true">
+                <span class="toggle-thumb"></span>
+              </span>
+              <span class="toggle-text">Recordar mis datos</span>
             </label>
             <a href="/forgot-password" class="forgot-link-compact">
               ¿Olvidó contraseña?

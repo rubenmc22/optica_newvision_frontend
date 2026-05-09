@@ -5,6 +5,11 @@
    ============================================= */
 
 .login-compact {
+    --login-sidebar-blue-dark: rgba(15, 35, 63, 0.96);
+    --login-sidebar-blue: rgba(37, 85, 135, 0.93);
+    --login-sidebar-blue-mid: #2b5d93;
+    --login-sidebar-blue-soft: #2f6ba8;
+    --login-sidebar-blue-rgb: 37, 85, 135;
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -113,7 +118,7 @@
 
 /* Header Compacto CON LOGO */
 .card-header-compact {
-    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    background: var(--login-sidebar-blue-mid);
     color: white;
     padding: 1.25rem 1.5rem;
     border-bottom: none;
@@ -213,7 +218,7 @@
         font-size: 0.85rem;
 
         i {
-            color: #3498db;
+            color: var(--login-sidebar-blue);
             font-size: 0.9rem;
             width: 16px;
         }
@@ -233,8 +238,8 @@
             height: 44px;
 
             &:focus {
-                border-color: #3498db;
-                box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+                border-color: var(--login-sidebar-blue);
+                box-shadow: 0 0 0 2px rgba(var(--login-sidebar-blue-rgb), 0.16);
                 outline: none;
             }
 
@@ -268,8 +273,8 @@
             transition: all 0.2s ease;
 
             &:hover {
-                color: #3498db;
-                background: rgba(52, 152, 219, 0.1);
+                color: var(--login-sidebar-blue);
+                background: rgba(var(--login-sidebar-blue-rgb), 0.12);
             }
         }
     }
@@ -296,7 +301,7 @@
     align-items: center;
     margin: 0.5rem 0;
 
-    .checkbox-compact {
+    .toggle-compact {
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -305,53 +310,60 @@
         color: #495057;
 
         input {
-            display: none;
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
 
-            &:checked+.checkmark-compact {
-                background: #3498db;
-                border-color: #3498db;
+            &:checked+.toggle-track {
+                background: linear-gradient(135deg, var(--login-sidebar-blue) 0%, var(--login-sidebar-blue-soft) 100%);
+                border-color: transparent;
 
-                &::after {
-                    opacity: 1;
+                .toggle-thumb {
+                    transform: translateX(14px);
                 }
             }
-        }
 
-        .checkmark-compact {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #dee2e6;
-            border-radius: 3px;
-            position: relative;
-            transition: all 0.2s ease;
-
-            &::after {
-                content: '✓';
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                color: white;
-                font-size: 0.7rem;
-                opacity: 0;
-                transition: opacity 0.2s ease;
+            &:focus-visible+.toggle-track {
+                box-shadow: 0 0 0 3px rgba(var(--login-sidebar-blue-rgb), 0.2);
             }
         }
 
-        .checkbox-text {
+        .toggle-track {
+            width: 36px;
+            height: 22px;
+            border-radius: 999px;
+            background: #dbe4ef;
+            border: 1px solid #c7d3e1;
+            display: inline-flex;
+            align-items: center;
+            padding: 2px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .toggle-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 2px 5px rgba(15, 23, 42, 0.22);
+            transition: transform 0.2s ease;
+        }
+
+        .toggle-text {
             font-weight: 500;
         }
     }
 
     .forgot-link-compact {
-        color: #3498db;
+        color: #255587;
         text-decoration: none;
         font-size: 0.8rem;
         font-weight: 500;
         transition: color 0.2s ease;
 
         &:hover {
-            color: #2980b9;
+            color: #0f233f;
             text-decoration: underline;
         }
     }
@@ -359,7 +371,7 @@
 
 /* Botón Compacto */
 .btn-login-compact {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    background: var(--login-sidebar-blue-mid);
     color: white;
     border: none;
     padding: 0.875rem 1.25rem;
@@ -376,7 +388,7 @@
 
     &:hover:not(:disabled) {
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        box-shadow: 0 4px 12px rgba(var(--login-sidebar-blue-rgb), 0.35);
     }
 
     &:active:not(:disabled) {
@@ -598,7 +610,7 @@
     .btn-login-compact,
     .form-control-compact,
     .password-toggle,
-    .checkbox-compact {
+    .toggle-compact {
         transition: none;
     }
 }
@@ -606,6 +618,6 @@
 /* Focus visible para teclado */
 .form-control-compact:focus-visible,
 .btn-login-compact:focus-visible {
-    outline: 2px solid #3498db;
+    outline: 2px solid var(--login-sidebar-blue);
     outline-offset: 2px;
 }
