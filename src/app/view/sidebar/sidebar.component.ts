@@ -89,7 +89,10 @@ export class SidebarComponent implements OnInit, AfterViewInit, OnDestroy {
     {
       label: 'Inventario de Productos',
       icon: 'fas fa-boxes',
-      routerLink: '/productos-inventario',
+      submenu: [
+        { label: 'Inventario', routerLink: '/productos-inventario', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Etiquetas', routerLink: '/productos-inventario/etiquetas', roles: ['admin', 'gerente', 'asesor-optico'] }
+      ],
       roles: ['admin', 'gerente', 'asesor-optico'],
       underConstruction: false
     },

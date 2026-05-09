@@ -59,9 +59,9 @@ export function normalizeProductLabelSettings(settings?: ProductLabelSettings | 
 
   return {
     fields: mergedFields,
-    columns: normalizeNumberInRange(settings?.columns, 1, 4, PRODUCT_LABEL_DEFAULT_SETTINGS.columns),
+    columns: PRODUCT_LABEL_DEFAULT_SETTINGS.columns,
     labelWidthMm: normalizeNumberInRange(settings?.labelWidthMm, 35, 100, PRODUCT_LABEL_DEFAULT_SETTINGS.labelWidthMm),
-    labelHeightMm: normalizeNumberInRange(settings?.labelHeightMm, 20, 80, PRODUCT_LABEL_DEFAULT_SETTINGS.labelHeightMm),
+    labelHeightMm: normalizeNumberInRange(settings?.labelHeightMm, 10, 80, PRODUCT_LABEL_DEFAULT_SETTINGS.labelHeightMm),
     showBorder: settings?.showBorder !== false,
     cantidadMasivaDefault: normalizeNullablePositiveInteger(settings?.cantidadMasivaDefault),
     updatedAt: settings?.updatedAt || PRODUCT_LABEL_DEFAULT_SETTINGS.updatedAt

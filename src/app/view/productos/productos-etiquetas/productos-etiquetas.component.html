@@ -1,17 +1,5 @@
 <div *ngIf="dataIsReady" class="labels-shell fade-in mb-5">
   <div class="labels-panel">
-    <a class="boton-flotante-regreso" routerLink="/productos-inventario"
-      title="Volver al inventario"
-      aria-label="Volver al inventario conservando el contexto actual">
-      <span class="boton-flotante-icono">
-        <i class="bi bi-arrow-left-circle"></i>
-      </span>
-      <span class="boton-flotante-contenido">
-        <span class="boton-flotante-titulo">Volver a inventario</span>
-        <span class="boton-flotante-subtitulo">Regresar al módulo principal</span>
-      </span>
-    </a>
-
     <section class="labels-hero surface-panel">
       <div class="labels-hero__main">
         <span class="labels-eyebrow">Inventario / Etiquetas</span>
@@ -28,10 +16,6 @@
           <article class="hero-stat">
             <span>Campos activos</span>
             <strong>{{ camposActivos.length }}</strong>
-          </article>
-          <article class="hero-stat">
-            <span>Columnas</span>
-            <strong>{{ configuracion.columns }}</strong>
           </article>
         </div>
       </div>
@@ -108,16 +92,12 @@
         <div class="labels-sidebar__body">
           <div class="settings-grid">
             <label class="setting-field">
-              <span>Columnas</span>
-              <input type="number" min="1" max="4" [(ngModel)]="configuracion.columns">
-            </label>
-            <label class="setting-field">
               <span>Ancho (mm)</span>
               <input type="number" min="35" max="100" [(ngModel)]="configuracion.labelWidthMm">
             </label>
             <label class="setting-field">
               <span>Alto (mm)</span>
-              <input type="number" min="20" max="80" [(ngModel)]="configuracion.labelHeightMm">
+              <input type="number" min="10" max="80" [(ngModel)]="configuracion.labelHeightMm">
             </label>
             <label class="toggle-card toggle-card--field">
               <span class="toggle-card__label">Acabado</span>
@@ -156,7 +136,7 @@
           <div class="panel-block panel-block--summary">
             <div>
               <span class="summary-label">Formato actual</span>
-              <strong>{{ configuracion.columns }} col · {{ configuracion.labelWidthMm }} x {{ configuracion.labelHeightMm }} mm</strong>
+              <strong>{{ configuracion.labelWidthMm }} x {{ configuracion.labelHeightMm }} mm</strong>
             </div>
             <small>{{ configuracion.showBorder ? 'Con borde visible' : 'Sin borde visible' }}</small>
           </div>
