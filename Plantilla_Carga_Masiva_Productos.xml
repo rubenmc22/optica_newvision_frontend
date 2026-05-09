@@ -1,0 +1,397 @@
+<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Bottom"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" ss:Size="11"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="sTitle">
+   <Font ss:FontName="Calibri" ss:Size="14" ss:Bold="1"/>
+   <Interior ss:Color="#D9EAF7" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="sHeader">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#1F4E78" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+  </Style>
+  <Style ss:ID="sNote">
+   <Font ss:FontName="Calibri" ss:Size="11"/>
+   <Alignment ss:Vertical="Top" ss:WrapText="1"/>
+  </Style>
+  <Style ss:ID="sRequired">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#9C0006"/>
+   <Interior ss:Color="#FFC7CE" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="sOptional">
+   <Font ss:FontName="Calibri" ss:Size="11" ss:Color="#1F1F1F"/>
+   <Interior ss:Color="#E2F0D9" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="sExample">
+   <Font ss:FontName="Calibri" ss:Size="11"/>
+   <Interior ss:Color="#FFF2CC" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Instrucciones">
+  <Table>
+   <Column ss:Width="220"/>
+   <Column ss:Width="520"/>
+   <Row>
+    <Cell ss:StyleID="sTitle"><Data ss:Type="String">Plantilla de carga masiva de productos</Data></Cell>
+    <Cell ss:StyleID="sTitle"><Data ss:Type="String">Optica New Vision</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">Tema</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">Indicacion</Data></Cell>
+   </Row>
+   <Row><Cell><Data ss:Type="String">Uso general</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Use una fila por producto. Puede cargar todo desde la hoja Plantilla General o trabajar por categoria en las hojas separadas.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Categorias validas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Cristales, Monturas, Lentes de contacto, Liquidos, Estuches, Accesorios.</Data></Cell></Row>
+    <Row><Cell><Data ss:Type="String">Campos comunes obligatorios</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">categoria, stock, precio_venta, aplica_iva, requiere_formula y activo.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Booleanos</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Llenar solo con TRUE o FALSE.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Precio</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">precio_venta es el precio final comercial. Si aplica_iva = TRUE, debe venir con IVA incluido. Si aplica_iva = FALSE, va sin IVA.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Nombre</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">nombre_personalizado es opcional. Si queda vacio, el sistema genera el nombre automaticamente.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Descripcion</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">descripcion_personalizada es opcional. Si queda vacia, el sistema genera una descripcion base.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Nombre automatico no cristal</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Para Monturas, Lentes de contacto, Liquidos, Estuches y Accesorios: CATEGORIA MARCA MODELO MATERIAL. Solo usa las partes que apliquen.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Nombre automatico cristal</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Para Cristales: tipo_cristal + presentacion + material + tratamientos + rango_formula.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Tratamientos</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Si un cristal tiene varios tratamientos, se separan con barra vertical. Ejemplo: Antirreflejo|Filtro azul|Fotocromatico.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Material otro</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">material_otro solo aplica a Cristales cuando material = Otro.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Costo laboratorio</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">costo_laboratorio solo aplica a Cristales.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Imagen</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Esta plantilla no incluye carga de imagen. Si no se carga imagen, el sistema deja la imagen generica por defecto.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Campos vacios</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">En cada hoja por categoria deje en blanco los campos que no apliquen. No invente valores para completar.</Data></Cell></Row>
+    <Row><Cell><Data ss:Type="String">requiere_item_padre</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Se omite de esta plantilla. Para la carga masiva se asumira FALSE por defecto salvo que luego definamos una regla especial de importacion.</Data></Cell></Row>
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Diccionario">
+  <Table>
+   <Column ss:Width="170"/>
+   <Column ss:Width="90"/>
+   <Column ss:Width="220"/>
+   <Column ss:Width="380"/>
+   <Row>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">Campo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">Tipo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">Aplica a</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">Regla</Data></Cell>
+   </Row>
+   <Row><Cell><Data ss:Type="String">categoria</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sRequired"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Debe ser una categoria comercial valida.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">nombre_personalizado</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Si queda vacio, el sistema lo genera.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">descripcion_personalizada</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Si queda vacia, el sistema genera descripcion base.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">stock</Data></Cell><Cell><Data ss:Type="String">Numero</Data></Cell><Cell ss:StyleID="sRequired"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Cantidad disponible en inventario.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">precio_venta</Data></Cell><Cell><Data ss:Type="String">Numero</Data></Cell><Cell ss:StyleID="sRequired"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Precio final comercial. Si aplica IVA debe venir con IVA.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">aplica_iva</Data></Cell><Cell><Data ss:Type="String">Booleano</Data></Cell><Cell ss:StyleID="sRequired"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">TRUE o FALSE.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">requiere_formula</Data></Cell><Cell><Data ss:Type="String">Booleano</Data></Cell><Cell ss:StyleID="sRequired"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">TRUE si el producto requiere formula medica.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">activo</Data></Cell><Cell><Data ss:Type="String">Booleano</Data></Cell><Cell ss:StyleID="sRequired"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">TRUE para vender, FALSE para dejar inactivo.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">marca</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">En Cristales es opcional. En las demas categorias conviene llenarlo para nombre y busqueda.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">modelo</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Monturas, Liquidos, Estuches, Accesorios</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Tambien se usa como nombre base en la construccion automatica.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">color</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Monturas, Lentes de contacto, Accesorios, Cristales</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">En Cristales normalmente puede ir vacio.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">material</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Cristales, Monturas, Lentes de contacto, Estuches, Accesorios</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">En Liquidos no se usa para el contrato actual.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">material_otro</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Cristales</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Llenar solo si material = Otro.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">proveedor</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Se recomienda llenarlo para trazabilidad y compras.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">tipo_cristal</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sRequired"><Data ss:Type="String">Cristales</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Ejemplo: Monofocal vision sencilla, Bifocal, Progresivo.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">presentacion</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Cristales</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Si la familia usa selector cerrado, trate de usar Stock o Semi-terminado.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">tratamientos</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Cristales</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Separar multiples valores con |.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">rango_formula</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Cristales, Lentes de contacto</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Ejemplo: Esf. +4.00 a -6.00.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">costo_laboratorio</Data></Cell><Cell><Data ss:Type="String">Numero</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Cristales</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Costo interno o del laboratorio.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">tipo_lente_contacto</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sRequired"><Data ss:Type="String">Lentes de contacto</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Ejemplo: Esferico, Torico, Multifocal.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">notas_importacion</Data></Cell><Cell><Data ss:Type="String">Texto</Data></Cell><Cell ss:StyleID="sOptional"><Data ss:Type="String">Todas</Data></Cell><Cell ss:StyleID="sNote"><Data ss:Type="String">Solo para comentarios del cliente o del equipo de carga.</Data></Cell></Row>
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Catalogos">
+  <Table>
+   <Column ss:Width="180"/>
+   <Column ss:Width="220"/>
+   <Column ss:Width="280"/>
+   <Row>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">Tipo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">Valor</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">Comentario</Data></Cell>
+   </Row>
+   <Row><Cell><Data ss:Type="String">Categoria</Data></Cell><Cell><Data ss:Type="String">Cristales</Data></Cell><Cell><Data ss:Type="String">Producto formulado o de laboratorio.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Categoria</Data></Cell><Cell><Data ss:Type="String">Monturas</Data></Cell><Cell><Data ss:Type="String">Monturas para lentes.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Categoria</Data></Cell><Cell><Data ss:Type="String">Lentes de contacto</Data></Cell><Cell><Data ss:Type="String">Lentes blandos o especiales.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Categoria</Data></Cell><Cell><Data ss:Type="String">Liquidos</Data></Cell><Cell><Data ss:Type="String">Soluciones o limpiadores.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Categoria</Data></Cell><Cell><Data ss:Type="String">Estuches</Data></Cell><Cell><Data ss:Type="String">Estuches de lentes o accesorios.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Categoria</Data></Cell><Cell><Data ss:Type="String">Accesorios</Data></Cell><Cell><Data ss:Type="String">Cordones, panos, kits, etc.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Booleano</Data></Cell><Cell><Data ss:Type="String">TRUE</Data></Cell><Cell><Data ss:Type="String">Valor verdadero.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Booleano</Data></Cell><Cell><Data ss:Type="String">FALSE</Data></Cell><Cell><Data ss:Type="String">Valor falso.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Presentacion cristal</Data></Cell><Cell><Data ss:Type="String">Stock</Data></Cell><Cell><Data ss:Type="String">Opcion comun para cristales.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Presentacion cristal</Data></Cell><Cell><Data ss:Type="String">Semi-terminado</Data></Cell><Cell><Data ss:Type="String">Opcion comun para cristales.</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Separador tratamientos</Data></Cell><Cell><Data ss:Type="String">|</Data></Cell><Cell><Data ss:Type="String">Ejemplo: Antirreflejo|Filtro azul.</Data></Cell></Row>
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Plantilla General">
+  <Table>
+   <Column ss:Width="140"/><Column ss:Width="170"/><Column ss:Width="210"/><Column ss:Width="80"/><Column ss:Width="90"/><Column ss:Width="90"/><Column ss:Width="110"/><Column ss:Width="70"/><Column ss:Width="120"/><Column ss:Width="140"/><Column ss:Width="140"/><Column ss:Width="110"/><Column ss:Width="120"/><Column ss:Width="150"/><Column ss:Width="130"/><Column ss:Width="170"/><Column ss:Width="130"/><Column ss:Width="150"/><Column ss:Width="170"/><Column ss:Width="150"/><Column ss:Width="150"/><Column ss:Width="180"/>
+   <Row>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">categoria</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">nombre_personalizado</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">descripcion_personalizada</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">stock</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">precio_venta</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">aplica_iva</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">requiere_formula</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">activo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">marca</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">modelo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">color</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">material</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">material_otro</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">proveedor</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">tipo_cristal</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">presentacion</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">tratamientos</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">rango_formula</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">costo_laboratorio</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">tipo_lente_contacto</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">notas_importacion</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Cristales</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">3</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">25</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">FALSE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Hoya</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">CR-39</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Laboratorio QA</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Monofocal vision sencilla</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Stock</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Antirreflejo</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Esf. +4.00 a -6.00</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">12.5</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Ejemplo de cristal</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Cristales">
+  <Table>
+   <Column ss:Width="170"/><Column ss:Width="210"/><Column ss:Width="80"/><Column ss:Width="90"/><Column ss:Width="90"/><Column ss:Width="110"/><Column ss:Width="110"/><Column ss:Width="120"/><Column ss:Width="150"/><Column ss:Width="170"/><Column ss:Width="130"/><Column ss:Width="150"/><Column ss:Width="170"/><Column ss:Width="150"/><Column ss:Width="200"/>
+   <Row>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">nombre_personalizado</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">descripcion_personalizada</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">stock</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">precio_venta</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">aplica_iva</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">requiere_formula</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">activo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">marca</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">tipo_cristal</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">presentacion</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">material</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">material_otro</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">proveedor</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">tratamientos</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">rango_formula</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">costo_laboratorio</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">notas_importacion</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">3</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">25</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">FALSE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Hoya</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Monofocal vision sencilla</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Stock</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">CR-39</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Laboratorio QA</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Antirreflejo|Filtro azul</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Esf. +4.00 a -6.00</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">12.5</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Marca opcional en cristales.</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Monturas">
+  <Table>
+   <Column ss:Width="170"/><Column ss:Width="210"/><Column ss:Width="80"/><Column ss:Width="90"/><Column ss:Width="90"/><Column ss:Width="110"/><Column ss:Width="110"/><Column ss:Width="120"/><Column ss:Width="150"/><Column ss:Width="150"/><Column ss:Width="110"/><Column ss:Width="130"/><Column ss:Width="150"/><Column ss:Width="200"/>
+   <Row>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">nombre_personalizado</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">descripcion_personalizada</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">stock</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">precio_venta</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">aplica_iva</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">requiere_formula</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">activo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">marca</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">modelo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">color</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">material</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">proveedor</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">notas_importacion</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">12</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">98.6</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">FALSE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Carrera</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Carrera 8847</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Negro mate</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Acetato</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Distribuidor oficial</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Nombre automatico: MONTURAS CARRERA 8847 ACETATO</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Lentes contacto">
+  <Table>
+   <Column ss:Width="170"/><Column ss:Width="210"/><Column ss:Width="80"/><Column ss:Width="90"/><Column ss:Width="90"/><Column ss:Width="110"/><Column ss:Width="110"/><Column ss:Width="120"/><Column ss:Width="150"/><Column ss:Width="150"/><Column ss:Width="110"/><Column ss:Width="130"/><Column ss:Width="150"/><Column ss:Width="170"/><Column ss:Width="200"/>
+   <Row>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">nombre_personalizado</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">descripcion_personalizada</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">stock</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">precio_venta</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">aplica_iva</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">requiere_formula</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">activo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">marca</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">tipo_lente_contacto</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">modelo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">color</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">material</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">proveedor</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">rango_formula</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">notas_importacion</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">6</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">18</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">FALSE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Bausch + Lomb</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Esferico</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Esferico</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Transparente</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Distribuidor LC</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">-0.50 a -6.00</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Nombre automatico usa categoria, marca, tipo/modelo y material si existe.</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Liquidos">
+  <Table>
+   <Column ss:Width="170"/><Column ss:Width="210"/><Column ss:Width="80"/><Column ss:Width="90"/><Column ss:Width="90"/><Column ss:Width="110"/><Column ss:Width="110"/><Column ss:Width="120"/><Column ss:Width="150"/><Column ss:Width="150"/><Column ss:Width="150"/><Column ss:Width="200"/>
+   <Row>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">nombre_personalizado</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">descripcion_personalizada</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">stock</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">precio_venta</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">aplica_iva</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">requiere_formula</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">activo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">marca</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">modelo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">proveedor</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">notas_importacion</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">20</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">12</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">FALSE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Renu</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Fresh 355ml</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Distribuidor Liquidos</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Nombre automatico: LIQUIDOS RENU FRESH 355ML</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Estuches">
+  <Table>
+   <Column ss:Width="170"/><Column ss:Width="210"/><Column ss:Width="80"/><Column ss:Width="90"/><Column ss:Width="90"/><Column ss:Width="110"/><Column ss:Width="110"/><Column ss:Width="120"/><Column ss:Width="150"/><Column ss:Width="150"/><Column ss:Width="130"/><Column ss:Width="150"/><Column ss:Width="200"/>
+   <Row>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">nombre_personalizado</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">descripcion_personalizada</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">stock</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">precio_venta</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">aplica_iva</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">requiere_formula</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">activo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">marca</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">modelo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">material</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">proveedor</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">notas_importacion</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">15</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">9.5</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">FALSE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Rayban</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Hardcase</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Cuero</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Proveedor Estuches</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Nombre automatico: ESTUCHES RAYBAN HARDCASE CUERO</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Accesorios">
+  <Table>
+   <Column ss:Width="170"/><Column ss:Width="210"/><Column ss:Width="80"/><Column ss:Width="90"/><Column ss:Width="90"/><Column ss:Width="110"/><Column ss:Width="110"/><Column ss:Width="120"/><Column ss:Width="150"/><Column ss:Width="150"/><Column ss:Width="110"/><Column ss:Width="130"/><Column ss:Width="150"/><Column ss:Width="200"/>
+   <Row>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">nombre_personalizado</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">descripcion_personalizada</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">stock</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">precio_venta</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">aplica_iva</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">requiere_formula</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">activo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">marca</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">modelo</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">color</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">material</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">proveedor</Data></Cell>
+    <Cell ss:StyleID="sHeader"><Data ss:Type="String">notas_importacion</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String"></Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">30</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">4.5</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">FALSE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">TRUE</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Zeiss</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Cordon</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Negro</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Microfibra</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Proveedor Accesorios</Data></Cell>
+    <Cell ss:StyleID="sExample"><Data ss:Type="String">Nombre automatico: ACCESORIOS ZEISS CORDON MICROFIBRA</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+</Workbook>
