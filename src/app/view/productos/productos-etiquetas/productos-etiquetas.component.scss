@@ -1016,7 +1016,7 @@
 
 @media (max-width: 720px) {
   .labels-shell {
-    padding: 1rem 1rem 10.25rem;
+    padding: 1rem 1rem 8.25rem;
   }
 
   .toolbar-grid,
@@ -1095,58 +1095,80 @@
     position: fixed;
     right: 12px;
     left: auto;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 102px);
-    width: min(290px, calc(100vw - 24px));
-    max-width: min(290px, calc(100vw - 24px));
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    width: min(264px, calc(100vw - 24px));
+    max-width: min(264px, calc(100vw - 24px));
     min-width: 0;
+    margin: 0;
     border-radius: 16px;
-    padding: 0.85rem 0.95rem;
-    gap: 0.75rem;
+    padding: 0.72rem 0.82rem;
+    gap: 0.58rem;
+    z-index: 74;
+
+    .boton-flotante-icono {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 38px;
+
+      i {
+        font-size: 1.05rem;
+      }
+    }
 
     .boton-flotante-titulo {
-      font-size: 0.94rem;
+      font-size: 0.86rem;
     }
 
     .boton-flotante-subtitulo {
-      font-size: 0.78rem;
+      font-size: 0.72rem;
     }
+  }
+}
+
+@media (max-width: 720px) {
+  body:has(.app-quick-dock) .boton-flotante-regreso {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 124px);
   }
 }
 
 @media (max-width: 560px) {
   .labels-shell {
-    padding-bottom: 11.5rem;
+    padding-bottom: 9.25rem;
   }
 
   .boton-flotante-regreso {
     position: fixed;
     right: 10px;
-    left: auto;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 122px);
-    width: min(272px, calc(100vw - 20px));
-    max-width: min(272px, calc(100vw - 20px));
-    padding: 0.78rem 0.85rem;
-    gap: 0.65rem;
+      left: auto;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+      width: min(236px, calc(100vw - 20px));
+      max-width: min(236px, calc(100vw - 20px));
+      padding: 0.66rem 0.72rem;
+      gap: 0.52rem;
     border-radius: 15px;
 
     .boton-flotante-icono {
-      width: 40px;
-      height: 40px;
-      flex-basis: 40px;
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
       border-radius: 12px;
 
       i {
-        font-size: 1.2rem;
+          font-size: 0.98rem;
       }
     }
 
     .boton-flotante-titulo {
-      font-size: 0.9rem;
+        font-size: 0.81rem;
     }
 
     .boton-flotante-subtitulo {
-      font-size: 0.74rem;
+        font-size: 0.68rem;
       line-height: 1.15;
     }
+  }
+
+  body:has(.app-quick-dock) .boton-flotante-regreso {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 148px);
   }
 }

@@ -140,3 +140,132 @@ body > .ng-dropdown-panel .ng-option {
         -webkit-overflow-scrolling: touch;
     }
 }
+
+@media (max-width: 720px) {
+    app-productos-etiquetas .boton-flotante-regreso {
+        position: fixed !important;
+        right: 12px !important;
+        left: auto !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
+        z-index: 74 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: min(264px, calc(100vw - 24px)) !important;
+        max-width: min(264px, calc(100vw - 24px)) !important;
+        min-width: 0 !important;
+        padding: 0.72rem 0.82rem !important;
+        gap: 0.58rem !important;
+        border-radius: 16px !important;
+        background: linear-gradient(135deg, #16324f 0%, #215b8f 100%) !important;
+        color: #ffffff !important;
+        border: 0 !important;
+        box-shadow: 0 18px 38px rgba(16, 42, 67, 0.26) !important;
+        text-decoration: none !important;
+        overflow: hidden !important;
+        font-weight: 600 !important;
+    }
+
+    app-productos-etiquetas .boton-flotante-regreso .boton-flotante-icono {
+        width: 38px !important;
+        height: 38px !important;
+        flex: 0 0 38px !important;
+        border-radius: 14px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(255, 255, 255, 0.16) !important;
+    }
+
+    app-productos-etiquetas .boton-flotante-regreso .boton-flotante-icono i {
+        font-size: 1.05rem !important;
+        color: #ffffff !important;
+    }
+
+    app-productos-etiquetas .boton-flotante-regreso .boton-flotante-contenido {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+        min-width: 0 !important;
+    }
+
+    app-productos-etiquetas .boton-flotante-regreso .boton-flotante-titulo {
+        font-size: 0.86rem !important;
+        font-weight: 700 !important;
+        line-height: 1.15 !important;
+        letter-spacing: -0.01em !important;
+        color: #ffffff !important;
+    }
+
+    app-productos-etiquetas .boton-flotante-regreso .boton-flotante-subtitulo {
+        font-size: 0.72rem !important;
+        line-height: 1.2 !important;
+        color: rgba(255, 255, 255, 0.82) !important;
+    }
+
+    body:has(.app-quick-dock) app-productos-etiquetas .boton-flotante-regreso {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 116px) !important;
+    }
+}
+
+@media (max-width: 560px) {
+    app-productos-etiquetas .boton-flotante-regreso {
+        right: 10px !important;
+        left: auto !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+        width: min(236px, calc(100vw - 20px)) !important;
+        max-width: min(236px, calc(100vw - 20px)) !important;
+        padding: 0.66rem 0.72rem !important;
+        gap: 0.52rem !important;
+        border-radius: 15px !important;
+        background: linear-gradient(135deg, #16324f 0%, #215b8f 100%) !important;
+        color: #ffffff !important;
+        border: 0 !important;
+        box-shadow: 0 18px 38px rgba(16, 42, 67, 0.26) !important;
+        text-decoration: none !important;
+        overflow: hidden !important;
+    }
+
+    app-productos-etiquetas .boton-flotante-regreso .boton-flotante-icono {
+        width: 34px !important;
+        height: 34px !important;
+        flex-basis: 34px !important;
+        border-radius: 12px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(255, 255, 255, 0.16) !important;
+    }
+
+    app-productos-etiquetas .boton-flotante-regreso .boton-flotante-icono i {
+        font-size: 0.98rem !important;
+        color: #ffffff !important;
+    }
+
+    app-productos-etiquetas .boton-flotante-regreso .boton-flotante-contenido {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+        min-width: 0 !important;
+    }
+
+    app-productos-etiquetas .boton-flotante-regreso .boton-flotante-titulo {
+        font-size: 0.81rem !important;
+        font-weight: 700 !important;
+        line-height: 1.15 !important;
+        letter-spacing: -0.01em !important;
+        color: #ffffff !important;
+    }
+
+    app-productos-etiquetas .boton-flotante-regreso .boton-flotante-subtitulo {
+        font-size: 0.68rem !important;
+        line-height: 1.15 !important;
+        color: rgba(255, 255, 255, 0.82) !important;
+    }
+
+    body:has(.app-quick-dock) app-productos-etiquetas .boton-flotante-regreso {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 138px) !important;
+    }
+}

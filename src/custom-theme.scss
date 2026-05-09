@@ -512,8 +512,8 @@ body {
   /* Aumenta este valor */
 }
 
-/* Otra alternativa - modificar el overlay pane */
-.cdk-overlay-pane {
+/* Otra alternativa - limitar ajuste solo a overlays de snackbar */
+.cdk-overlay-pane.custom-snackbar-pane {
   margin-bottom: 100px !important;
 }
 
