@@ -1492,7 +1492,7 @@ export class HistoriasMedicasComponent implements OnInit {
     const mostrarCobroSoloConsulta = this.puedeCobrarSoloConsultaDesdeHistoria(historia);
     const result = await this.swalService.showInfo(
       'Historia médica lista',
-      this.construirHtmlSwalHistoriaLista(historia, nombrePaciente, presupuestoGenerado, etiquetaOpciones, totalOpciones),
+      this.construirHtmlSwalHistoriaLista(historia, nombrePaciente, presupuestoGenerado, etiquetaOpciones),
       {
         icon: 'success',
         showDenyButton: true,
@@ -1563,29 +1563,19 @@ export class HistoriasMedicasComponent implements OnInit {
     historia: HistoriaMedica,
     nombrePaciente: string,
     presupuestoGenerado: Presupuesto | null,
-    etiquetaOpciones: string,
-    totalOpciones: number
+    etiquetaOpciones: string
   ): string {
-    const resumenPresupuesto = presupuestoGenerado?.codigo
-      ? `
-        <section class="swal-history-flow-panel swal-history-flow-panel--success">
-          <div class="swal-history-flow-panel__eyebrow">Presupuesto enlazado</div>
-          <div class="swal-history-flow-panel__title">Presupuesto ${presupuestoGenerado.codigo} generado</div>
-          <div class="swal-history-flow-panel__text">Quedó asociado a esta historia con <strong>${etiquetaOpciones}</strong> para que el paciente pueda comparar recomendaciones.</div>
-        </section>
-      `
+    const numeroHistoria = historia.nHistoria ?? 'sin número';
+    const bloquePresupuesto = presupuestoGenerado?.codigo
+      ? `<p class="swal-history-flow-lead"><strong>Presupuesto:</strong> ${presupuestoGenerado.codigo} (${etiquetaOpciones})</p>`
       : '';
 
     return `
       <div class="swal-history-flow-card">
-        <p class="swal-history-flow-lead">
-          La historia <strong>#${historia.nHistoria ?? 'sin número'}</strong> de <strong>${nombrePaciente}</strong> ya quedó registrada.
-        </p>
-        ${resumenPresupuesto}
-        <section class="swal-history-flow-panel swal-history-flow-panel--warning">
-          <div class="swal-history-flow-panel__eyebrow">Siguiente paso</div>
-          <div class="swal-history-flow-panel__text">Continúa con consulta más productos o cierra este flujo si el paciente no comprará ahora.</div>
-        </section>
+        <!-- RDMC REQBD-xxxx: Mostrar solo informacion clave al crear historia medica -->
+        <p class="swal-history-flow-lead"><strong>Historia:</strong> #${numeroHistoria}</p>
+        <p class="swal-history-flow-lead"><strong>Paciente:</strong> ${nombrePaciente}</p>
+        ${bloquePresupuesto}
       </div>
     `;
   }

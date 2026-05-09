@@ -1506,19 +1506,20 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
     if (!orden?.productos || !Array.isArray(orden.productos)) return [];
     const grupos: { [cat: string]: any[] } = {};
     orden.productos.forEach(prod => {
+      const prodAny = prod as any;
       // Heurística: si no hay 'categoria', inferir por nombre/modelo
       let categoria = 'Sin categoría';
-      if ('categoria' in prod && prod.categoria) {
-        categoria = String(prod.categoria).trim();
-      } else if (prod.nombre) {
-        const nombre = prod.nombre.toLowerCase();
+      if ('categoria' in prodAny && prodAny.categoria) {
+        categoria = String(prodAny.categoria).trim();
+      } else if (prodAny.nombre) {
+        const nombre = String(prodAny.nombre).toLowerCase();
         if (nombre.includes('montura')) categoria = 'Monturas';
         else if (nombre.includes('cristal')) categoria = 'Cristales';
         else if (nombre.includes('lente de contacto') || nombre.includes('contacto')) categoria = 'Lentes de contacto';
-        else if (prod.modelo && prod.modelo.toLowerCase().includes('contacto')) categoria = 'Lentes de contacto';
+        else if (prodAny.modelo && String(prodAny.modelo).toLowerCase().includes('contacto')) categoria = 'Lentes de contacto';
       }
       if (!grupos[categoria]) grupos[categoria] = [];
-      grupos[categoria].push(prod);
+      grupos[categoria].push(prodAny);
     });
     return Object.entries(grupos).map(([categoria, productos]) => ({ categoria, productos }));
   }
