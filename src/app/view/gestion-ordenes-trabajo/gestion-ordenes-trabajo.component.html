@@ -634,7 +634,7 @@
 </div>
 
 <!-- Modal Detalle Orden -->
-<div class="modal-detalle-layer" *ngIf="mostrarModalDetalle" (click)="cerrarModalDetalle()">
+<div class="modal-detalle-layer" *ngIf="mostrarModalDetalle && !estaModalOculto('detalle')" (click)="cerrarModalDetalle()">
   <div class="modal-detalle-orden" (click)="$event.stopPropagation()">
   <div class="modal-header">
     <div class="header-left">
@@ -765,9 +765,6 @@
               <button class="tab-btn" [class.active]="tabActivaDetalle === 'formulacion'" (click)="tabActivaDetalle = 'formulacion'">
                 <i class="bi bi-prescription"></i> Formulación
               </button>
-              <button class="tab-btn" [class.active]="tabActivaDetalle === 'producto'" (click)="tabActivaDetalle = 'producto'">
-                <i class="bi bi-box-seam"></i> Producto
-              </button>
               <button class="tab-btn" [class.active]="tabActivaDetalle === 'indicaciones'" (click)="tabActivaDetalle = 'indicaciones'">
                 <i class="bi bi-lightbulb"></i> Indicaciones
               </button>
@@ -881,94 +878,65 @@
             </div>
             
             <!-- CONTENIDO DE PRODUCTO -->
+            <!--RDMC REQBD-xxxx: Indicaciones agrupadas por categoría-->
             <div class="tab-content" *ngIf="tabActivaDetalle === 'producto'">
-              <div class="producto-detalle-moderno" *ngIf="ordenSeleccionada?.productos?.length > 0">
-                <div *ngFor="let producto of ordenSeleccionada?.productos" class="producto-card">
-                  <div class="producto-header">
-                    <i class="bi bi-box"></i>
-                    <span class="producto-nombre">{{ producto.nombre }}</span>
+              <div class="indicaciones-detalle" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length > 0">
+                <ng-container *ngFor="let recomendacion of ordenSeleccionada?.cliente?.historia_medica?.recomendaciones">
+                  <div class="indicacion-item">
+                    <span>{{ recomendacion }}</span>
                   </div>
-                  <div class="producto-info-grid">
-                    <div class="producto-info-item" *ngIf="producto.codigo">
-                      <span class="info-label">Código:</span>
-                      <span class="info-value">{{ producto.codigo }}</span>
-                    </div>
-                    <div class="producto-info-item" *ngIf="producto.marca">
-                      <span class="info-label">Marca:</span>
-                      <span class="info-value">{{ producto.marca }}</span>
-                    </div>
-                    <div class="producto-info-item" *ngIf="producto.modelo">
-                      <span class="info-label">Modelo:</span>
-                      <span class="info-value">{{ producto.modelo }}</span>
-                    </div>
-                    <div class="producto-info-item" *ngIf="producto.cantidad">
-                      <span class="info-label">Cantidad:</span>
-                      <span class="info-value">{{ producto.cantidad }}</span>
-                    </div>
-                  </div>
-                </div>
+                </ng-container>
               </div>
-              
-              <div class="no-data" *ngIf="!ordenSeleccionada?.productos?.length">
-                <i class="bi bi-box"></i>
-                <span>No hay productos asociados</span>
+              <div class="no-data" *ngIf="!ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length">
+                <i class="bi bi-lightbulb"></i>
+                <span>No hay indicaciones asociadas</span>
               </div>
             </div>
             
             <!-- CONTENIDO DE INDICACIONES -->
+            <!--RDMC REQBD-xxxx: Indicaciones = productos pagados agrupados por categoría-->
             <div class="tab-content" *ngIf="tabActivaDetalle === 'indicaciones'">
-              <div class="indicaciones-detalle" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length > 0">
-                <div *ngFor="let rec of ordenSeleccionada?.cliente?.historia_medica?.recomendaciones; let i = index" class="indicacion-card-detalle">
-                  <div class="indicacion-header">
-                    <span class="indicacion-numero">#{{ i + 1 }}</span>
-                    <span class="badge-tipo" [ngClass]="esLenteContactoRecomendacion(rec) ? 'tipo-contacto' : 'tipo-normal'">
-                      {{ esLenteContactoRecomendacion(rec) ? '👁️ Contacto' : '👓 Convencional' }}
-                    </span>
-                  </div>
-                  
-                  <div class="indicacion-grid">
-                    <div class="indicacion-item">
-                      <span class="item-label">Cristal</span>
-                      <span class="item-value">{{ getTipoCristalRecomendado(rec.cristal) }}</span>
+              <div class="indicaciones-agrupadas" *ngIf="ordenSeleccionada?.productos?.length > 0">
+                <ng-container *ngFor="let grupo of getProductosPagadosAgrupadosPorCategoria(ordenSeleccionada)">
+                  <div class="indicacion-categoria-card" [ngClass]="{
+                    'cat-cristales': (grupo.categoria || '').toLowerCase().includes('cristal'),
+                    'cat-monturas': (grupo.categoria || '').toLowerCase().includes('montura')
+                  }">
+                    <div class="indicacion-categoria-header">
+                      <i class="bi categoria-icon" [ngClass]="
+                        (grupo.categoria || '').toLowerCase().includes('cristal')
+                          ? 'bi-gem'
+                          : ((grupo.categoria || '').toLowerCase().includes('montura') ? 'bi-eyeglasses' : 'bi-folder2-open')
+                      "></i>
+                      <span class="indicacion-categoria-nombre">{{ grupo.categoria }}</span>
+                      <span class="categoria-count">{{ grupo.productos?.length || 0 }} item(s)</span>
                     </div>
-                    <div class="indicacion-item">
-                      <span class="item-label">Material</span>
-                      <span class="item-value">{{ getMaterialesRecomendados(rec.material) }}</span>
-                    </div>
-                    <div class="indicacion-item" *ngIf="getMonturaRecomendadaTexto(rec)">
-                      <span class="item-label">Montura</span>
-                      <span class="item-value">{{ getMonturaRecomendadaTexto(rec) }}</span>
-                    </div>
-                    <div class="indicacion-item" *ngIf="getTipoLenteContactoRecomendacionDetalle(rec) as tipoLenteContacto">
-                      <span class="item-label">Modelo Contacto</span>
-                      <span class="item-value highlight">{{ getTipoLenteContactoLabel(tipoLenteContacto) }}</span>
-                    </div>
-                  </div>
-                  
-                  <div class="medidas-detalle" *ngIf="getMedidasRecomendacionDetalle(rec) as medidas">
-                    <div class="medidas-titulo">
-                      <i class="bi bi-rulers"></i>
-                      <span>Medidas:</span>
-                    </div>
-                    <div class="medidas-chips">
-                      <span *ngIf="medidas.horizontal" class="medida-chip">H: {{ medidas.horizontal }} cm</span>
-                      <span *ngIf="medidas.vertical" class="medida-chip">V: {{ medidas.vertical }} cm</span>
-                      <span *ngIf="medidas.diagonal" class="medida-chip">D: {{ medidas.diagonal }} cm</span>
-                      <span *ngIf="medidas.puente" class="medida-chip">P: {{ medidas.puente }} cm</span>
+                    <div class="indicacion-productos-lista">
+                      <div *ngFor="let producto of grupo.productos" class="indicacion-producto-item">
+                        <div class="indicacion-producto-nombre">
+                          <div class="producto-titulo-left">
+                            <i class="bi bi-box"></i>
+                            <span class="producto-titulo-text">{{ producto.nombre }}</span>
+                          </div>
+                          <!-- RDMC REQBD-xxxx: Mostrar codigo junto al nombre en badge compacto para todas las categorias -->
+                          <span *ngIf="producto.codigo" class="codigo-inline-badge">{{ producto.codigo }}</span>
+                        </div>
+                        <div class="indicacion-producto-detalles">
+                          <span *ngIf="producto.modelo" class="detalle-chip"><b>Modelo:</b> {{ producto.modelo }}</span>
+                          <span *ngIf="producto.marca" class="detalle-chip"><b>Marca:</b> {{ producto.marca }}</span>
+                          <span *ngIf="producto.material" class="detalle-chip"><b>Material:</b> {{ producto.material }}</span>
+                          <!-- RDMC REQBD-xxxx: En cristales mostrar atributos especificos como badges -->
+                          <span *ngIf="esProductoCristal(producto) && producto.presentacion" class="detalle-chip"><b>Presentación:</b> {{ producto.presentacion }}</span>
+                          <span *ngIf="esProductoCristal(producto) && getTratamientosProductoTexto(producto)" class="detalle-chip"><b>Tratamientos:</b> {{ getTratamientosProductoTexto(producto) }}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  
-                  <!-- Observaciones -->
-                  <div class="observaciones-detalle" *ngIf="rec.observaciones">
-                    <i class="bi bi-chat-text"></i>
-                    <span class="observaciones-text">{{ rec.observaciones }}</span>
-                  </div>
-                </div>
+                </ng-container>
               </div>
-              
-              <div class="no-data" *ngIf="!ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length">
-                <i class="bi bi-lightbulb"></i>
-                <span>No hay indicaciones registradas</span>
+              <div class="no-data" *ngIf="!ordenSeleccionada?.productos?.length">
+                <i class="bi bi-box"></i>
+                <span>No hay productos pagados asociados</span>
               </div>
             </div>
           </div>
@@ -1015,8 +983,8 @@
 
 
 <!-- Modal de Archivadas -->
-<div class="modal-backdrop" *ngIf="mostrarModalArchivo" (click)="cerrarModalArchivo()"></div>
-<div class="modal-archivadas" *ngIf="mostrarModalArchivo">
+<div class="modal-backdrop" *ngIf="mostrarModalArchivo && !estaModalOculto('archivadas')" (click)="cerrarModalArchivo()"></div>
+<div class="modal-archivadas" *ngIf="mostrarModalArchivo && !estaModalOculto('archivadas')">
   <div class="modal-header">
     <h2>
       <i class="bi bi-archive"></i>
@@ -1094,8 +1062,8 @@
 </div>
 
 <!-- Modal para ver todas las órdenes -->
-<div class="modal-backdrop" *ngIf="mostrarModalOrdenes" (click)="cerrarModalOrdenes()"></div>
-<div class="modal-ordenes" *ngIf="mostrarModalOrdenes">
+<div class="modal-backdrop" *ngIf="mostrarModalOrdenes && !estaModalOculto('ordenes')" (click)="cerrarModalOrdenes()"></div>
+<div class="modal-ordenes" *ngIf="mostrarModalOrdenes && !estaModalOculto('ordenes')">
   <div class="modal-header">
     <h2>
       <i class="bi bi-list-ul"></i>
@@ -1142,7 +1110,7 @@
 
     <!-- Lista de órdenes filtradas -->
     <div class="ordenes-modal-list" *ngIf="ordenesModalFiltradas.length > 0; else sinResultados">
-      <div class="orden-modal-card" *ngFor="let orden of ordenesModalPagina" (click)="verDetalleOrden(orden)">
+      <div class="orden-modal-card" *ngFor="let orden of ordenesModalPagina" (click)="verDetalleOrden(orden, true)">
         <div class="orden-modal-header">
           <div class="orden-info">
             <strong>{{orden.codigo}}</strong>
@@ -1187,7 +1155,7 @@
         </div>
 
         <div class="orden-modal-actions">
-          <button class="btn-action" (click)="verDetalleOrden(orden); $event.stopPropagation()" title="Ver detalles">
+          <button class="btn-action" (click)="verDetalleOrden(orden, true); $event.stopPropagation()" title="Ver detalles">
             <i class="bi bi-eye"></i>
           </button>
           <button class="btn-action"
@@ -1244,9 +1212,9 @@
 
 
 <!-- Modal para configurar fecha de entrega -->
-<div class="modal-backdrop" *ngIf="mostrarModalConfigurarFecha" (click)="cerrarModalFechaEntrega()"></div>
+<div class="modal-backdrop" *ngIf="mostrarModalConfigurarFecha && !estaModalOculto('configFecha')" (click)="cerrarModalFechaEntrega()"></div>
 
-<div class="modal-configurar-fecha" *ngIf="mostrarModalConfigurarFecha">
+<div class="modal-configurar-fecha" *ngIf="mostrarModalConfigurarFecha && !estaModalOculto('configFecha')">
   <div class="modal-header">
     <h2>
       <i class="bi bi-calendar-plus"></i>
@@ -1310,9 +1278,9 @@
 
 
 <!-- Modal para Actualizar Progreso -->
-<div class="modal-progreso-backdrop" *ngIf="mostrarModalProgreso" (click)="cerrarModalProgreso()"></div>
+<div class="modal-progreso-backdrop" *ngIf="mostrarModalProgreso && !estaModalOculto('progreso')" (click)="cerrarModalProgreso()"></div>
 
-<div class="modal-progreso" *ngIf="mostrarModalProgreso">
+<div class="modal-progreso" *ngIf="mostrarModalProgreso && !estaModalOculto('progreso')">
   <div class="modal-header">
     <h3>
       <i class="bi bi-percent"></i>
@@ -1416,9 +1384,9 @@
 
 
 <!-- Modal para Configurar Auto-Archivado -->
-<div class="modal-archivo-backdrop" *ngIf="mostrarModalAutoArchivado" (click)="cerrarModalArchivo()"></div>
+<div class="modal-archivo-backdrop" *ngIf="mostrarModalAutoArchivado && !estaModalOculto('autoArchivado')" (click)="cerrarModalArchivo()"></div>
 
-<div class="modal-archivo" *ngIf="mostrarModalAutoArchivado">
+<div class="modal-archivo" *ngIf="mostrarModalAutoArchivado && !estaModalOculto('autoArchivado')">
   <div class="modal-header">
     <h3 style="color: white;">
       <i class="bi bi-gear"></i>

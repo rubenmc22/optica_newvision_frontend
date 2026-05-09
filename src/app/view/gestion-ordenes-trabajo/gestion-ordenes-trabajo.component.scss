@@ -1,4 +1,157 @@
 @use '../../../custom-theme.scss' as theme;
+//RDMC REQBD-xxxx: Estilos modernos para indicaciones agrupadas
+.indicaciones-agrupadas {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 0.75rem;
+}
+
+.indicacion-categoria-card {
+    --accent: #64748b;
+    --accent-soft: #f1f5f9;
+    --accent-border: #dbe3ee;
+    background: #f8fafc;
+    border-radius: 12px;
+    box-shadow: none;
+    padding: 1rem 1.1rem 0.9rem;
+    border: 1px solid var(--accent-border);
+    border-left: 4px solid var(--accent);
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+
+    &.cat-cristales {
+        --accent: #0f766e;
+        --accent-soft: #ecfeff;
+        --accent-border: #a5f3fc;
+    }
+
+    &.cat-monturas {
+        --accent: #1d4ed8;
+        --accent-soft: #eff6ff;
+        --accent-border: #bfdbfe;
+    }
+}
+.indicacion-categoria-card:hover {
+    background: #f9fbfd;
+    border-color: color-mix(in srgb, var(--accent) 28%, #cbd5e1);
+}
+.indicacion-categoria-header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+
+    .categoria-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent-soft);
+        border: 1px solid color-mix(in srgb, var(--accent) 20%, #e2e8f0);
+        color: var(--accent);
+        font-size: 0.92rem;
+    }
+
+    .categoria-count {
+        margin-left: auto;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        background: #eef2f7;
+        border: 1px solid #dde5ef;
+        padding: 0.18rem 0.5rem;
+        border-radius: 999px;
+    }
+}
+.indicacion-categoria-nombre {
+    letter-spacing: 0.02em;
+}
+.indicacion-productos-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+.indicacion-producto-item {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 0.68rem 0.9rem;
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+}
+.indicacion-producto-nombre {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 0.98rem;
+}
+
+.producto-titulo-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.producto-titulo-text {
+    line-height: 1.25;
+}
+
+.codigo-inline-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #cfd8e3;
+    border-radius: 999px;
+    padding: 0.08rem 0.48rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    margin-left: 0.55rem;
+    flex-shrink: 0;
+}
+.indicacion-producto-detalles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.55rem;
+    margin-top: 0.42rem;
+}
+.detalle-chip {
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.86rem;
+    font-weight: 500;
+    margin-right: 0;
+
+    b {
+        color: #1e293b;
+        font-weight: 600;
+    }
+}
+
+.indicacion-categoria-card.cat-cristales .detalle-chip {
+    background: #f0fdfa;
+    border-color: #bae6fd;
+}
+
+.indicacion-categoria-card.cat-monturas .detalle-chip {
+    background: #eff6ff;
+    border-color: #c7d2fe;
+}
 
 // Variables
 :host {
@@ -1242,7 +1395,7 @@
     max-height: 80vh;
     background: white;
     border-radius: 20px;
-    z-index: 1051;
+    z-index: 2001 !important;
     box-shadow: 0 32px 64px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
@@ -1582,7 +1735,7 @@
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
-    z-index: 1050;
+    z-index: 2000 !important;
     animation: fadeIn 0.3s ease;
 }
 
@@ -2247,7 +2400,7 @@
     max-height: 80vh;
     background: white;
     border-radius: 20px;
-    z-index: 1051;
+    z-index: 2001 !important;
     box-shadow: 0 32px 64px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
@@ -2766,7 +2919,7 @@
     background: white;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    z-index: 1051;
+    z-index: 2001 !important;
     width: 90%;
     max-width: 500px;
     max-height: 90vh;
@@ -5475,7 +5628,8 @@
     display: flex;
     gap: 8px;
     margin-bottom: 16px;
-    background: #f1f5f9;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
     padding: 6px;
     border-radius: 10px;
 
@@ -5500,14 +5654,26 @@
         }
 
         &.active {
-            background: white;
-            color: #1976d2;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+            color: #1e293b;
+            box-shadow: none;
+        }
+
+        &:nth-child(1).active {
+            border: 1px solid #c7d2fe;
+            color: #1e40af;
+            background: #eff6ff;
+        }
+
+        &:nth-child(2).active {
+            border: 1px solid #bae6fd;
+            color: #0f766e;
+            background: #ecfeff;
         }
 
         &:hover:not(.active) {
-            background: rgba(255, 255, 255, 0.5);
-            color: #475569;
+            background: #eef2f7;
+            color: #334155;
         }
     }
 }
@@ -6089,7 +6255,7 @@
     justify-content: center;
     padding: 24px;
     box-sizing: border-box;
-    overflow-y: auto;
+    overflow-y: hidden;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     pointer-events: auto;
@@ -6126,4 +6292,28 @@
         max-width: none;
         max-height: calc(100vh - 20px);
     }
+}
+
+.modal-detalle-layer > .modal-detalle-orden {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-detalle-layer > .modal-detalle-orden .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.modal-detalle-layer > .modal-detalle-orden .detalle-grid {
+    max-height: none;
+    overflow-y: visible;
+}
+
+.modal-detalle-layer > .modal-detalle-orden .modal-actions {
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: #f8f9fa;
 }

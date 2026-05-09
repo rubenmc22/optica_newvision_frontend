@@ -40,7 +40,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   ordenesModal: any[] = [];
   tituloModalOrdenes: string = '';
   estadoModalActual: string = '';
-  tabActivaDetalle: string = 'formulacion'; // Puede ser 'formulacion', 'producto' o 'indicaciones'
+  //RDMC REQBD-xxxx: Solo dos tabs, formulacion e indicaciones
+  tabActivaDetalle: string = 'formulacion'; // Puede ser 'formulacion' o 'indicaciones'
 
 
   // Datos de ejemplo
@@ -69,6 +70,15 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
 
   // Modal
   mostrarModalDetalle: boolean = false;
+  private modalesOcultos: Record<'detalle' | 'ordenes' | 'configFecha' | 'archivadas' | 'autoArchivado' | 'progreso', boolean> = {
+    detalle: false,
+    ordenes: false,
+    configFecha: false,
+    archivadas: false,
+    autoArchivado: false,
+    progreso: false
+  };
+  private pilaModalesSuspendidos: Array<'detalle' | 'ordenes' | 'configFecha' | 'archivadas' | 'autoArchivado' | 'progreso'> = [];
 
   // Modal para configurar fecha de entrega
   mostrarModalConfigurarFecha: boolean = false;
@@ -1033,7 +1043,9 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   /**
    * Modal
    */
-  verDetalleOrden(orden: OrdenTrabajo) {
+  verDetalleOrden(orden: OrdenTrabajo, desdeModalOrdenes: boolean = false) {
+    this.suspenderModalVisiblePara('detalle');
+
     this.ordenSeleccionada = orden;
     this.mostrarModalDetalle = true;
     this.bloquearScroll();
@@ -1301,18 +1313,31 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   /**
    * Método actualizado para abrir el modal
    */
-  verOrdenesEnModal(ordenes: any[], titulo: string, estado: string) {
+  verOrdenesEnModal(
+    ordenes: any[],
+    titulo: string,
+    estado: string,
+    contextoRestauracion?: {
+      filtroModal?: string;
+      filtroPrioridadModal?: string;
+      ordenModal?: string;
+      paginaActual?: number;
+    }
+  ) {
+    this.suspenderModalVisiblePara('ordenes');
+
     this.ordenesModal = [...ordenes];
     this.tituloModalOrdenes = titulo;
     this.estadoModalActual = estado;
 
-    // Reiniciar filtros
-    this.filtroModal = '';
-    this.filtroPrioridadModal = '';
-    this.ordenModal = 'fechaCreacion_desc';
+    // Reiniciar o restaurar filtros según el origen de apertura.
+    this.filtroModal = contextoRestauracion?.filtroModal ?? '';
+    this.filtroPrioridadModal = contextoRestauracion?.filtroPrioridadModal ?? '';
+    this.ordenModal = contextoRestauracion?.ordenModal ?? 'fechaCreacion_desc';
 
     // Filtrar y mostrar
     this.filtrarOrdenesModal();
+    this.paginaActual = contextoRestauracion?.paginaActual ?? 0;
     this.mostrarModalOrdenes = true;
     this.bloquearScroll();
   }
@@ -1320,8 +1345,9 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   /**
    * Método actualizado para cerrar el modal
    */
-  cerrarModalOrdenes() {
+  cerrarModalOrdenes(desbloquearPantalla: boolean = true) {
     this.mostrarModalOrdenes = false;
+    this.modalesOcultos.ordenes = false;
     this.ordenesModal = [];
     this.ordenesModalFiltradas = [];
     this.tituloModalOrdenes = '';
@@ -1329,7 +1355,11 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
     this.filtroModal = '';
     this.filtroPrioridadModal = '';
     this.paginaActual = 0;
-    this.desbloquearScroll();
+
+    if (desbloquearPantalla) {
+      this.desbloquearScroll();
+      this.restaurarUltimoModalSuspendido();
+    }
   }
 
   /**
@@ -1470,18 +1500,55 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   /**
    * Obtener productos para mostrar
    */
-  getProductosParaMostrar(orden: OrdenTrabajo): any[] {
-    return orden.productos?.map(producto => ({
-      cantidad: 1,
-      datos: {
-        id: producto.id,
-        nombre: producto.nombre,
-        marca: producto.marca,
-        codigo: producto.codigo,
-        modelo: producto.modelo,
-        precio: producto.precio
+  //RDMC REQBD-xxxx: Agrupar productos pagados por categoría para la pestaña Indicaciones
+  //RDMC REQBD-xxxx: Agrupar productos pagados por categoría, infiriendo si no existe
+  getProductosPagadosAgrupadosPorCategoria(orden: OrdenTrabajo): { categoria: string, productos: any[] }[] {
+    if (!orden?.productos || !Array.isArray(orden.productos)) return [];
+    const grupos: { [cat: string]: any[] } = {};
+    orden.productos.forEach(prod => {
+      // Heurística: si no hay 'categoria', inferir por nombre/modelo
+      let categoria = 'Sin categoría';
+      if ('categoria' in prod && prod.categoria) {
+        categoria = String(prod.categoria).trim();
+      } else if (prod.nombre) {
+        const nombre = prod.nombre.toLowerCase();
+        if (nombre.includes('montura')) categoria = 'Monturas';
+        else if (nombre.includes('cristal')) categoria = 'Cristales';
+        else if (nombre.includes('lente de contacto') || nombre.includes('contacto')) categoria = 'Lentes de contacto';
+        else if (prod.modelo && prod.modelo.toLowerCase().includes('contacto')) categoria = 'Lentes de contacto';
       }
-    })) || [];
+      if (!grupos[categoria]) grupos[categoria] = [];
+      grupos[categoria].push(prod);
+    });
+    return Object.entries(grupos).map(([categoria, productos]) => ({ categoria, productos }));
+  }
+
+  //RDMC REQBD-xxxx: Helpers para badges de cristales en la pestaña Indicaciones
+  esProductoCristal(producto: any): boolean {
+    return String(producto?.categoria || '').trim().toLowerCase().includes('cristal');
+  }
+
+  //RDMC REQBD-xxxx: Normalizar tratamientos para mostrarlos como texto legible en badges
+  getTratamientosProductoTexto(producto: any): string {
+    const tratamientos = producto?.tratamientos;
+
+    if (!tratamientos) {
+      return '';
+    }
+
+    if (Array.isArray(tratamientos)) {
+      const valores = tratamientos
+        .map((item) => (typeof item === 'string' ? item.trim() : String(item ?? '').trim()))
+        .filter((item) => item.length > 0);
+
+      return valores.join(', ');
+    }
+
+    if (typeof tratamientos === 'string') {
+      return tratamientos.trim();
+    }
+
+    return '';
   }
 
   /**
@@ -1791,6 +1858,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
       event.stopPropagation();
     }
 
+    this.suspenderModalVisiblePara('configFecha');
+
     this.ordenParaConfigurarFecha = orden;
 
     // Calcular días actuales si existe fecha
@@ -1852,12 +1921,17 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   /**
    * Cerrar modal de fecha de entrega
    */
-  public cerrarModalFechaEntrega() {
+  public cerrarModalFechaEntrega(desbloquearPantalla: boolean = true) {
     this.mostrarModalConfigurarFecha = false;
+    this.modalesOcultos.configFecha = false;
     this.ordenParaConfigurarFecha = null;
     this.fechaCalculada = null;
     this.diasParaFechaEntrega = 7;
-    this.desbloquearScroll();
+
+    if (desbloquearPantalla) {
+      this.desbloquearScroll();
+      this.restaurarUltimoModalSuspendido();
+    }
   }
 
   /**
@@ -1972,6 +2046,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
 
   // Método para abrir el modal de progreso
   abrirModalProgreso(orden: OrdenTrabajo) {
+    this.suspenderModalVisiblePara('progreso');
     this.ordenSeleccionada = orden;
     this.progresoActual = orden.progreso || 0;
 
@@ -2006,9 +2081,11 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   // Método para cerrar el modal
   cerrarModalProgreso() {
     this.mostrarModalProgreso = false;
+    this.modalesOcultos.progreso = false;
     this.ordenSeleccionada = null;
     this.progresoActual = 0;
     this.mensajeError = '';
+    this.restaurarUltimoModalSuspendido();
   }
 
   // Método para validar el progreso
@@ -2102,6 +2179,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
 
   // Método para abrir el modal
   abrirModalArchivo() {
+    this.suspenderModalVisiblePara('autoArchivado');
     // Usar el valor actual de diasParaAutoArchivo
     this.diasArchivoActual = this.diasParaAutoArchivo || 30;
     this.diasArchivoSeleccionados = this.diasArchivoActual;
@@ -2120,6 +2198,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
 
   // Método para abrir modal de configuración de auto-archivado
   abrirModalConfigArchivo() {
+    this.suspenderModalVisiblePara('autoArchivado');
     // Usar el valor actual de diasParaAutoArchivo
     this.diasArchivoActual = this.diasParaAutoArchivo || 30;
     this.diasArchivoSeleccionados = this.diasArchivoActual;
@@ -2129,6 +2208,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
 
   // Método para abrir modal de ver órdenes archivadas
   abrirModalArchivadas() {
+    this.suspenderModalVisiblePara('archivadas');
     this.filtrarArchivadas(); // Asegurarse de que el filtro esté aplicado
     this.mostrarModalArchivo = true;
     this.bloquearScroll();
@@ -2138,7 +2218,10 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   cerrarModalArchivo() {
     this.mostrarModalArchivo = false;
     this.mostrarModalAutoArchivado = false;
+    this.modalesOcultos.archivadas = false;
+    this.modalesOcultos.autoArchivado = false;
     this.desbloquearScroll();
+    this.restaurarUltimoModalSuspendido();
   }
 
   // Método para validar días
@@ -2532,11 +2615,80 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   // También ajusta el método cerrarModalDetalle
   cerrarModalDetalle() {
     this.mostrarModalDetalle = false;
+    this.modalesOcultos.detalle = false;
     this.ordenSeleccionada = null;
     this.desbloquearScroll();
 
     // Limpiar clases responsive
     document.querySelector('.modal-detalle-orden')?.classList.remove('modal-mobile-full', 'modal-zoom-extremo');
+    this.restaurarUltimoModalSuspendido();
+  }
+
+  estaModalOculto(modal: 'detalle' | 'ordenes' | 'configFecha' | 'archivadas' | 'autoArchivado' | 'progreso'): boolean {
+    return this.modalesOcultos[modal];
+  }
+
+  private suspenderModalVisiblePara(modalDestino: 'detalle' | 'ordenes' | 'configFecha' | 'archivadas' | 'autoArchivado' | 'progreso'): void {
+    const modalVisibleActual = this.obtenerModalVisibleActual();
+    if (!modalVisibleActual || modalVisibleActual === modalDestino) {
+      return;
+    }
+
+    this.modalesOcultos[modalVisibleActual] = true;
+    this.pilaModalesSuspendidos.push(modalVisibleActual);
+  }
+
+  private restaurarUltimoModalSuspendido(): void {
+    while (this.pilaModalesSuspendidos.length > 0) {
+      const modal = this.pilaModalesSuspendidos.pop();
+      if (!modal) {
+        return;
+      }
+
+      if (this.estaModalAbierto(modal)) {
+        this.modalesOcultos[modal] = false;
+        this.bloquearScroll();
+        return;
+      }
+    }
+  }
+
+  private obtenerModalVisibleActual(): 'detalle' | 'ordenes' | 'configFecha' | 'archivadas' | 'autoArchivado' | 'progreso' | null {
+    const orden: Array<'detalle' | 'progreso' | 'configFecha' | 'archivadas' | 'autoArchivado' | 'ordenes'> = [
+      'detalle',
+      'progreso',
+      'configFecha',
+      'archivadas',
+      'autoArchivado',
+      'ordenes'
+    ];
+
+    for (const modal of orden) {
+      if (this.estaModalAbierto(modal) && !this.modalesOcultos[modal]) {
+        return modal;
+      }
+    }
+
+    return null;
+  }
+
+  private estaModalAbierto(modal: 'detalle' | 'ordenes' | 'configFecha' | 'archivadas' | 'autoArchivado' | 'progreso'): boolean {
+    switch (modal) {
+      case 'detalle':
+        return this.mostrarModalDetalle;
+      case 'ordenes':
+        return this.mostrarModalOrdenes;
+      case 'configFecha':
+        return this.mostrarModalConfigurarFecha;
+      case 'archivadas':
+        return this.mostrarModalArchivo;
+      case 'autoArchivado':
+        return this.mostrarModalAutoArchivado;
+      case 'progreso':
+        return this.mostrarModalProgreso;
+      default:
+        return false;
+    }
   }
 
   getInfoMontura(producto: any): string {
