@@ -303,6 +303,7 @@ export class ProductoService {
       nombre: dto.monturaConfig?.nombre ?? '',
       marca: dto.monturaConfig?.marca ?? dto.marca ?? '',
       modelo: dto.monturaConfig?.modelo ?? dto.modelo ?? '',
+      clase: dto.monturaConfig?.clase ?? '',
       color: dto.monturaConfig?.color ?? dto.color ?? '',
       material: dto.monturaConfig?.material ?? dto.material ?? '',
       proveedor: dto.monturaConfig?.proveedor ?? dto.proveedor ?? '',

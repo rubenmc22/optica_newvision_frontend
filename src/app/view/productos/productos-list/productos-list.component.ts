@@ -27,6 +27,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     @ViewChild('modalBodyRef') private modalBodyRef?: ElementRef<HTMLDivElement>;
     @ViewChild('seccionCategoriaRef') private seccionCategoriaRef?: ElementRef<HTMLDivElement>;
     @ViewChild('categoriaSelectRef') private categoriaSelectRef?: ElementRef<HTMLDivElement>;
+    @ViewChild('claseMonturaSelectRef') private claseMonturaSelectRef?: ElementRef<HTMLDivElement>;
     @ViewChild('descripcionTextareaRef') private descripcionTextareaRef?: ElementRef<HTMLTextAreaElement>;
 
     private readonly CATEGORIA_FILTROS_ADITIVOS_NORMALIZADA = 'filtros/aditivos';
@@ -126,6 +127,13 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         PROGRESIVO_DIGITAL_INTERMEDIO: [],
         PROGRESIVO_DIGITAL_AMPLIO: []
     };
+    private readonly CLASES_MONTURA_DISPONIBLES: OpcionSelect[] = [
+        { value: 'Clase A', label: 'Clase A' },
+        { value: 'Clase B', label: 'Clase B' },
+        { value: 'Clase C', label: 'Clase C' },
+        { value: 'Clase D', label: 'Clase D' },
+        { value: 'Clase E', label: 'Clase E' }
+    ];
 
     // CONSTANTES
     readonly PRODUCTOS_POR_PAGINA = 12;
@@ -154,6 +162,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     // FILTROS
     filtroBusqueda = '';
     tipoSeleccionado = '';
+    filtroClaseMontura = '';
     disponibilidadSeleccionada = '';
     estadoSeleccionado: boolean = true;
     sedeActiva: string = '';
@@ -715,13 +724,33 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     limpiarFiltros(): void {
         this.filtroBusqueda = '';
         this.tipoSeleccionado = '';
+        this.filtroClaseMontura = '';
         this.disponibilidadSeleccionada = '';
         this.estadoSeleccionado = true;
+    }
+
+    onTipoSeleccionadoChange(valor: string | null | Event): void {
+        let tipo = '';
+
+        if (typeof valor === 'string') {
+            tipo = valor;
+        } else if (valor === null) {
+            tipo = '';
+        } else {
+            tipo = (valor.target as HTMLSelectElement | null)?.value ?? '';
+        }
+
+        this.tipoSeleccionado = tipo;
+
+        if (this.tipoSeleccionado?.trim().toLowerCase() !== 'monturas') {
+            this.filtroClaseMontura = '';
+        }
     }
 
     get productosFiltrados(): Producto[] {
         const texto = this.filtroBusqueda?.trim().toLowerCase() ?? '';
         const tipo = this.tipoSeleccionado?.toLowerCase() ?? '';
+        const claseMontura = this.filtroClaseMontura?.trim().toLowerCase() ?? '';
         const disponibilidad = this.disponibilidadSeleccionada ?? '';
         const sede = this.sedeFiltro?.trim().toLowerCase() ?? '';
         const estado = this.estadoSeleccionado;
@@ -737,6 +766,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             const proveedor = p.proveedor?.toLowerCase() ?? '';
             const material = p.material?.toLowerCase() ?? '';
             const color = p.color?.toLowerCase() ?? '';
+            const clase = p.monturaConfig?.clase?.toLowerCase() ?? '';
             const sedeProducto = p.sede?.toLowerCase() ?? '';
             const activo = p.activo;
             const disponibilidadInventario = this.getDisponibilidadInventario(p);
@@ -748,14 +778,16 @@ export class ProductosListComponent implements OnInit, OnDestroy {
                 modelo.includes(texto) ||
                 proveedor.includes(texto) ||
                 material.includes(texto) ||
-                color.includes(texto);
+                color.includes(texto) ||
+                clase.includes(texto);
 
             const coincideTipo = !tipo || categoria === tipo;
+            const coincideClaseMontura = !claseMontura || (categoria === 'monturas' && clase === claseMontura);
             const coincideDisponibilidad = !disponibilidad || disponibilidadInventario === disponibilidad;
             const coincideEstado = estado === null || activo === estado;
             const coincideSede = !sede || sedeProducto === sede;
 
-            return coincideTexto && coincideTipo && coincideDisponibilidad && coincideEstado && coincideSede;
+            return coincideTexto && coincideTipo && coincideClaseMontura && coincideDisponibilidad && coincideEstado && coincideSede;
         });
 
         if (this.ordenarPorStockActivo) {
@@ -1302,6 +1334,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             nombre: this.resolverNombreProducto(producto),
             marca: String(producto.marca ?? '').trim(),
             modelo: String(producto.modelo ?? '').trim(),
+            clase: String(producto.monturaConfig?.clase ?? '').trim(),
             color: String(producto.color ?? '').trim(),
             material: String(producto.material ?? '').trim(),
             proveedor: String(producto.proveedor ?? '').trim(),
@@ -1444,6 +1477,14 @@ export class ProductosListComponent implements OnInit, OnDestroy {
 
     get mostrarCampoColor(): boolean {
         return ['monturas', 'lentes de contacto', 'accesorios'].includes(this.categoriaProductoActual);
+    }
+
+    get mostrarCampoClaseMontura(): boolean {
+        return this.categoriaProductoActual === 'monturas';
+    }
+
+    get opcionesClaseMontura(): OpcionSelect[] {
+        return this.CLASES_MONTURA_DISPONIBLES;
     }
 
     get mostrarCampoStock(): boolean {
@@ -1615,6 +1656,10 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             default:
                 return 'Color o acabado visible';
         }
+    }
+
+    get placeholderClaseMontura(): string {
+        return 'Selecciona la clase de la montura';
     }
 
     get placeholderDescripcionCategoria(): string {
@@ -1993,6 +2038,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             controlaStock: undefined,
             disponibilidadInventario: undefined,
             cristalConfig: normalizarProductoCristalConfig(undefined),
+            monturaConfig: undefined,
             lenteContactoConfig: undefined
         });
 
@@ -2005,6 +2051,12 @@ export class ProductosListComponent implements OnInit, OnDestroy {
                 this.categoriaSelectRef?.nativeElement ?? this.seccionCategoriaRef?.nativeElement,
                 20
             );
+        }, 0);
+    }
+
+    onClaseMonturaOpen(): void {
+        setTimeout(() => {
+            this.desplazarModalHastaElemento(this.claseMonturaSelectRef?.nativeElement, 20);
         }, 0);
     }
 
@@ -2053,6 +2105,70 @@ export class ProductosListComponent implements OnInit, OnDestroy {
                     ? normalizarProductoCristalConfig(this.producto?.cristalConfig).materialOtro
                     : ''
             }
+        });
+    }
+
+    onClaseMonturaChange(valor: string | null | Event): void {
+        if (!this.producto) {
+            return;
+        }
+
+        const claseTexto = typeof valor === 'string' || valor === null
+            ? valor ?? ''
+            : (valor.target as HTMLInputElement | null)?.value ?? '';
+        const clase = String(claseTexto).trim();
+
+        this.actualizarProductoFormulario({
+            ...this.producto,
+            monturaConfig: {
+                ...(this.producto.monturaConfig ?? {}),
+                clase
+            }
+        });
+    }
+
+    onProveedorProductoModelChange(valor: string | null | Event): void {
+        if (!this.producto) {
+            return;
+        }
+
+        const proveedor = typeof valor === 'string' || valor === null
+            ? valor ?? ''
+            : (valor.target as HTMLInputElement | null)?.value ?? '';
+
+        this.actualizarProductoFormulario({
+            ...this.producto,
+            proveedor: String(proveedor).trim()
+        });
+    }
+
+    onColorProductoModelChange(valor: string | null | Event): void {
+        if (!this.producto) {
+            return;
+        }
+
+        const color = typeof valor === 'string' || valor === null
+            ? valor ?? ''
+            : (valor.target as HTMLInputElement | null)?.value ?? '';
+
+        this.actualizarProductoFormulario({
+            ...this.producto,
+            color: String(color).trim()
+        });
+    }
+
+    onMaterialTextoProductoChange(valor: string | null | Event): void {
+        if (!this.producto) {
+            return;
+        }
+
+        const material = typeof valor === 'string' || valor === null
+            ? valor ?? ''
+            : (valor.target as HTMLInputElement | null)?.value ?? '';
+
+        this.actualizarProductoFormulario({
+            ...this.producto,
+            material: String(material).trim()
         });
     }
 
@@ -2304,6 +2420,25 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             siguiente.stock = 0;
         }
 
+        siguiente.monturaConfig = categoria === 'monturas'
+            ? {
+                categoria: 'Monturas',
+                nombre: String(siguiente.monturaConfig?.nombre ?? '').trim(),
+                marca: String(siguiente.marca ?? '').trim(),
+                modelo: String(siguiente.modelo ?? '').trim(),
+                clase: this.valorPerteneceAOpciones(
+                    siguiente.monturaConfig?.clase,
+                    this.opcionesClaseMontura
+                )
+                    ? String(siguiente.monturaConfig?.clase ?? '').trim()
+                    : '',
+                color: String(siguiente.color ?? '').trim(),
+                material: String(siguiente.material ?? '').trim(),
+                proveedor: String(siguiente.proveedor ?? '').trim(),
+                descripcion: String(siguiente.monturaConfig?.descripcion ?? siguiente.descripcion ?? '').trim()
+            }
+            : undefined;
+
         siguiente.cristalConfig = categoria === 'cristales' || !categoria
             ? normalizarProductoCristalConfig(siguiente.cristalConfig)
             : undefined;
@@ -2514,7 +2649,8 @@ export class ProductosListComponent implements OnInit, OnDestroy {
                 this.construirEtiquetaProducto('Montura', [producto?.marca, producto?.modelo]),
                 this.construirDetalleDescripcion('color', producto?.color),
                 this.construirDetalleDescripcion('material', producto?.material),
-                this.construirDetalleDescripcion('proveedor', producto?.proveedor)
+                this.construirDetalleDescripcion('proveedor', producto?.proveedor),
+                this.formatearClaseMontura(producto?.monturaConfig?.clase)
             ].filter(Boolean);
 
             return this.finalizarDescripcionProducto(partes, 'Montura');
@@ -2617,8 +2753,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             : producto?.modelo?.trim();
 
         const material = producto?.material?.trim();
+        const claseMontura = categoriaNormalizada === 'monturas'
+            ? this.formatearClaseMontura(producto?.monturaConfig?.clase)?.toUpperCase()
+            : '';
 
-        return [categoria, producto?.marca?.trim(), modelo, material]
+        return [categoria, producto?.marca?.trim(), modelo, material, claseMontura]
             .filter(Boolean)
             .join(' ')
             .replace(/\s+/g, ' ')
@@ -2643,6 +2782,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     private construirDetalleDescripcion(etiqueta: string, valor: string | null | undefined): string {
         const texto = String(valor ?? '').trim();
         return texto ? `${etiqueta} ${texto}` : '';
+    }
+
+    private formatearClaseMontura(valor: string | null | undefined): string {
+        const texto = String(valor ?? '').trim().replace(/^clase\s+/i, '').trim();
+        return texto ? `Clase ${texto}` : '';
     }
 
     private finalizarDescripcionProducto(partes: string[], fallback: string): string {

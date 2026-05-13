@@ -55,10 +55,23 @@
               <i class="bi bi-grid"></i>
               Categoría
             </label>
-            <select class="form-select modern-select" [(ngModel)]="tipoSeleccionado">
+            <select class="form-select modern-select" [ngModel]="tipoSeleccionado" (ngModelChange)="onTipoSeleccionadoChange($event)">
               <option value="">Todas</option>
               <option *ngFor="let tipo of categoriasProducto" [value]="tipo.toLowerCase()">
                 {{ tipo }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filtro-item" *ngIf="tipoSeleccionado === 'monturas'">
+            <label class="form-label-moderno">
+              <i class="bi bi-tags"></i>
+              Clase
+            </label>
+            <select class="form-select modern-select" [(ngModel)]="filtroClaseMontura">
+              <option value="">Todas</option>
+              <option *ngFor="let clase of opcionesClaseMontura" [value]="clase.label.toLowerCase()">
+                {{ clase.label }}
               </option>
             </select>
           </div>
@@ -574,7 +587,8 @@
                         {{ etiquetaProveedorCategoria }}
                       </label>
                       <input type="text" class="form-control-moderno" [(ngModel)]="producto.proveedor" name="proveedor"
-                        [disabled]="esSoloLectura" [placeholder]="placeholderProveedorCategoria">
+                        [disabled]="esSoloLectura" [placeholder]="placeholderProveedorCategoria"
+                        (ngModelChange)="onProveedorProductoModelChange($event)">
                       <div class="campo-ayuda" *ngIf="esCristalConfigurableActual">
                         <div>• Registra el laboratorio que fabrica o despacha la referencia.</div>
                       </div>
@@ -591,7 +605,8 @@
                       </label>
                       <input type="text" class="form-control-moderno" [(ngModel)]="producto.material" name="material"
                         [required]="materialEsObligatorio" [disabled]="esSoloLectura"
-                        [placeholder]="placeholderMaterialCategoria">
+                        [placeholder]="placeholderMaterialCategoria"
+                        (ngModelChange)="onMaterialTextoProductoChange($event)">
                     </div>
                   </div>
 
@@ -603,7 +618,22 @@
                         Color
                       </label>
                       <input type="text" class="form-control-moderno" [(ngModel)]="producto.color" name="color"
-                        [disabled]="esSoloLectura" [placeholder]="placeholderColorCategoria">
+                        [disabled]="esSoloLectura" [placeholder]="placeholderColorCategoria"
+                        (ngModelChange)="onColorProductoModelChange($event)">
+                    </div>
+                  </div>
+
+                  <div class="col-md-4" *ngIf="mostrarCampoClaseMontura" #claseMonturaSelectRef>
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-tags"></i>
+                        Clase
+                      </label>
+                      <ng-select [items]="opcionesClaseMontura" bindLabel="label" bindValue="label"
+                        [ngModel]="producto.monturaConfig?.clase || null" name="claseMontura"
+                        (ngModelChange)="onClaseMonturaChange($event)" (open)="onClaseMonturaOpen()" [searchable]="false" [clearable]="true"
+                        [disabled]="esSoloLectura" [placeholder]="placeholderClaseMontura" class="ng-select-moderno">
+                      </ng-select>
                     </div>
                   </div>
 
@@ -651,7 +681,7 @@
                   </div>
 
                   <!-- Descripción -->
-                  <div [class.col-md-8]="esCristalConfigurableActual || mostrarCampoRangoFormulaLenteContacto" [class.col-12]="!esCristalConfigurableActual && !mostrarCampoRangoFormulaLenteContacto">
+                  <div [class.col-md-8]="esCristalConfigurableActual || mostrarCampoRangoFormulaLenteContacto || mostrarCampoClaseMontura" [class.col-12]="!esCristalConfigurableActual && !mostrarCampoRangoFormulaLenteContacto && !mostrarCampoClaseMontura">
                     <div class="form-group-moderno">
                       <label class="form-label-moderno">
                         <i class="bi bi-text-paragraph"></i>

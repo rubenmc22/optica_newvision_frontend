@@ -31,6 +31,7 @@ export interface ProductoMonturaConfig {
   nombre?: string;
   marca: string;
   modelo: string;
+  clase?: string;
   color: string;
   material: string;
   proveedor: string;
